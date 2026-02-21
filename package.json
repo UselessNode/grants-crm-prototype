@@ -1,0 +1,26 @@
+{
+  "name": "grants-crm-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Прототип CRM системы для приема заявок на гранты",
+  "author": "Студент",
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently \"cd frontend && npm run dev\" \"cd backend && npm run dev\"",
+    "build": "cd frontend && npm run build && cd ../backend && npm run build",
+    "start": "node dist/backend/app.js",
+    "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/seed.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "husky": "^9.0.11"
+  },
+  "dependencies": {}
+}
