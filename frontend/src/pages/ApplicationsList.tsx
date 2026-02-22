@@ -1,3 +1,4 @@
+// ApplicationsList.tsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { applicationService } from '../utils/applicationService';
