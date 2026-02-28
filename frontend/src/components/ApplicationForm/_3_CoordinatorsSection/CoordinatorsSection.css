@@ -1,0 +1,29 @@
+/* ========================================
+   CoordinatorsSection
+   Секция 3: Координаторы
+   ======================================== */
+
+.CoordinatorsSection {
+  /* Контейнер секции */
+}
+
+.CoordinatorsSection__item {
+  @apply bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4
+         transition-all duration-200;
+}
+
+.CoordinatorsSection__item-header {
+  @apply flex justify-between items-center mb-3;
+}
+
+.CoordinatorsSection__grid {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-3;
+}
+
+.CoordinatorsSection__grid-2-col {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-3 mt-4;
+}
+
+.CoordinatorsSection__mt {
+  @apply mt-3;
+}

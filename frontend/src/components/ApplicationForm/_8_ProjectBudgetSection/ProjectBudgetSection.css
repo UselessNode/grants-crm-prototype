@@ -1,0 +1,33 @@
+/*ProjectBudgetSection.css*/
+/* ========================================
+   ProjectBudgetSection
+   Секция 8: Бюджет проекта
+   ======================================== */
+
+.ProjectBudgetSection {
+  /* Контейнер секции */
+}
+
+.ProjectBudgetSection .section-title {
+  @apply mb-6;
+}
+
+/* Сообщение об ошибке */
+.ProjectBudgetSection__error-message {
+  @apply mt-4 flex items-center gap-2 text-red-600 bg-red-50
+         px-4 py-3 rounded-lg text-sm font-medium;
+}
+
+.ProjectBudgetSection__error-message--total {
+  @apply mt-2;
+}
+
+/* Сообщение об ошибке в строке */
+.table-article-error {
+  @apply mt-2 flex items-center gap-1.5 text-red-600 text-xs font-medium;
+}
+
+/* Иконка комментария с ошибкой */
+.table-comment-icon-error {
+  @apply text-red-600;
+}

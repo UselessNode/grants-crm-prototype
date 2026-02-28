@@ -4,17 +4,67 @@ import ApplicationsList from './pages/ApplicationsList';
 import ApplicationForm from './pages/ApplicationForm';
 import ApplicationView from './pages/ApplicationView';
 import UIShowcase from './pages/UIShowcase';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import PrivateRoute from './components/PrivateRoute';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/applications" replace />} />
-        <Route path="/applications" element={<ApplicationsList />} />
-        <Route path="/applications/new" element={<ApplicationForm />} />
-        <Route path="/applications/:id" element={<ApplicationView />} />
-        <Route path="/applications/:id/edit" element={<ApplicationForm />} />
-        <Route path="/ui_showcase" element={<UIShowcase />} />
+        {/* Публичные маршруты */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Защищённые маршруты */}
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Navigate to="/applications" replace />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/applications"
+          element={
+            <PrivateRoute>
+              <ApplicationsList />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/applications/new"
+          element={
+            <PrivateRoute>
+              <ApplicationForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/applications/:id"
+          element={
+            <PrivateRoute>
+              <ApplicationView />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/applications/:id/edit"
+          element={
+            <PrivateRoute>
+              <ApplicationForm />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/ui_showcase"
+          element={
+            <PrivateRoute>
+              <UIShowcase />
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

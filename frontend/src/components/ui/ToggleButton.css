@@ -1,0 +1,68 @@
+/* ========================================
+   ToggleButton Component
+   Кнопка-переключатель
+   ======================================== */
+
+.ToggleButton {
+  @apply inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium
+         transition-all duration-200
+         focus:outline-none focus:ring-2 focus:ring-offset-1;
+}
+
+/* Default (серый, неактивный) */
+.ToggleButton--default {
+  @apply bg-white text-gray-700 border-gray-300
+         hover:bg-gray-50 hover:border-gray-400
+         focus:ring-gray-500;
+}
+
+.ToggleButton--default.ToggleButton--active {
+  @apply bg-primary-600 text-white border-primary-600
+         hover:bg-primary-700 hover:border-primary-700
+         focus:ring-primary-500;
+}
+
+/* Success (зелёный) */
+.ToggleButton--success {
+  @apply bg-white text-gray-700 border-gray-300
+         hover:bg-gray-50 hover:border-gray-400
+         focus:ring-green-500;
+}
+
+.ToggleButton--success.ToggleButton--active {
+  @apply bg-green-600 text-white border-green-600
+         hover:bg-green-700 hover:border-green-700
+         focus:ring-green-500;
+}
+
+/* Warning (янтарный) */
+.ToggleButton--warning {
+  @apply bg-white text-gray-700 border-gray-300
+         hover:bg-gray-50 hover:border-gray-400
+         focus:ring-amber-500;
+}
+
+.ToggleButton--warning.ToggleButton--active {
+  @apply bg-amber-500 text-white border-amber-500
+         hover:bg-amber-600 hover:border-amber-600
+         focus:ring-amber-500;
+}
+
+/* Disabled */
+.ToggleButton--disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* Иконка */
+.ToggleButton__icon {
+  @apply flex-shrink-0;
+}
+
+.ToggleButton__icon svg {
+  @apply w-4 h-4;
+}
+
+/* Лейбл */
+.ToggleButton__label {
+  @apply flex-shrink-0;
+}

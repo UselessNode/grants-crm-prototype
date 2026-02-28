@@ -3,6 +3,9 @@
 /**
  * Скрипт заполнения БД тестовыми данными
  * Использование: npm run seed
+ *
+ * Seed-данные вставляются через ON CONFLICT DO NOTHING,
+ * поэтому повторный запуск не создаёт дубликатов.
  */
 
 const { Pool } = require("pg");
@@ -25,19 +28,23 @@ async function seed() {
     const seedPath = path.join(__dirname, "seed_data.sql");
     const sql = fs.readFileSync(seedPath, "utf-8");
 
-    console.log("Выполнение seed-данных...");
+    console.log("📦 Заполнение тестовыми данными...\n");
 
     await client.query("BEGIN");
     try {
       await client.query(sql);
       await client.query("COMMIT");
-      console.log("Seed-данные успешно добавлены!");
+      console.log("\n✅ Seed-данные успешно добавлены!");
+      console.log(
+        "\n💡 Примечание: Повторный запуск не создаст дубликатов (используется ON CONFLICT DO NOTHING).\n",
+      );
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
     }
   } catch (error) {
-    console.error("Ошибка при выполнении seed-данных:", error.message);
+    console.error("\n❌ Ошибка при выполнении seed-данных:", error.message);
+    console.error(error.stack);
     process.exit(1);
   } finally {
     client.release();

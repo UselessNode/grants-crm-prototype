@@ -1,0 +1,9 @@
+export { BasicInfoSection } from './_1_BasicInfoSection/BasicInfoSection';
+export { TeamMembersSection } from './_2_TeamMembersSection/TeamMembersSection';
+export { CoordinatorsSection } from './_3_CoordinatorsSection/CoordinatorsSection';
+export { DobroResponsibleSection } from './_4_DobroResponsibleSection/DobroResponsibleSection';
+export { ProjectDescriptionSection } from './_5_ProjectDescriptionSection/ProjectDescriptionSection';
+export { ProjectPlanSection } from './_6_ProjectPlanSection/ProjectPlanSection';
+export { ProjectResultsSection } from './_7_ProjectResultsSection/ProjectResultsSection';
+export { ProjectBudgetSection } from './_8_ProjectBudgetSection/ProjectBudgetSection';
+export { AdditionalMaterialsSection } from './_9_AdditionalMaterialsSection/AdditionalMaterialsSection';

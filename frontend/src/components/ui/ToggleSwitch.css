@@ -1,0 +1,151 @@
+/* ========================================
+   ToggleSwitch Component
+   ======================================== */
+
+.ToggleSwitch {
+  @apply inline-flex items-center cursor-pointer select-none;
+}
+
+.ToggleSwitch--disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* Скрытый input */
+.ToggleSwitch__input {
+  @apply sr-only;
+}
+
+/* Трек (дорожка) */
+.ToggleSwitch__track {
+  @apply relative inline-flex items-center rounded-full transition-colors duration-200
+         bg-gray-300 flex-shrink-0;
+}
+
+/* Thumb (переключатель) */
+.ToggleSwitch__thumb {
+  @apply absolute inline-flex items-center justify-center rounded-full bg-white
+         shadow transform transition-transform duration-200
+         flex items-center justify-center;
+}
+
+/* Иконка внутри thumb */
+.ToggleSwitch__icon {
+  @apply text-gray-400;
+}
+
+/* Лейбл */
+.ToggleSwitch__label {
+  @apply ml-2 text-sm font-medium text-gray-700;
+}
+
+/* ========================================
+   РАЗМЕРЫ
+   ======================================== */
+
+/* Small */
+.ToggleSwitch--sm .ToggleSwitch__track {
+  @apply w-8 h-4;
+}
+
+.ToggleSwitch--sm .ToggleSwitch__thumb {
+  @apply w-3 h-3 translate-x-0.5;
+}
+
+.ToggleSwitch--sm.ToggleSwitch--checked .ToggleSwitch__thumb {
+  @apply translate-x-4;
+}
+
+.ToggleSwitch--sm .ToggleSwitch__label {
+  @apply text-xs;
+}
+
+.ToggleSwitch--sm .ToggleSwitch__icon svg {
+  @apply w-2 h-2;
+}
+
+/* Medium (default) */
+.ToggleSwitch--md .ToggleSwitch__track {
+  @apply w-11 h-5;
+}
+
+.ToggleSwitch--md .ToggleSwitch__thumb {
+  @apply w-4 h-4 translate-x-0.5;
+}
+
+.ToggleSwitch--md.ToggleSwitch--checked .ToggleSwitch__thumb {
+  @apply translate-x-5;
+}
+
+.ToggleSwitch--md .ToggleSwitch__label {
+  @apply text-sm;
+}
+
+.ToggleSwitch--md .ToggleSwitch__icon svg {
+  @apply w-3 h-3;
+}
+
+/* Large */
+.ToggleSwitch--lg .ToggleSwitch__track {
+  @apply w-14 h-7;
+}
+
+.ToggleSwitch--lg .ToggleSwitch__thumb {
+  @apply w-6 h-6 translate-x-0.5;
+}
+
+.ToggleSwitch--lg.ToggleSwitch--checked .ToggleSwitch__thumb {
+  @apply translate-x-7;
+}
+
+.ToggleSwitch--lg .ToggleSwitch__label {
+  @apply text-base;
+}
+
+.ToggleSwitch--lg .ToggleSwitch__icon svg {
+  @apply w-4 h-4;
+}
+
+/* ========================================
+   ВАРИАНТЫ (цвета)
+   ======================================== */
+
+/* Default (Indigo) */
+.ToggleSwitch--default.ToggleSwitch--checked .ToggleSwitch__track {
+  @apply bg-primary-600;
+}
+
+.ToggleSwitch--default.ToggleSwitch--checked .ToggleSwitch__icon {
+  @apply text-white;
+}
+
+/* Success (Green) */
+.ToggleSwitch--success.ToggleSwitch--checked .ToggleSwitch__track {
+  @apply bg-green-600;
+}
+
+.ToggleSwitch--success.ToggleSwitch--checked .ToggleSwitch__icon {
+  @apply text-white;
+}
+
+/* Warning (Amber) */
+.ToggleSwitch--warning.ToggleSwitch--checked .ToggleSwitch__track {
+  @apply bg-amber-500;
+}
+
+.ToggleSwitch--warning.ToggleSwitch--checked .ToggleSwitch__icon {
+  @apply text-white;
+}
+
+/* ========================================
+   ВАРИАНТЫ ОТОБРАЖЕНИЯ
+   ======================================== */
+
+/* Только иконка (без лейбла) */
+.ToggleSwitch--icon-only .ToggleSwitch__label {
+  @apply hidden;
+}
+
+/* Только текст (без иконки) */
+.ToggleSwitch--text-only .ToggleSwitch__icon {
+  @apply hidden;
+}

@@ -1,0 +1,41 @@
+/* ProjectPlanSection.css */
+
+.ProjectPlanSection__item {
+  margin-bottom: 1.5rem;
+}
+
+.ProjectPlanSection__item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ProjectPlanSection__grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .ProjectPlanSection__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.ProjectPlanSection__full-width {
+  grid-column: 1 / -1;
+}
+
+.ProjectPlanSection__mt {
+  margin-top: 0.75rem;
+}
+
+/* Кнопка удаления с увеличенным отступом */
+.ProjectPlanSection__item-header .btn-remove {
+  margin-left: 1rem;
+  margin-top: 0;
+  padding: 0.375rem 0.75rem;
+}

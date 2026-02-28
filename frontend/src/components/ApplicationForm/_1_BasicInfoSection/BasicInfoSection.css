@@ -1,0 +1,16 @@
+/* ========================================
+   BasicInfoSection
+   Секция 1: Основная информация
+   ======================================== */
+
+.BasicInfoSection {
+  /* Контейнер секции */
+}
+
+.BasicInfoSection__grid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+}
+
+.BasicInfoSection__full-width {
+  @apply md:col-span-2;
+}

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { applicationService } from '../utils/applicationService';
 import type { Application } from '../utils/types';
+import UserHeader from '../components/UserHeader';
 
 export default function ApplicationView() {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +28,7 @@ export default function ApplicationView() {
     if (id) {
       loadApplication();
     }
-  }, [id, navigate]);
+  }, [id]);
 
   const handleDelete = async () => {
     if (!confirm('Вы уверены, что хотите удалить эту заявку?')) return;
@@ -69,34 +70,35 @@ export default function ApplicationView() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-indigo-600">Просмотр заявки</h1>
+    <div className="application-view-page bg-gray-50">
+      <UserHeader />
+
+      <main className="page-main">
+        {/* Заголовок с кнопками */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Просмотр заявки</h2>
           <div className="flex gap-2">
             <Link
               to={`/applications/${application.id}/edit`}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+              className="btn-header"
             >
               Редактировать
             </Link>
             <Link
               to="/applications"
-              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+              className="btn-cancel"
             >
               Назад к списку
             </Link>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-4xl mx-auto py-6 px-4">
         <div className="bg-white rounded-lg shadow p-6">
           {/* Заголовок и статус */}
-          <div className="flex justify-between items-start mb-6">
+          <div className="application-info-container">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{application.title}</h2>
-              <p className="text-gray-500 mt-1">
+              <h2 className="application-title">{application.title}</h2>
+              <p className="application-subtitle">
                 Заявка №{application.id} от {application.created_at ? new Date(application.created_at).toLocaleDateString('ru-RU', {
                   year: 'numeric',
                   month: 'long',
@@ -112,14 +114,14 @@ export default function ApplicationView() {
           </div>
 
           {/* Основная информация */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 pb-6 border-b">
+          <div className="application-data-grid">
             <div>
-              <h3 className="text-sm font-medium text-gray-500">Направление</h3>
-              <p className="mt-1 text-gray-900">{application.direction_name || 'Не выбрано'}</p>
+              <h3 className="application-data-label">Направление</h3>
+              <p className="application-data-value">{application.direction_name || 'Не выбрано'}</p>
             </div>
             <div>
-              <h3 className="text-sm font-medium text-gray-500">Дата подачи</h3>
-              <p className="mt-1 text-gray-900">
+              <h3 className="application-data-label">Дата подачи</h3>
+              <p className="application-data-value">
                 {application.submitted_at
                   ? new Date(application.submitted_at).toLocaleDateString('ru-RU')
                   : 'Не подана'}
@@ -128,49 +130,49 @@ export default function ApplicationView() {
           </div>
 
           {/* Описание проекта */}
-          <div className="space-y-6">
+          <div className="application-section">
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Описание идеи</h3>
-              <p className="text-gray-700 whitespace-pre-wrap">{application.idea_description}</p>
+              <h3 className="application-section-title">Описание идеи</h3>
+              <p className="application-section-text">{application.idea_description}</p>
             </section>
 
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Важность для команды</h3>
-              <p className="text-gray-700 whitespace-pre-wrap">{application.importance_to_team}</p>
+              <h3 className="application-section-title">Важность для команды</h3>
+              <p className="application-section-text">{application.importance_to_team}</p>
             </section>
 
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Цель проекта</h3>
-              <p className="text-gray-700 whitespace-pre-wrap">{application.project_goal}</p>
+              <h3 className="application-section-title">Цель проекта</h3>
+              <p className="application-section-text">{application.project_goal}</p>
             </section>
 
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Задачи проекта</h3>
-              <p className="text-gray-700 whitespace-pre-wrap">{application.project_tasks}</p>
+              <h3 className="application-section-title">Задачи проекта</h3>
+              <p className="application-section-text">{application.project_tasks}</p>
             </section>
 
             {application.implementation_experience && (
               <section>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Опыт реализации</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">{application.implementation_experience}</p>
+                <h3 className="application-section-title">Опыт реализации</h3>
+                <p className="application-section-text">{application.implementation_experience}</p>
               </section>
             )}
 
             {application.results_description && (
               <section>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Ожидаемые результаты</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">{application.results_description}</p>
+                <h3 className="application-section-title">Ожидаемые результаты</h3>
+                <p className="application-section-text">{application.results_description}</p>
               </section>
             )}
           </div>
 
           {/* Кнопка удаления */}
-          <div className="mt-8 pt-6 border-t">
+          <div className="application-delete-container">
             <button
               onClick={handleDelete}
-              className="text-red-600 hover:text-red-800 text-sm"
+              className="application-delete-button"
             >
-              🗑️ Удалить заявку
+              Удалить заявку
             </button>
           </div>
         </div>

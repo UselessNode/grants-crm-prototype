@@ -1,0 +1,20 @@
+/* DateInput.css */
+
+.DateInput {
+  position: relative;
+}
+
+.DateInput__error {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #ef4444;
+}
+
+.DateInput__error-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}

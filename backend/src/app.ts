@@ -14,6 +14,13 @@ const app = express();
 app.use(helmet()); // Защита заголовков
 app.use(cors()); // Разрешение CORS
 app.use(morgan('dev')); // Логирование запросов
+
+// Установка кодировки UTF-8 для всех ответов
+app.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -23,7 +30,10 @@ app.get('/api/health', (req, res) => {
 });
 
 // Подключение маршрутов
+import authRoutes from './routes/authRoutes';
 import applicationRoutes from './routes/applicationRoutes';
+
+app.use('/api', authRoutes);
 app.use('/api', applicationRoutes);
 
 // Обработка 404

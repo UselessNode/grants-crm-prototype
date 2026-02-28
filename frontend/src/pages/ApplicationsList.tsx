@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { applicationService } from '../utils/applicationService';
 import type { Application, Direction, Status } from '../utils/types';
+import UserHeader from '../components/UserHeader';
 
 export default function ApplicationsList() {
   const [applications, setApplications] = useState<Application[]>([]);
@@ -84,25 +85,26 @@ export default function ApplicationsList() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-indigo-600">Заявки на гранты</h1>
+    <div className="applications-list-page bg-gray-50">
+      <UserHeader />
+
+      <main className="page-main-lg">
+        {/* Заголовок с кнопкой */}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Заявки</h2>
           <Link
             to="/applications/new"
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+            className="btn-header"
           >
             + Новая заявка
           </Link>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto py-6 px-4">
         {/* Фильтры */}
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="filters-container">
+          <div className="filters-grid">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="filter-label">
                 Поиск
               </label>
               <input
@@ -110,18 +112,18 @@ export default function ApplicationsList() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Название или описание..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="filter-input"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="filter-label">
                 Направление
               </label>
               <select
                 value={directionFilter}
                 onChange={(e) => setDirectionFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="filter-select"
               >
                 <option value="">Все направления</option>
                 {directions.map((d) => (
@@ -131,13 +133,13 @@ export default function ApplicationsList() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="filter-label">
                 Статус
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="filter-select"
               >
                 <option value="">Все статусы</option>
                 {statuses.map((s) => (
@@ -147,13 +149,13 @@ export default function ApplicationsList() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="filter-label">
                 На странице
               </label>
               <select
                 value={limit}
                 onChange={(e) => { setLimit(parseInt(e.target.value)); setPage(1); }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="filter-select"
               >
                 <option value="10">10</option>
                 <option value="25">25</option>
@@ -165,7 +167,7 @@ export default function ApplicationsList() {
         </div>
 
         {/* Таблица заявок */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="applications-table-container">
           {loading ? (
             <div className="p-8 text-center text-gray-500">Загрузка...</div>
           ) : applications.length === 0 ? (
@@ -175,59 +177,59 @@ export default function ApplicationsList() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="applications-table">
+                  <thead className="applications-table-header">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="applications-th">
                         ID
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="applications-th">
                         Название
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="applications-th">
                         Направление
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="applications-th">
                         Статус
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="applications-th">
                         Дата создания
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="applications-th">
                         Действия
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="applications-tbody">
                     {applications.map((app) => (
-                      <tr key={app.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <tr key={app.id} className="applications-table-row">
+                        <td className="applications-td">
                           #{app.id}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="applications-td-title">
                           <span className="text-sm font-medium text-gray-900">{app.title}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="applications-td">
                           {app.direction_name || '—'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="applications-td">
                           <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(app.status_name)}`}>
                             {app.status_name || '—'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="applications-td">
                           {app.created_at ? new Date(app.created_at).toLocaleDateString('ru-RU') : '—'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <Link to={`/applications/${app.id}`} className="text-indigo-600 hover:text-indigo-900 mr-3">
+                        <td className="applications-td-text">
+                          <Link to={`/applications/${app.id}`} className="applications-action-link">
                             Просмотр
                           </Link>
-                          <Link to={`/applications/${app.id}/edit`} className="text-blue-600 hover:text-blue-900 mr-3">
+                          <Link to={`/applications/${app.id}/edit`} className="applications-action-link-edit">
                             Редактировать
                           </Link>
                           <button
                             onClick={() => app.id && handleDelete(app.id)}
-                            className="text-red-600 hover:text-red-900"
+                            className="applications-action-button-delete"
                           >
                             Удалить
                           </button>
@@ -239,15 +241,15 @@ export default function ApplicationsList() {
               </div>
 
               {/* Пагинация */}
-              <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                <div className="text-sm text-gray-700">
+              <div className="pagination-container">
+                <div className="pagination-info">
                   Показано {applications.length} из {totalItems} заявок
                 </div>
-                <div className="flex gap-2">
+                <div className="pagination-buttons">
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    className="pagination-button"
                   >
                     ← Назад
                   </button>
@@ -257,7 +259,7 @@ export default function ApplicationsList() {
                   <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    className="pagination-button"
                   >
                     Вперед →
                   </button>

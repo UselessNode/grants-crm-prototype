@@ -1,4 +1,6 @@
 import api from './api';
+import { CONFIG } from '../utils/config';
+import { mockApi } from '../mocks/api';
 import type {
   Application, DirectionsResponse, StatusesResponse, ApplicationsResponse,
   SingleApplicationResponse, Tender, TeamMember, ProjectCoordinator,
@@ -21,6 +23,7 @@ interface CreateApplicationData {
   dobro_responsible?: DobroResponsible[];
   project_plans?: ProjectPlan[];
   project_budget?: ProjectBudget[];
+  additional_materials?: AdditionalMaterial[];
 }
 
 export const applicationService = {
@@ -34,6 +37,9 @@ export const applicationService = {
     direction_id?: number;
     status_id?: number;
   }) {
+    if (CONFIG.MOCK_MODE) {
+      return mockApi.getApplications(params || {});
+    }
     const response = await api.get<ApplicationsResponse>('/applications', { params });
     return response.data;
   },
@@ -42,6 +48,9 @@ export const applicationService = {
    * Получить заявку по ID
    */
   async getApplication(id: number) {
+    if (CONFIG.MOCK_MODE) {
+      return mockApi.getApplication(id);
+    }
     const response = await api.get<SingleApplicationResponse>(`/applications/${id}`);
     return response.data;
   },
@@ -50,6 +59,9 @@ export const applicationService = {
    * Создать новую заявку
    */
   async createApplication(data: CreateApplicationData) {
+    if (CONFIG.MOCK_MODE) {
+      return mockApi.createApplication(data);
+    }
     const response = await api.post<SingleApplicationResponse>('/applications', data);
     return response.data;
   },
@@ -58,6 +70,9 @@ export const applicationService = {
    * Обновить заявку
    */
   async updateApplication(id: number, data: Partial<CreateApplicationData>) {
+    if (CONFIG.MOCK_MODE) {
+      return mockApi.updateApplication(id, data);
+    }
     const response = await api.put<SingleApplicationResponse>(`/applications/${id}`, data);
     return response.data;
   },
@@ -66,6 +81,9 @@ export const applicationService = {
    * Удалить заявку
    */
   async deleteApplication(id: number) {
+    if (CONFIG.MOCK_MODE) {
+      return mockApi.deleteApplication(id);
+    }
     const response = await api.delete(`/applications/${id}`);
     return response.data;
   },
@@ -74,6 +92,9 @@ export const applicationService = {
    * Получить список направлений
    */
   async getDirections() {
+    if (CONFIG.MOCK_MODE) {
+      return mockApi.getDirections();
+    }
     const response = await api.get<DirectionsResponse>('/directions');
     return response.data;
   },
@@ -82,6 +103,9 @@ export const applicationService = {
    * Получить список статусов
    */
   async getStatuses() {
+    if (CONFIG.MOCK_MODE) {
+      return mockApi.getStatuses();
+    }
     const response = await api.get<StatusesResponse>('/statuses');
     return response.data;
   },
@@ -90,6 +114,9 @@ export const applicationService = {
    * Получить список конкурсов
    */
   async getTenders() {
+    if (CONFIG.MOCK_MODE) {
+      return mockApi.getTenders();
+    }
     const response = await api.get<{ success: boolean; data: Tender[] }>('/tenders');
     return response.data;
   },

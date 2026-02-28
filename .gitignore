@@ -1,19 +1,41 @@
-# Node.js
+# ========================================
+# .gitignore для проекта Grants CRM
+# Репозиторий: C:\project\src\
+# ========================================
+
+# ========================================
+# ЗАВИСИМОСТИ
+# ========================================
 node_modules/
+bower_components/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.yarn/
+.pnpm-store/
 
-# Файлы сборки
-/dist
-/build
-/output
+# ========================================
+# СБОРКА И БИЛДЫ
+# ========================================
+dist/
+build/
+output/
+*.tsbuildinfo
+.vite/
 
-# Файлы окружения
+# ========================================
+# ФАЙЛЫ ОКРУЖЕНИЯ
+# ========================================
 .env
 .env.local
 .env.development
 .env.test
 .env.production
+!.env.example
 
-# Логи
+# ========================================
+# ЛОГИ
+# ========================================
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -21,29 +43,21 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Временные файлы
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Файлы покрытия тестами
-coverage
-*.lcov
-
-# Кэш TypeScript
-*.tsbuildinfo
-
-# Файлы IDE
+# ========================================
+# IDE И РЕДАКТОРЫ
+# ========================================
 .idea/
 .vscode/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+*.swp
+*.swo
+*~
+.suo
+*.sublime-project
+*.sublime-workspace
 
-# Системные файлы
+# ========================================
+# СИСТЕМНЫЕ ФАЙЛЫ
+# ========================================
 .DS_Store
 .DS_Store?
 ._*
@@ -51,41 +65,36 @@ coverage
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Базы данных
+# ========================================
+# ТЕСТЫ И ПОКРЫТИЕ
+# ========================================
+coverage/
+*.lcov
+test-results.xml
+.nyc_output/
+
+# ========================================
+# ВРЕМЕННЫЕ ФАЙЛЫ
+# ========================================
+tmp/
+temp/
+*.pid
+*.seed
+*.pid.lock
+
+# ========================================
+# БАЗЫ ДАННЫХ (локальные)
+# ========================================
 *.sqlite
 *.sqlite3
 *.sqlitedb
 *.db
-*.sqlite-journal
 
-# Сборка frontend
-frontend/dist/
-frontend/.vite/
-
-# Сборка backend
-backend/dist/
-
-# Зависимости
-bower_components/
-
-# Файлы тестирования
-test-results.xml
-
-# Отладочные файлы
-*.out
-*.dump
-
-# Менеджеры пакетов
-package-lock.json
-pnpm-lock.yaml
-yarn.lock
-.yarn/cache
-.yarn/unplugged
-.yarn/build-state.yml
-.yarn/install-state.gz
-
-# Конфигурации инструментов
-vite.config.ts
-tailwind.config.js
-postcss.config.js
+# ========================================
+# ИНСТРУМЕНТЫ
+# ========================================
+.eslintcache
+.stylelintcache
+.prettierignore

@@ -9,6 +9,8 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'grants_crm',
   password: process.env.DB_PASSWORD || 'postgres',
   port: parseInt(process.env.DB_PORT || '5432'),
+  // Явно указываем кодировку UTF-8
+  client_encoding: 'UTF8',
 });
 
 export default pool;

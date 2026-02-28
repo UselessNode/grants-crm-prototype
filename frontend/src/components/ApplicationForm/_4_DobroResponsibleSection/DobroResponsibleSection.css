@@ -1,0 +1,26 @@
+/*DobroResponsibleSection.css*/
+/* ========================================
+   DobroResponsibleSection
+   Секция 4: Ответственный Добро.Ру
+   ======================================== */
+
+.DobroResponsibleSection {
+  /* Контейнер секции */
+}
+
+.DobroResponsibleSection__item {
+  @apply bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4
+         transition-all duration-200;
+}
+
+.DobroResponsibleSection__item-header {
+  @apply flex justify-between items-center mb-3;
+}
+
+.DobroResponsibleSection__grid {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-3;
+}
+
+.DobroResponsibleSection__mt {
+  @apply mt-3;
+}

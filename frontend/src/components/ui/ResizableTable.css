@@ -1,0 +1,37 @@
+/* ResizableTable.css */
+
+.ResizableTable {
+  overflow-x: auto;
+  position: relative;
+}
+
+.ResizableTable__table {
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.ResizableTable__th {
+  position: relative;
+  user-select: none;
+}
+
+.ResizableTable__resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  background-color: transparent;
+  transition: background-color 0.15s ease;
+}
+
+.ResizableTable__resizer:hover,
+.ResizableTable__resizer:active {
+  background-color: #6366f1;
+}
+
+.ResizableTable__resizer:active {
+  cursor: col-resize;
+}

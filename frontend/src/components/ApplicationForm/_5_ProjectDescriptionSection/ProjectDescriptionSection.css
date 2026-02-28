@@ -1,0 +1,13 @@
+/*ProjectDescriptionSection.css*/
+/* ========================================
+   ProjectDescriptionSection
+   Секция 5: Описание проекта
+   ======================================== */
+
+.ProjectDescriptionSection {
+  /* Контейнер секции */
+}
+
+.ProjectDescriptionSection__space-y {
+  @apply space-y-4;
+}

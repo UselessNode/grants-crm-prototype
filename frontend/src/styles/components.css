@@ -1,0 +1,950 @@
+/*components.css*/
+
+
+@layer components {
+
+
+  /* Карточка */
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+  }
+
+  .card-hover {
+    @apply transition-shadow duration-200 hover:shadow-lg;
+  }
+
+  /* Карточка секции формы */
+  .section-card {
+    @apply bg-white rounded-lg shadow-md p-6 mb-6
+           transition-all duration-200;
+  }
+
+  /* Вложенная карточка (для элементов внутри секции) */
+  .section-card-item {
+    @apply bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4
+           transition-all duration-200;
+  }
+
+  /* Заголовок секции */
+  .section-title {
+    @apply text-lg font-semibold text-gray-900 mb-4 border-b border-gray-200 pb-2;
+  }
+
+  /* Подзаголовок элемента */
+  .item-label {
+    @apply font-medium text-gray-700;
+  }
+
+  /* Метка поля */
+  .field-label {
+    @apply block text-xs font-medium text-gray-600 mb-1;
+  }
+
+  /* Метка поля (основная) */
+  .field-label-lg {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+
+  /* Поле ввода (базовое) */
+  .field-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded
+           transition-colors duration-200
+           text-gray-900 placeholder-gray-400
+           focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+           disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed;
+  }
+
+  /* Поле ввода (большое) */
+  .field-input-lg {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg
+           transition-colors duration-200
+           text-gray-900 placeholder-gray-400
+           focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+           disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed;
+  }
+
+  /* Поле ввода с ошибкой */
+  .field-input-error {
+    @apply border-red-500 focus:ring-red-500;
+  }
+
+  /* Сообщение об ошибке */
+  .field-error {
+    @apply mt-1 text-xs text-red-500;
+  }
+
+  .field-error-lg {
+    @apply mt-1 text-sm text-red-500;
+  }
+
+  /* Обязательное поле (звёздочка) */
+  .required-mark {
+    @apply text-red-500;
+  }
+
+  /* Кнопка добавления */
+  .btn-add {
+    @apply mt-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium
+           transition-colors duration-200;
+  }
+
+  /* Кнопка удаления */
+  .btn-remove {
+    @apply text-red-600 hover:text-red-800 text-sm font-medium
+           transition-colors duration-200
+           px-3 py-1.5 rounded-lg hover:bg-red-50
+           focus:outline-none focus:ring-2 focus:ring-red-500;
+  }
+
+  /* Кнопка добавления (с иконкой, для заголовка) */
+  .btn-add-icon {
+    @apply inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700
+           text-white px-3 py-1.5 rounded-md text-sm font-medium
+           transition-colors shadow-sm
+           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500;
+  }
+
+  /* Кнопка добавления (с иконкой, компактная) */
+  .btn-add-icon-sm {
+    @apply inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700
+           text-white px-2.5 py-1 rounded text-xs font-medium
+           transition-colors
+           focus:outline-none focus:ring-2 focus:ring-primary-500;
+  }
+
+  /* ========================================
+     СТИЛИ ДЛЯ СПИСКА ЗАЯВОК (APPLICATIONS LIST)
+     ======================================== */
+
+  /* Обёртка страницы списка заявок */
+  .applications-list-page {
+    @apply min-h-screen;
+  }
+
+  /* Контейнер фильтров */
+  .filters-container {
+    @apply bg-white p-4 rounded-lg shadow mb-6;
+  }
+
+  /* Грид фильтров */
+  .filters-grid {
+    @apply grid grid-cols-1 md:grid-cols-4 gap-4;
+  }
+
+  /* Поле ввода фильтра */
+  .filter-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg
+           focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+           text-gray-900 placeholder-gray-400;
+  }
+
+  /* Выбор фильтра (select) */
+  .filter-select {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg
+           focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+           text-gray-900;
+  }
+
+  /* Заголовок фильтра */
+  .filter-label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+
+  /* Контейнер таблицы заявок */
+  .applications-table-container {
+    @apply bg-white rounded-lg shadow overflow-hidden;
+  }
+
+  /* Базовая таблица заявок */
+  .applications-table {
+    @apply min-w-full divide-y divide-gray-200;
+  }
+
+  /* Заголовок таблицы заявок */
+  .applications-table-header {
+    @apply bg-gray-50;
+  }
+
+  /* Ячейки заголовка таблицы заявок */
+  .applications-th {
+    @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200;
+  }
+
+  /* Тело таблицы заявок */
+  .applications-tbody {
+    @apply bg-white;
+  }
+
+  /* Ячейки тела таблицы заявок */
+  .applications-td {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-500;
+  }
+
+  /* Ячейка с названием заявки */
+  .applications-td-title {
+    @apply px-6 py-4 whitespace-nowrap;
+  }
+
+  /* Ячейка с текстом */
+  .applications-td-text {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+  }
+
+  /* Строка таблицы заявок */
+  .applications-table-row {
+    @apply hover:bg-gray-50;
+  }
+
+  /* Кнопки действий в строке таблицы */
+  .applications-action-link {
+    @apply text-indigo-600 hover:text-indigo-900 mr-3;
+  }
+
+  .applications-action-link-edit {
+    @apply text-blue-600 hover:text-blue-900 mr-3;
+  }
+
+  .applications-action-button-delete {
+    @apply text-red-600 hover:text-red-900;
+  }
+
+  /* Пагинация */
+  .pagination-container {
+    @apply px-6 py-4 border-t border-gray-200 flex items-center justify-between;
+  }
+
+  .pagination-info {
+    @apply text-sm text-gray-700;
+  }
+
+  .pagination-buttons {
+    @apply flex gap-2;
+  }
+
+  .pagination-button {
+    @apply px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700;
+  }
+
+  /* Блок итогов */
+  .summary-block {
+    @apply mt-4 p-4 bg-indigo-50 rounded-lg;
+  }
+
+  .summary-label {
+    @apply text-gray-600;
+  }
+
+  .summary-value {
+    @apply ml-2 font-semibold text-gray-600;
+  }
+
+  /* Контейнер таблицы (для прокрутки) */
+  .table-container {
+    @apply overflow-x-auto;
+  }
+
+  /* Базовая таблица */
+  .table {
+    @apply min-w-full border-collapse;
+  }
+
+  /* Заголовок таблицы */
+  .table-header {
+    @apply bg-gray-50;
+  }
+
+  /* Ячейки заголовка */
+  .th {
+    @apply px-3 py-2 text-left text-xs font-semibold text-gray-500
+           uppercase tracking-wider border-b border-gray-200;
+  }
+
+  /* Тело таблицы */
+  .tbody {
+    @apply bg-white;
+  }
+
+  /* Ячейки тела таблицы */
+  .td {
+    @apply px-3 py-2 align-middle text-sm text-gray-900
+           border-b border-gray-200;
+  }
+
+  /* Ячейка для комментария (с увеличенными отступами) */
+  .td-comment {
+    @apply px-3 py-3 align-middle text-sm text-gray-900
+           border-b border-gray-200;
+  }
+
+  /* Ячейка по центру */
+  .td-center {
+    @apply text-center;
+  }
+
+  /* Ячейка справа */
+  .td-right {
+    @apply text-right;
+  }
+
+  /* Строка таблицы */
+  .table-row {
+    @apply hover:bg-gray-50 transition-colors duration-150;
+  }
+
+  /* Строка таблицы с ошибкой */
+  .table-row-error {
+    @apply bg-red-50 hover:bg-red-100;
+  }
+
+  /* Строка комментария */
+  .table-comment-row {
+    @apply bg-gray-50;
+  }
+
+  /* Строка комментария с ошибкой */
+  .table-comment-row-error {
+    @apply bg-red-100;
+  }
+
+  /* Строка добавления */
+  .table-add-row {
+    @apply bg-gray-50;
+  }
+
+  .td-add {
+    @apply px-3 py-3 text-center;
+  }
+
+  /* Жирный разделитель между статьями */
+  .table-divider-row {
+    @apply bg-gray-100;
+  }
+
+  .table-divider {
+    @apply px-3 py-0 border-b-2 border-gray-300;
+  }
+
+  /* Иконка ошибки в ячейке */
+  .table-error-icon {
+    @apply text-red-600 flex items-center justify-center;
+  }
+
+  /* Поля ввода в таблицах (компактные, без скруглений) */
+  .table-input {
+    @apply w-full px-2 py-1.5 border-0 bg-transparent
+           text-gray-900 text-sm
+           focus:outline-none focus:ring-0
+           placeholder-gray-400;
+  }
+
+  /* Скрываем стрелочки у input type="number" */
+  .table-input::-webkit-inner-spin-button,
+  .table-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+
+  .table-input-error {
+    @apply bg-red-50;
+  }
+
+  .table-input-number {
+    @apply table-input text-left;
+  }
+
+  .table-input-center {
+    @apply table-input text-center;
+  }
+
+  /* Обёртка для полей с символом валюты */
+  .table-input-wrapper {
+    @apply relative;
+  }
+
+  .table-input-currency {
+    @apply absolute inset-y-0 left-0 flex items-center pl-2
+           text-gray-400 text-xs pointer-events-none;
+  }
+
+  .table-input-with-currency {
+    @apply pl-5;
+  }
+
+  /* Символ валюты справа */
+  .table-input-currency-right {
+    @apply absolute inset-y-0 right-0 flex items-center pr-2
+           text-gray-400 text-xs pointer-events-none;
+  }
+
+  .table-input-with-currency-right {
+    @apply pr-5;
+  }
+
+  /* Комментарий в таблице */
+  .table-comment-wrapper {
+    @apply flex items-center gap-2;
+  }
+
+  .table-comment-icon {
+    @apply w-4 h-4 text-gray-400 flex-shrink-0;
+  }
+
+  .table-comment-input {
+    @apply w-full px-2 py-1.5 border-0 bg-transparent
+           text-gray-600 text-sm
+           focus:outline-none focus:ring-0
+           placeholder-gray-400 resize-none;
+  }
+
+  /* Кнопки действий в таблице */
+  .table-action-btn {
+    @apply p-1.5 rounded transition-all duration-200
+           focus:outline-none focus:ring-2
+           disabled:opacity-30 disabled:cursor-not-allowed;
+  }
+
+  .table-action-btn-delete {
+    @apply table-action-btn
+           text-gray-300 hover:text-red-600 hover:bg-red-50
+           focus:ring-red-500
+           disabled:hover:bg-transparent disabled:hover:text-gray-300;
+  }
+
+  /* Подвал таблицы */
+  .table-footer {
+    @apply bg-gray-50 font-medium text-gray-700 border-t border-gray-200;
+  }
+
+  .table-footer-label {
+    @apply px-3 py-2 text-right uppercase text-xs tracking-wider;
+  }
+
+  .table-footer-value {
+    @apply px-3 py-2 text-sm;
+  }
+
+  .table-footer-value-primary {
+    @apply text-primary-600 font-semibold;
+  }
+
+  .table-footer-value-success {
+    @apply text-green-600 font-semibold;
+  }
+
+  .table-footer-value-error {
+    @apply text-red-600 font-semibold;
+  }
+
+  /* Обёртка для значения с валютой в футере */
+  .table-footer-input-wrapper {
+    @apply inline-flex items-baseline gap-0.5;
+  }
+
+  .table-footer-currency {
+    @apply text-gray-400 text-xs ml-0.5;
+  }
+
+  /* Пустое состояние таблицы */
+  .table-empty-state {
+    @apply px-3 py-8 text-center text-gray-500;
+  }
+
+  .table-empty-content {
+    @apply flex flex-col items-center justify-center;
+  }
+
+  .table-empty-icon {
+    @apply w-10 h-10 text-gray-300 mb-2;
+  }
+
+  .table-empty-text {
+    @apply text-sm;
+  }
+
+  /* Примечание */
+  .table-note {
+    @apply mt-3 text-xs text-gray-400 text-right;
+  }
+
+  /* ========================================
+     СТИЛИ ДЛЯ ПРОСМОТРА ЗАЯВКИ (APPLICATION VIEW)
+     ======================================== */
+
+  /* Обёртка страницы просмотра заявки */
+  .application-view-page {
+    @apply min-h-screen;
+  }
+
+  /* Контейнер основной информации */
+  .application-info-container {
+    @apply flex justify-between items-start mb-6;
+  }
+
+  /* Заголовок заявки */
+  .application-title {
+    @apply text-2xl font-bold text-gray-900;
+  }
+
+  /* Подзаголовок заявки */
+  .application-subtitle {
+    @apply text-gray-500 mt-1;
+  }
+
+  /* Контейнер основных данных */
+  .application-data-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 pb-6 border-b;
+  }
+
+  /* Заголовок секции данных */
+  .application-data-label {
+    @apply text-sm font-medium text-gray-500;
+  }
+
+  /* Значение секции данных */
+  .application-data-value {
+    @apply mt-1 text-gray-900;
+  }
+
+  /* Секция описания */
+  .application-section {
+    @apply space-y-6;
+  }
+
+  /* Заголовок секции описания */
+  .application-section-title {
+    @apply text-lg font-semibold text-gray-900 mb-2;
+  }
+
+  /* Текст секции описания */
+  .application-section-text {
+    @apply text-gray-700 whitespace-pre-wrap;
+  }
+
+  /* Контейнер кнопки удаления */
+  .application-delete-container {
+    @apply mt-8 pt-6 border-t;
+  }
+
+  /* Кнопка удаления */
+  .application-delete-button {
+    @apply text-red-600 hover:text-red-800 text-sm;
+  }
+
+  /* ========================================
+     ТАБЛИЦА БЮДЖЕТА
+     Наследует базовые классы .table, .th, .td
+     ----------------------------------------
+     TODO: Вынести в отдельный файл
+     ======================================== */
+
+  .budget-table-container {
+    @apply table-container;
+  }
+
+  .budget-table {
+    @apply table;
+  }
+
+  .budget-table-header {
+    @apply table-header;
+  }
+
+  .budget-th {
+    @apply th;
+  }
+
+  .budget-tbody {
+    @apply tbody;
+  }
+
+  .budget-td {
+    @apply td;
+  }
+
+  .budget-td-input {
+    @apply field-input text-sm;
+  }
+
+  .budget-td-input-number {
+    @apply field-input text-sm text-right;
+  }
+
+  .budget-td-total {
+    @apply field-input text-sm bg-gray-100 text-right;
+  }
+
+  .budget-td-comment {
+    @apply field-input-lg;
+  }
+
+  .budget-btn-remove {
+    @apply btn-remove flex items-center justify-center h-full;
+  }
+
+  /* ========================================
+     КНОПКИ
+     ======================================== */
+
+  .btn {
+    @apply inline-flex items-center justify-center font-medium rounded-lg
+           transition-all duration-200 focus:outline-none focus:ring-2
+           focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700
+           focus:ring-primary-500 shadow-sm hover:shadow;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white text-gray-700 border border-gray-300
+           hover:bg-gray-50 focus:ring-primary-500 shadow-sm;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700
+           focus:ring-red-500 shadow-sm;
+  }
+
+  .btn-ghost {
+    @apply btn text-gray-600 hover:bg-gray-100 focus:ring-gray-500;
+  }
+
+  /* Кнопка действия в хедере */
+  .btn-header {
+    @apply inline-flex items-center justify-center font-medium rounded-lg
+           transition-all duration-200 focus:outline-none focus:ring-2
+           focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed
+           bg-indigo-600 text-white px-4 py-2 hover:bg-indigo-700
+           focus:ring-indigo-500 shadow-sm hover:shadow;
+  }
+
+  /* Кнопка отмены */
+  .btn-cancel {
+    @apply inline-flex items-center justify-center font-medium rounded-lg
+           transition-all duration-200 focus:outline-none focus:ring-2
+           focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed
+           bg-white text-gray-700 border border-gray-300 px-6 py-3
+           hover:bg-gray-100 focus:ring-gray-500;
+  }
+
+  /* Кнопка сохранения */
+  .btn-submit {
+    @apply inline-flex items-center justify-center font-medium rounded-lg
+           transition-all duration-200 focus:outline-none focus:ring-2
+           focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed
+           bg-indigo-600 text-white px-4 py-3 hover:bg-indigo-700
+           focus:ring-indigo-500 shadow-sm hover:shadow flex-1;
+  }
+
+  /* Контейнер кнопок действий формы */
+  .form-actions {
+    @apply flex gap-4 pt-4 border-t sticky bottom-4 bg-gray-50 p-4 rounded-lg;
+  }
+
+  /* Обёртка страницы формы заявки */
+  .application-form-page {
+    @apply min-h-screen;
+  }
+
+  /* Заголовок страницы */
+  .page-header {
+    @apply bg-white shadow-sm sticky top-0 z-10;
+  }
+
+  .page-header-content {
+    @apply max-w-5xl mx-auto px-4 py-4 flex justify-between items-center;
+  }
+
+  .page-header-content-lg {
+    @apply max-w-7xl mx-auto px-4 py-4 flex justify-between items-center;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-indigo-600;
+  }
+
+  /* Основной контейнер страницы */
+  .page-main {
+    @apply max-w-5xl mx-auto py-6 px-4;
+  }
+
+  .page-main-lg {
+    @apply max-w-7xl mx-auto py-6 px-4;
+  }
+
+  /* Поля ввода (старые классы для совместимости) */
+  .input {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-primary-500
+           focus:border-transparent
+           disabled:bg-gray-100 disabled:cursor-not-allowed;
+  }
+
+  .input-error {
+    @apply border-red-500 focus:ring-red-500;
+  }
+
+  /* ========================================
+     БЕЙДЖИ
+     ======================================== */
+
+  .badge {
+    @apply inline-flex items-center font-medium rounded-full px-2.5 py-0.5 text-sm;
+  }
+
+  .badge-default {
+    @apply badge bg-gray-100 text-gray-800;
+  }
+
+  .badge-success {
+    @apply badge bg-green-100 text-green-800;
+  }
+
+  .badge-warning {
+    @apply badge bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-error {
+    @apply badge bg-red-100 text-red-800;
+  }
+
+  .badge-info {
+    @apply badge bg-blue-100 text-blue-800;
+  }
+
+  /* Статусы заявок */
+  .badge-status-draft {
+    @apply badge bg-status-draft-bg text-status-draft-text;
+  }
+
+  .badge-status-submitted {
+    @apply badge bg-status-submitted-bg text-status-submitted-text;
+  }
+
+  .badge-status-review {
+    @apply badge bg-status-review-bg text-status-review-text;
+  }
+
+  .badge-status-approved {
+    @apply badge bg-status-approved-bg text-status-approved-text;
+  }
+
+  .badge-status-rejected {
+    @apply badge bg-status-rejected-bg text-status-rejected-text;
+  }
+
+  /* ========================================
+     Overrides (селекторы элементов)
+     ======================================== */
+
+  /* Улучшенные стили для select */
+  select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'%3e%3c/path%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    appearance: none;
+    @apply text-gray-900;
+  }
+
+  /* Улучшенные стили для input */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="tel"],
+  input[type="url"],
+  textarea {
+    @apply text-gray-900 placeholder-gray-400;
+  }
+
+  /* Улучшенные стили для checkbox и radio */
+  input[type="checkbox"],
+  input[type="radio"] {
+    @apply w-4 h-4 text-primary-600 border-gray-300
+           focus:ring-primary-500 rounded;
+  }
+
+  input[type="checkbox"] {
+    @apply rounded;
+  }
+
+  input[type="radio"] {
+    @apply rounded-full;
+  }
+
+  /* Стили для кнопок */
+  button {
+    @apply text-gray-900;
+  }
+
+  /* ========================================
+     ФОРМЫ АВТОРИЗАЦИИ
+     ======================================== */
+
+  /* Контейнер страницы авторизации */
+  .auth-container {
+    @apply min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8;
+  }
+
+  /* Карточка авторизации */
+  .auth-card {
+    @apply sm:mx-auto sm:w-full sm:max-w-md bg-white rounded-lg shadow-sm border border-gray-200 p-8;
+  }
+
+  /* Заголовок формы авторизации */
+  .auth-title {
+    @apply text-2xl font-bold text-center text-gray-900 mb-6;
+  }
+
+  /* Подзаголовок формы авторизации */
+  .auth-subtitle {
+    @apply text-sm text-center text-gray-600 mb-6;
+  }
+
+  /* Логотип/иконка в форме авторизации */
+  .auth-icon {
+    @apply w-12 h-12 text-primary-600 mx-auto mb-4;
+  }
+
+  /* Группа полей формы */
+  .auth-field-group {
+    @apply mb-5;
+  }
+
+  /* Поле ввода в форме авторизации */
+  .auth-input {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg
+           transition-all duration-200
+           text-gray-900 placeholder-gray-400
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed;
+  }
+
+  /* Поле ввода с ошибкой */
+  .auth-input-error {
+    @apply border-red-500 focus:ring-red-500;
+  }
+
+  /* Сообщение об ошибке в форме авторизации */
+  .auth-error {
+    @apply mt-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg;
+  }
+
+  /* Сообщение об успехе */
+  .auth-success {
+    @apply mt-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg;
+  }
+
+  /* Кнопка в форме авторизации */
+  .auth-btn {
+    @apply w-full flex justify-center py-3 px-4 border border-transparent rounded-lg
+           shadow-sm text-sm font-medium text-white bg-primary-600
+           hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500
+           transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Ссылка в форме авторизации */
+  .auth-link {
+    @apply text-sm font-medium text-primary-600 hover:text-primary-700
+           transition-colors duration-200;
+  }
+
+  /* Разделитель формы */
+  .auth-divider {
+    @apply relative my-6;
+  }
+
+  .auth-divider-line {
+    @apply absolute inset-0 flex items-center;
+  }
+
+  .auth-divider-line::before {
+    @apply w-full border-t border-gray-200 content-[''];
+  }
+
+  .auth-divider-text {
+    @apply relative flex justify-center text-sm;
+  }
+
+  .auth-divider-text span {
+    @apply px-2 bg-white text-gray-500;
+  }
+
+  /* Модальное окно предупреждения о сессии */
+  .session-warning-modal {
+    @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+  }
+
+  .session-warning-content {
+    @apply bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6;
+  }
+
+  .session-warning-title {
+    @apply text-lg font-semibold text-gray-900 mb-2;
+  }
+
+  .session-warning-message {
+    @apply text-gray-600 mb-6;
+  }
+
+  .session-warning-actions {
+    @apply flex gap-3;
+  }
+
+  .session-warning-btn-primary {
+    @apply flex-1 py-2.5 px-4 bg-primary-600 text-white rounded-lg
+           hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500
+           transition-colors duration-200 font-medium;
+  }
+
+  .session-warning-btn-secondary {
+    @apply flex-1 py-2.5 px-4 bg-white text-gray-700 border border-gray-300 rounded-lg
+           hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500
+           transition-colors duration-200 font-medium;
+  }
+
+  /* Хедер с информацией о пользователе */
+  .user-header {
+    @apply flex items-center gap-3;
+  }
+
+  .user-avatar {
+    @apply w-8 h-8 rounded-full bg-primary-600 text-white
+           flex items-center justify-center text-sm font-semibold;
+  }
+
+  .user-name {
+    @apply text-sm font-medium text-gray-700;
+  }
+
+  .user-email {
+    @apply text-xs text-gray-500;
+  }
+
+  /* Выпадающее меню пользователя */
+  .user-menu {
+    @apply absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg
+           border border-gray-200 py-1 z-50;
+  }
+
+  .user-menu-item {
+    @apply w-full text-left px-4 py-2 text-sm text-gray-700
+           hover:bg-gray-100 transition-colors duration-150;
+  }
+
+  .user-menu-divider {
+    @apply border-t border-gray-200 my-1;
+  }
+
+  .user-menu-btn {
+    @apply w-full text-left px-4 py-2 text-sm text-red-600
+           hover:bg-red-50 transition-colors duration-150;
+  }
+}
