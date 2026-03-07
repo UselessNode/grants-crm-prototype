@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
-import { CONFIG } from '../utils/config';
-import { mockApi } from '../mocks/api';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -15,7 +13,7 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Создать axios инстанс с токеном
+   * Создать axios инстанс с токеном (для verify запроса)
    */
   const createAuthAxios = useCallback(() => {
     const instance = axios.create({
@@ -33,20 +31,8 @@ export function useAuth() {
       return config;
     });
 
-    // Обрабатываем ошибки авторизации
-    instance.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          logout();
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
-    );
-
     return instance;
-  }, [token, logout]);
+  }, [token]);
 
   /**
    * Проверка токена при загрузке
@@ -58,23 +44,16 @@ export function useAuth() {
 
     const checkToken = async () => {
       try {
-        let response;
+        const api = createAuthAxios();
+        const response = await api.get('/auth/verify');
 
-        if (CONFIG.MOCK_MODE) {
-          response = await mockApi.verify(token);
-        } else {
-          const api = createAuthAxios();
-          response = await api.get('/auth/verify');
-          response = response.data;
-        }
-
-        if (!response.success) {
+        if (!response.data.success) {
           logout();
           return;
         }
 
         // Проверяем, нужно ли показать предупреждение о сессии
-        const { remainingTime } = response.data;
+        const { remainingTime } = response.data.data;
         const WARNING_TIME = 25 * 60; // 25 минут в секундах
 
         if (remainingTime <= WARNING_TIME && remainingTime > 0) {
@@ -106,17 +85,10 @@ export function useAuth() {
     setError(null);
 
     try {
-      let response;
+      const response = await axios.post(`${API_URL}/auth/login`, { email, password });
 
-      if (CONFIG.MOCK_MODE) {
-        response = await mockApi.login(email, password);
-      } else {
-        response = await axios.post(`${API_URL}/auth/login`, { email, password });
-        response = response.data;
-      }
-
-      if (response.success) {
-        const { user: userData, token: newToken } = response.data;
+      if (response.data.success) {
+        const { user: userData, token: newToken } = response.data.data;
         login(userData, newToken);
         return { success: true };
       }
@@ -145,23 +117,16 @@ export function useAuth() {
     setError(null);
 
     try {
-      let response;
+      const response = await axios.post(`${API_URL}/auth/register`, {
+        email,
+        password,
+        surname,
+        name,
+        patronymic,
+      });
 
-      if (CONFIG.MOCK_MODE) {
-        response = await mockApi.register(email, password, surname, name, patronymic);
-      } else {
-        response = await axios.post(`${API_URL}/auth/register`, {
-          email,
-          password,
-          surname,
-          name,
-          patronymic,
-        });
-        response = response.data;
-      }
-
-      if (response.success) {
-        const { user: userData, token: newToken } = response.data;
+      if (response.data.success) {
+        const { user: userData, token: newToken } = response.data.data;
         login(userData, newToken);
         return { success: true };
       }

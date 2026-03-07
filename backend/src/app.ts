@@ -32,9 +32,11 @@ app.get('/api/health', (req, res) => {
 // Подключение маршрутов
 import authRoutes from './routes/authRoutes';
 import applicationRoutes from './routes/applicationRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 app.use('/api', authRoutes);
 app.use('/api', applicationRoutes);
+app.use('/api', adminRoutes);
 
 // Обработка 404
 app.use((req, res) => {
@@ -59,7 +61,19 @@ const PORT = process.env.BACKEND_PORT || 3001;
 
 // Запуск сервера
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log('\n========================================');
+  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log('========================================');
+  console.log('📝 Тестовые учётные данные:');
+  console.log('----------------------------------------');
+  console.log('👤 Администратор:');
+  console.log('   Email: admin@crm.test');
+  console.log('   Пароль: 123456');
+  console.log('----------------------------------------');
+  console.log('👤 Обычный пользователь:');
+  console.log('   Email: anna@mail.com');
+  console.log('   Пароль: 123456');
+  console.log('========================================\n');
 });
 
 export default app;

@@ -1,11 +1,19 @@
 import { Router } from 'express';
 import { ApplicationController } from '../controllers/ApplicationController';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 
 /**
  * Маршруты для управления заявками
+ * Все маршруты требуют аутентификации
  */
+
+// Middleware для всех маршрутов
+router.use(authMiddleware);
+
+// Получить список ролей (только для администраторов)
+router.get('/roles', ApplicationController.getRoles);
 
 // Получить список заявок (с пагинацией, поиском и фильтрацией)
 router.get('/applications', ApplicationController.index);
@@ -30,5 +38,8 @@ router.put('/applications/:id', ApplicationController.update);
 
 // Удалить заявку
 router.delete('/applications/:id', ApplicationController.delete);
+
+// Подать заявку
+router.post('/applications/:id/submit', ApplicationController.submit);
 
 export default router;

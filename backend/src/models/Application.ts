@@ -9,6 +9,7 @@ export interface Application {
   tender_id?: number | null;
   direction_id?: number | null;
   status_id?: number | null;
+  owner_id?: number | null;
   idea_description: string;
   importance_to_team: string;
   project_goal: string;
@@ -29,6 +30,7 @@ export interface ApplicationCreateData extends Application {
   dobro_responsible?: DobroResponsible[];
   project_plans?: ProjectPlan[];
   project_budget?: ProjectBudget[];
+  owner_id?: number | null;
 }
 
 /**
@@ -67,6 +69,8 @@ export interface ApplicationStatus {
   id?: number;
   name: string;
   description?: string | null;
+  is_editable?: boolean;
+  is_deletable?: boolean;
 }
 
 export interface TeamMember {
@@ -151,14 +155,23 @@ export class ApplicationModel {
     search?: string;
     direction_id?: number;
     status_id?: number;
+    ownerId?: number;
+    userRole?: 'user' | 'admin';
   } = {}) {
     try {
-      const { page = 1, limit = 10, search, direction_id, status_id } = options;
+      const { page = 1, limit = 10, search, direction_id, status_id, ownerId, userRole = 'user' } = options;
       const offset = (page - 1) * limit;
 
       let whereConditions: string[] = [];
       let params: (string | number)[] = [];
       let paramIndex = 1;
+
+      // Разграничение доступа: обычные пользователи видят только свои заявки
+      if (userRole !== 'admin') {
+        whereConditions.push(`a.owner_id = $${paramIndex}`);
+        params.push(ownerId || 0);
+        paramIndex++;
+      }
 
       if (search) {
         whereConditions.push(`(a.title ILIKE $${paramIndex} OR a.idea_description ILIKE $${paramIndex})`);
@@ -194,10 +207,13 @@ export class ApplicationModel {
         SELECT
           a.*,
           d.name as direction_name,
-          s.name as status_name
+          s.name as status_name,
+          u.email as owner_email,
+          COALESCE(CONCAT(u.surname, ' ', u.name)) as owner_name
         FROM applications a
         LEFT JOIN directions d ON a.direction_id = d.id
         LEFT JOIN application_statuses s ON a.status_id = s.id
+        LEFT JOIN users u ON a.owner_id = u.id
         ${whereClause}
         ORDER BY a.created_at DESC
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -283,7 +299,7 @@ export class ApplicationModel {
   /**
    * Создать новую заявку
    */
-  static async create(data: ApplicationCreateData): Promise<ApplicationWithRelations> {
+  static async create(data: ApplicationCreateData, ownerId?: number | null): Promise<ApplicationWithRelations> {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -309,15 +325,16 @@ export class ApplicationModel {
       // Создаем основную заявку
       const appResult = await client.query(`
         INSERT INTO applications (
-          title, tender_id, direction_id, status_id, idea_description, importance_to_team,
+          title, tender_id, direction_id, status_id, owner_id, idea_description, importance_to_team,
           project_goal, project_tasks, implementation_experience, results_description
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *
       `, [
         title,
         tender_id || null,
         direction_id || null,
         status_id || 1,
+        ownerId || null,
         idea_description,
         importance_to_team,
         project_goal,
@@ -390,9 +407,17 @@ export class ApplicationModel {
   /**
    * Обновить заявку
    */
-  static async update(id: number, data: Partial<ApplicationCreateData>): Promise<ApplicationWithRelations | null> {
+  static async update(id: number, data: Partial<ApplicationCreateData>, userId?: number, userRole?: 'user' | 'admin'): Promise<ApplicationWithRelations | null> {
     const client = await pool.connect();
     try {
+      // Проверяем права доступа
+      if (userRole !== 'admin') {
+        const existingApp = await this.findById(id);
+        if (existingApp && existingApp.owner_id !== userId && existingApp.owner_id !== null) {
+          throw new Error('Доступ запрещён. Вы можете редактировать только свои заявки');
+        }
+      }
+
       await client.query('BEGIN');
 
       const fields: string[] = [];
@@ -400,7 +425,7 @@ export class ApplicationModel {
       let paramIndex = 1;
 
       const allowedFields: (keyof Application)[] = [
-        'title', 'tender_id', 'direction_id', 'status_id', 'idea_description',
+        'title', 'tender_id', 'direction_id', 'status_id', 'owner_id', 'idea_description',
         'importance_to_team', 'project_goal', 'project_tasks',
         'implementation_experience', 'results_description', 'submitted_at'
       ];
@@ -489,9 +514,22 @@ export class ApplicationModel {
   /**
    * Удалить заявку
    */
-  static async delete(id: number): Promise<boolean> {
-    const result = await pool.query('DELETE FROM applications WHERE id = $1', [id]);
-    return result.rowCount !== null && result.rowCount > 0;
+  static async delete(id: number, userId?: number, userRole?: 'user' | 'admin'): Promise<boolean> {
+    try {
+      // Проверяем права доступа
+      if (userRole !== 'admin') {
+        const existingApp = await this.findById(id);
+        if (existingApp && existingApp.owner_id !== userId && existingApp.owner_id !== null) {
+          throw new Error('Доступ запрещён. Вы можете удалять только свои заявки');
+        }
+      }
+
+      const result = await pool.query('DELETE FROM applications WHERE id = $1', [id]);
+      return result.rowCount !== null && result.rowCount > 0;
+    } catch (error) {
+      console.warn('Database connection error in delete:', error instanceof Error ? error.message : 'Unknown error');
+      throw error;
+    }
   }
 
   /**
@@ -504,6 +542,48 @@ export class ApplicationModel {
     } catch (error) {
       console.warn('Database connection error in getDirections:', error instanceof Error ? error.message : 'Unknown error');
       return [];
+    }
+  }
+
+  /**
+   * Подать заявку (смена статуса на "Подана")
+   */
+  static async submit(id: number, userId?: number, userRole?: 'user' | 'admin'): Promise<ApplicationWithRelations | null> {
+    const client = await pool.connect();
+    try {
+      const application = await this.findById(id);
+
+      if (!application) {
+        throw new Error('Заявка не найдена');
+      }
+
+      // Проверяем права доступа
+      if (userRole !== 'admin' && application.owner_id !== userId) {
+        throw new Error('Доступ запрещён. Вы можете подавать только свои заявки');
+      }
+
+      // Проверяем, можно ли подать заявку (только из черновика)
+      if (application.status_id !== 1) {
+        throw new Error('Заявку можно подать только из статуса "Черновик"');
+      }
+
+      await client.query('BEGIN');
+
+      // Обновляем статус на "Подана" (id=2) и устанавливаем дату подачи
+      await client.query(`
+        UPDATE applications
+        SET status_id = 2, submitted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [id]);
+
+      await client.query('COMMIT');
+
+      return await this.findById(id) as ApplicationWithRelations | null;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
   }
 

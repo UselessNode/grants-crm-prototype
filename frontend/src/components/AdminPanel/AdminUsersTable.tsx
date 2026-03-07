@@ -1,0 +1,42 @@
+import type { User } from '../../utils/adminService';
+
+type AdminUsersTableProps = {
+  users: User[];
+};
+
+export function AdminUsersTable({ users }: AdminUsersTableProps) {
+  return (
+    <div className="bg-white rounded-lg shadow overflow-hidden">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ФИО</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Роль</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Дата регистрации</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {users.map(u => (
+            <tr key={u.id}>
+              <td className="px-6 py-4 text-sm text-gray-900">{u.id}</td>
+              <td className="px-6 py-4 text-sm text-gray-900">
+                {`${u.surname || ''} ${u.name || ''}`.trim() || '—'}
+              </td>
+              <td className="px-6 py-4 text-sm text-gray-900">{u.email}</td>
+              <td className="px-6 py-4 text-sm">
+                <span className={`px-2 py-1 rounded text-xs font-medium ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
+                  {u.role === 'admin' ? 'Администратор' : 'Пользователь'}
+                </span>
+              </td>
+              <td className="px-6 py-4 text-sm text-gray-500">
+                {u.created_at ? new Date(u.created_at).toLocaleDateString('ru-RU') : '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

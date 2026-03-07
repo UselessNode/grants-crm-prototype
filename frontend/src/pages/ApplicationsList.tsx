@@ -61,7 +61,13 @@ export default function ApplicationsList() {
   }, [search, directionFilter, statusFilter]);
 
   // Удаление заявки
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number, statusName?: string) => {
+    // Проверяем, можно ли удалить заявку по статусу
+    if (statusName !== 'Черновик' && statusName !== 'Отклонена') {
+      alert('Нельзя удалить заявку в текущем статусе');
+      return;
+    }
+
     if (!confirm('Вы уверены, что хотите удалить эту заявку?')) return;
 
     try {
@@ -82,6 +88,16 @@ export default function ApplicationsList() {
       'Отклонена': 'bg-red-100 text-red-800',
     };
     return colors[statusName || ''] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Проверка, можно ли редактировать заявку
+  const canEdit = (statusName?: string) => {
+    return statusName === 'Черновик' || statusName === 'Отклонена';
+  };
+
+  // Проверка, можно ли удалить заявку
+  const canDelete = (statusName?: string) => {
+    return statusName === 'Черновик' || statusName === 'Отклонена';
   };
 
   return (
@@ -180,38 +196,22 @@ export default function ApplicationsList() {
                 <table className="applications-table">
                   <thead className="applications-table-header">
                     <tr>
-                      <th className="applications-th">
-                        ID
-                      </th>
-                      <th className="applications-th">
-                        Название
-                      </th>
-                      <th className="applications-th">
-                        Направление
-                      </th>
-                      <th className="applications-th">
-                        Статус
-                      </th>
-                      <th className="applications-th">
-                        Дата создания
-                      </th>
-                      <th className="applications-th">
-                        Действия
-                      </th>
+                      <th className="applications-th">ID</th>
+                      <th className="applications-th">Название</th>
+                      <th className="applications-th">Направление</th>
+                      <th className="applications-th">Статус</th>
+                      <th className="applications-th">Дата создания</th>
+                      <th className="applications-th">Действия</th>
                     </tr>
                   </thead>
                   <tbody className="applications-tbody">
                     {applications.map((app) => (
                       <tr key={app.id} className="applications-table-row">
-                        <td className="applications-td">
-                          #{app.id}
-                        </td>
+                        <td className="applications-td">#{app.id}</td>
                         <td className="applications-td-title">
                           <span className="text-sm font-medium text-gray-900">{app.title}</span>
                         </td>
-                        <td className="applications-td">
-                          {app.direction_name || '—'}
-                        </td>
+                        <td className="applications-td">{app.direction_name || '—'}</td>
                         <td className="applications-td">
                           <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(app.status_name)}`}>
                             {app.status_name || '—'}
@@ -224,15 +224,24 @@ export default function ApplicationsList() {
                           <Link to={`/applications/${app.id}`} className="applications-action-link">
                             Просмотр
                           </Link>
-                          <Link to={`/applications/${app.id}/edit`} className="applications-action-link-edit">
-                            Редактировать
-                          </Link>
-                          <button
-                            onClick={() => app.id && handleDelete(app.id)}
-                            className="applications-action-button-delete"
-                          >
-                            Удалить
-                          </button>
+                          {canEdit(app.status_name) ? (
+                            <Link to={`/applications/${app.id}/edit`} className="applications-action-link-edit">
+                              Редактировать
+                            </Link>
+                          ) : (
+                            <span className="text-gray-400 cursor-not-allowed" title="Редактирование доступно только для черновиков и отклонённых заявок">
+                              Редактировать
+                            </span>
+                          )}
+                          {canDelete(app.status_name) ? (
+                            <button onClick={() => app.id && handleDelete(app.id, app.status_name)} className="applications-action-button-delete">
+                              Удалить
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 cursor-not-allowed" title="Удаление доступно только для черновиков и отклонённых заявок">
+                              Удалить
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -242,27 +251,11 @@ export default function ApplicationsList() {
 
               {/* Пагинация */}
               <div className="pagination-container">
-                <div className="pagination-info">
-                  Показано {applications.length} из {totalItems} заявок
-                </div>
+                <div className="pagination-info">Показано {applications.length} из {totalItems} заявок</div>
                 <div className="pagination-buttons">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="pagination-button"
-                  >
-                    ← Назад
-                  </button>
-                  <span className="px-3 py-1 text-gray-700">
-                    Страница {page} из {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="pagination-button"
-                  >
-                    Вперед →
-                  </button>
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="pagination-button">← Назад</button>
+                  <span className="px-3 py-1 text-gray-700">Страница {page} из {totalPages}</span>
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="pagination-button">Вперед →</button>
                 </div>
               </div>
             </>

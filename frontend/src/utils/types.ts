@@ -16,6 +16,16 @@ export interface Application {
   direction_name?: string;
   status_name?: string;
   tender_name?: string;
+  owner_id?: number | null;
+  owner_email?: string | null;
+  owner_name?: string | null;
+  // Связанные данные (загружаются при получении полной заявки)
+  team_members?: TeamMember[];
+  project_coordinators?: ProjectCoordinator[];
+  dobro_responsible?: DobroResponsible[];
+  project_plans?: ProjectPlan[];
+  project_budget?: ProjectBudget[];
+  additional_materials?: AdditionalMaterial[];
 }
 
 export interface TeamMember {
@@ -103,6 +113,8 @@ export interface Status {
   id: number;
   name: string;
   description: string | null;
+  is_editable?: boolean;
+  is_deletable?: boolean;
 }
 
 export interface ApplicationsResponse {

@@ -87,7 +87,6 @@ export class AuthController {
             surname: user.surname,
             name: user.name,
             patronymic: user.patronymic,
-            full_name: user.full_name,
             role: user.role,
           },
           token,
@@ -170,7 +169,6 @@ export class AuthController {
             surname: user.surname,
             name: user.name,
             patronymic: user.patronymic,
-            full_name: user.full_name,
             role: user.role,
           },
           token,
@@ -216,7 +214,6 @@ export class AuthController {
           surname: user.surname,
           name: user.name,
           patronymic: user.patronymic,
-          full_name: user.full_name,
           role: user.role,
         },
       });
@@ -316,7 +313,6 @@ export class AuthController {
           surname: updatedUser.surname,
           name: updatedUser.name,
           patronymic: updatedUser.patronymic,
-          full_name: updatedUser.full_name,
           role: updatedUser.role,
         },
       });

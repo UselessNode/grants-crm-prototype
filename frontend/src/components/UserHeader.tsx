@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import Icon from './Icon';
+import logoWatermelon from '../assets/images/Melon.png';
 
 /**
  * Компонент хедера с информацией о пользователе
@@ -52,8 +53,6 @@ export default function UserHeader() {
   const getFullName = () => {
     if (!user) return '';
 
-    if (user.full_name) return user.full_name;
-
     const parts = [user.surname, user.name, user.patronymic].filter(Boolean);
     return parts.join(' ') || user.email;
   };
@@ -63,8 +62,11 @@ export default function UserHeader() {
   return (
     <div className="page-header">
       <div className="page-header-content">
-        {/* Логотип/название */}
-        <h1 className="page-title">Заявки на гранты</h1>
+        {/* Логотип */}
+        <div className="page-logo-wrapper">
+          <img src={logoWatermelon} alt="Арбузные гранты" className="page-logo" />
+          <span className="page-logo-text">Арбузные гранты</span>
+        </div>
 
         {/* Меню пользователя */}
         <div className="relative" ref={menuRef}>
@@ -96,7 +98,26 @@ export default function UserHeader() {
                   </span>
                 )}
               </div>
-              <div className="user-menu-divider"></div>
+
+              {/* Ссылка на админ-панель для администраторов */}
+              {user.role === 'admin' && (
+                <>
+                  <button
+                    onClick={() => {
+                      navigate('/admin');
+                      setMenuOpen(false);
+                    }}
+                    className="user-menu-btn"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon name="settings" size={16} />
+                      Админ-панель
+                    </div>
+                  </button>
+                  <div className="user-menu-divider"></div>
+                </>
+              )}
+
               <button
                 onClick={handleLogout}
                 className="user-menu-btn"

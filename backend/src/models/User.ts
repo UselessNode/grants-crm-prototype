@@ -1,6 +1,16 @@
 import pool from '../config/database';
 
 /**
+ * Интерфейс роли
+ */
+export interface Role {
+  id: number;
+  name: 'user' | 'admin';
+  description?: string | null;
+  created_at?: Date;
+}
+
+/**
  * Интерфейс пользователя
  */
 export interface User {
@@ -9,8 +19,8 @@ export interface User {
   surname?: string | null;
   name?: string | null;
   patronymic?: string | null;
-  full_name?: string | null;
   role: 'user' | 'admin';
+  role_id?: number;
   last_activity?: Date;
   created_at?: Date;
   updated_at?: Date;
@@ -35,8 +45,8 @@ export interface UserUpdateData {
   surname?: string | null;
   name?: string | null;
   patronymic?: string | null;
-  full_name?: string | null;
   role?: 'user' | 'admin';
+  role_id?: number;
   last_activity?: Date;
 }
 
@@ -50,7 +60,11 @@ export class UserModel {
   static async findByEmail(email: string): Promise<(User & { password_hash?: string }) | null> {
     try {
       const result = await pool.query(`
-        SELECT * FROM users WHERE email = $1
+        SELECT u.id, u.email, u.password_hash, u.surname, u.name, u.patronymic,
+               COALESCE(r.name, 'user') as role, u.role_id, u.last_activity, u.created_at, u.updated_at
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE u.email = $1
       `, [email]);
 
       return result.rows[0] || null;
@@ -66,9 +80,11 @@ export class UserModel {
   static async findById(id: number): Promise<User | null> {
     try {
       const result = await pool.query(`
-        SELECT id, email, surname, name, patronymic, full_name, role, last_activity, created_at, updated_at
-        FROM users
-        WHERE id = $1
+        SELECT u.id, u.email, u.surname, u.name, u.patronymic,
+               COALESCE(r.name, 'user') as role, u.role_id, u.last_activity, u.created_at, u.updated_at
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        WHERE u.id = $1
       `, [id]);
 
       return result.rows[0] || null;
@@ -92,11 +108,15 @@ export class UserModel {
         throw new Error('Пользователь с таким email уже существует');
       }
 
+      // Получаем role_id по названию роли
+      const roleResult = await pool.query('SELECT id FROM roles WHERE name = $1', [role]);
+      const roleId = roleResult.rows[0]?.id || 1; // По умолчанию user (id=1)
+
       const result = await client.query(`
-        INSERT INTO users (email, password_hash, surname, name, patronymic, role)
+        INSERT INTO users (email, password_hash, surname, name, patronymic, role_id)
         VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, email, surname, name, patronymic, full_name, role, created_at, updated_at
-      `, [email, password, surname || null, name || null, patronymic || null, role]);
+        RETURNING id, email, surname, name, patronymic, role_id, created_at, updated_at
+      `, [email, password, surname || null, name || null, patronymic || null, roleId]);
 
       return result.rows[0];
     } catch (error) {
@@ -117,7 +137,7 @@ export class UserModel {
       let paramIndex = 1;
 
       const allowedFields: (keyof UserUpdateData)[] = [
-        'surname', 'name', 'patronymic', 'full_name', 'role', 'last_activity'
+        'surname', 'name', 'patronymic', 'role_id', 'last_activity'
       ];
 
       for (const field of allowedFields) {
@@ -126,6 +146,15 @@ export class UserModel {
           values.push(data[field] as string | number | Date | null);
           paramIndex++;
         }
+      }
+
+      // Если обновляется role, обновляем и role_id
+      if (data.role !== undefined) {
+        const roleResult = await pool.query('SELECT id FROM roles WHERE name = $1', [data.role]);
+        const roleId = roleResult.rows[0]?.id || 1;
+        fields.push(`role_id = $${paramIndex}`);
+        values.push(roleId);
+        paramIndex++;
       }
 
       if (fields.length === 0) {
@@ -139,7 +168,7 @@ export class UserModel {
         UPDATE users
         SET ${fields.join(', ')}
         WHERE id = $${paramIndex}
-        RETURNING id, email, surname, name, patronymic, full_name, role, last_activity, created_at, updated_at
+        RETURNING id, email, surname, name, patronymic, role_id, last_activity, created_at, updated_at
       `, values);
 
       return result.rows[0] || null;
@@ -179,9 +208,11 @@ export class UserModel {
 
       // Получаем данные с пагинацией
       const dataResult = await pool.query(`
-        SELECT id, email, surname, name, patronymic, full_name, role, last_activity, created_at, updated_at
-        FROM users
-        ORDER BY created_at DESC
+        SELECT u.id, u.email, u.surname, u.name, u.patronymic,
+               COALESCE(r.name, 'user') as role, u.role_id, u.last_activity, u.created_at, u.updated_at
+        FROM users u
+        LEFT JOIN roles r ON u.role_id = r.id
+        ORDER BY u.created_at DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset]);
 
@@ -218,6 +249,19 @@ export class UserModel {
     } catch (error) {
       console.warn('Database connection error in delete:', error instanceof Error ? error.message : 'Unknown error');
       return false;
+    }
+  }
+
+  /**
+   * Получить все роли
+   */
+  static async getRoles() {
+    try {
+      const result = await pool.query('SELECT * FROM roles ORDER BY id');
+      return result.rows;
+    } catch (error) {
+      console.warn('Database connection error in getRoles:', error instanceof Error ? error.message : 'Unknown error');
+      return [];
     }
   }
 }

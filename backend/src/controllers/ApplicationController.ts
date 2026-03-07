@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { ApplicationModel, ApplicationCreateData } from '../models/Application';
+import { AuthRequest } from '../middleware/auth';
 
 /**
  * Контроллер для управления заявками
@@ -9,9 +10,11 @@ export class ApplicationController {
    * Получить список заявок с пагинацией, поиском и фильтрацией
    * GET /api/applications
    */
-  static async index(req: Request, res: Response) {
+  static async index(req: AuthRequest, res: Response) {
     try {
       const { page, limit, search, direction_id, status_id } = req.query;
+      const userId = req.user?.userId;
+      const userRole = req.user?.role || 'user';
 
       const result = await ApplicationModel.findAll({
         page: page ? parseInt(page as string) : 1,
@@ -19,6 +22,8 @@ export class ApplicationController {
         search: search as string | undefined,
         direction_id: direction_id ? parseInt(direction_id as string) : undefined,
         status_id: status_id ? parseInt(status_id as string) : undefined,
+        ownerId: userId,
+        userRole: userRole as 'user' | 'admin',
       });
 
       res.json({
@@ -39,9 +44,11 @@ export class ApplicationController {
    * Получить заявку по ID
    * GET /api/applications/:id
    */
-  static async show(req: Request, res: Response) {
+  static async show(req: AuthRequest, res: Response) {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user?.userId;
+      const userRole = req.user?.role || 'user';
 
       if (isNaN(id)) {
         return res.status(400).json({
@@ -56,6 +63,14 @@ export class ApplicationController {
         return res.status(404).json({
           success: false,
           message: 'Заявка не найдена',
+        });
+      }
+
+      // Проверяем права доступа: админ видит все, пользователь - только свои
+      if (userRole !== 'admin' && application.owner_id !== userId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Вы можете просматривать только свои заявки',
         });
       }
 
@@ -77,7 +92,7 @@ export class ApplicationController {
    * Создать новую заявку
    * POST /api/applications
    */
-  static async create(req: Request, res: Response) {
+  static async create(req: AuthRequest, res: Response) {
     try {
       const {
         title,
@@ -130,7 +145,8 @@ export class ApplicationController {
         project_budget,
       };
 
-      const newApplication = await ApplicationModel.create(applicationData);
+      const ownerId = req.user?.userId;
+      const newApplication = await ApplicationModel.create(applicationData, ownerId);
 
       res.status(201).json({
         success: true,
@@ -151,9 +167,11 @@ export class ApplicationController {
    * Обновить заявку
    * PUT /api/applications/:id
    */
-  static async update(req: Request, res: Response) {
+  static async update(req: AuthRequest, res: Response) {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user?.userId;
+      const userRole = req.user?.role || 'user';
 
       if (isNaN(id)) {
         return res.status(400).json({
@@ -171,7 +189,7 @@ export class ApplicationController {
         });
       }
 
-      const updatedApplication = await ApplicationModel.update(id, req.body);
+      const updatedApplication = await ApplicationModel.update(id, req.body, userId, userRole as 'user' | 'admin');
 
       res.json({
         success: true,
@@ -192,9 +210,11 @@ export class ApplicationController {
    * Удалить заявку
    * DELETE /api/applications/:id
    */
-  static async delete(req: Request, res: Response) {
+  static async delete(req: AuthRequest, res: Response) {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user?.userId;
+      const userRole = req.user?.role || 'user';
 
       if (isNaN(id)) {
         return res.status(400).json({
@@ -212,7 +232,15 @@ export class ApplicationController {
         });
       }
 
-      await ApplicationModel.delete(id);
+      // Проверяем, можно ли удалить заявку (статус должен позволять удаление)
+      if (application.status_id && application.status_id !== 1 && application.status_id !== 5) {
+        return res.status(403).json({
+          success: false,
+          message: 'Нельзя удалить заявку в текущем статусе',
+        });
+      }
+
+      await ApplicationModel.delete(id, userId, userRole as 'user' | 'admin');
 
       res.json({
         success: true,
@@ -229,10 +257,52 @@ export class ApplicationController {
   }
 
   /**
+   * Подать заявку
+   * POST /api/applications/:id/submit
+   */
+  static async submit(req: AuthRequest, res: Response) {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user?.userId;
+      const userRole = req.user?.role || 'user';
+
+      if (isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Некорректный ID заявки',
+        });
+      }
+
+      const application = await ApplicationModel.findById(id);
+
+      if (!application) {
+        return res.status(404).json({
+          success: false,
+          message: 'Заявка не найдена',
+        });
+      }
+
+      const updatedApplication = await ApplicationModel.submit(id, userId, userRole as 'user' | 'admin');
+
+      res.json({
+        success: true,
+        message: 'Заявка успешно подана',
+        data: updatedApplication,
+      });
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Ошибка при подаче заявки',
+      });
+    }
+  }
+
+  /**
    * Получить список направлений
    * GET /api/directions
    */
-  static async getDirections(req: Request, res: Response) {
+  static async getDirections(req: AuthRequest, res: Response) {
     try {
       const directions = await ApplicationModel.getDirections();
 
@@ -254,7 +324,7 @@ export class ApplicationController {
    * Получить список статусов
    * GET /api/statuses
    */
-  static async getStatuses(req: Request, res: Response) {
+  static async getStatuses(req: AuthRequest, res: Response) {
     try {
       const statuses = await ApplicationModel.getStatuses();
 
@@ -276,7 +346,7 @@ export class ApplicationController {
    * Получить список тендеров
    * GET /api/tenders
    */
-  static async getTenders(req: Request, res: Response) {
+  static async getTenders(req: AuthRequest, res: Response) {
     try {
       const tenders = await ApplicationModel.getTenders();
 
@@ -289,6 +359,37 @@ export class ApplicationController {
       res.status(500).json({
         success: false,
         message: 'Ошибка при получении тендеров',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
+
+  /**
+   * Получить список ролей
+   * GET /api/roles
+   */
+  static async getRoles(req: AuthRequest, res: Response) {
+    try {
+      // Только администраторы могут получать список ролей
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Требуются права администратора',
+        });
+      }
+
+      const { UserModel } = await import('../models/User');
+      const roles = await UserModel.getRoles();
+
+      res.json({
+        success: true,
+        data: roles,
+      });
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при получении ролей',
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
       });
     }

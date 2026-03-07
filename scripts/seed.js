@@ -1,13 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * Скрипт заполнения БД тестовыми данными
- * Использование: npm run seed
- *
- * Seed-данные вставляются через ON CONFLICT DO NOTHING,
- * поэтому повторный запуск не создаёт дубликатов.
- */
-
 const { Pool } = require("pg");
 const fs = require("fs");
 const path = require("path");

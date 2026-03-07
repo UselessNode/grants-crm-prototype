@@ -13,7 +13,6 @@ export interface User {
   surname?: string | null;
   name?: string | null;
   patronymic?: string | null;
-  full_name?: string | null;
   role: 'user' | 'admin';
 }
 

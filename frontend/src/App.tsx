@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import ApplicationsList from './pages/ApplicationsList';
 import ApplicationForm from './pages/ApplicationForm';
 import ApplicationView from './pages/ApplicationView';
+import AdminPanel from './pages/AdminPanel';
 import UIShowcase from './pages/UIShowcase';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -62,6 +63,15 @@ function App() {
           element={
             <PrivateRoute>
               <UIShowcase />
+            </PrivateRoute>
+          }
+        />
+        {/* Админ-панель (доступ только для admin) */}
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoute>
+              <AdminPanel />
             </PrivateRoute>
           }
         />

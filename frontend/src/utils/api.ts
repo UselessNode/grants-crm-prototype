@@ -28,6 +28,23 @@ const api = axios.create({
   },
 });
 
+// Интерцептор для добавления токена авторизации
+// Токен берётся из localStorage напрямую, чтобы избежать циклических зависимостей
+api.interceptors.request.use((config) => {
+  try {
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      const parsed = JSON.parse(authStorage);
+      if (parsed.state?.token) {
+        config.headers.Authorization = `Bearer ${parsed.state.token}`;
+      }
+    }
+  } catch (e) {
+    // Игнорируем ошибки парсинга
+  }
+  return config;
+});
+
 // Интерцептор для обработки ошибок
 api.interceptors.response.use(
   (response) => response,

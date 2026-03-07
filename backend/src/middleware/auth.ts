@@ -7,10 +7,10 @@ import { UserModel } from '../models/User';
  */
 export interface AuthRequest extends Request {
   user?: TokenPayload & {
-    full_name?: string | null;
     surname?: string | null;
     name?: string | null;
     patronymic?: string | null;
+    role_id?: number | null;
   };
 }
 
@@ -58,10 +58,11 @@ export async function authMiddleware(
     // Добавляем данные пользователя в запрос
     req.user = {
       ...payload,
-      full_name: user.full_name,
-      surname: user.surname,
+      role: user.role,
       name: user.name,
+      surname: user.surname,
       patronymic: user.patronymic,
+      role_id: user.role_id,
     };
 
     next();
@@ -115,9 +116,8 @@ export async function optionalAuthMiddleware(
         if (user) {
           req.user = {
             ...payload,
-            full_name: user.full_name,
-            surname: user.surname,
             name: user.name,
+            surname: user.surname,
             patronymic: user.patronymic,
           };
         }

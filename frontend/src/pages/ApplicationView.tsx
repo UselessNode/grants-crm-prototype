@@ -31,6 +31,12 @@ export default function ApplicationView() {
   }, [id]);
 
   const handleDelete = async () => {
+    // Проверяем, можно ли удалить заявку
+    if (application?.status_name !== 'Черновик' && application?.status_name !== 'Отклонена') {
+      alert('Нельзя удалить заявку в текущем статусе');
+      return;
+    }
+
     if (!confirm('Вы уверены, что хотите удалить эту заявку?')) return;
 
     try {
@@ -39,6 +45,21 @@ export default function ApplicationView() {
     } catch (error) {
       console.error('Ошибка удаления:', error);
       alert('Ошибка при удалении заявки');
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!confirm('Вы уверены, что хотите подать эту заявку? После подачи редактирование будет недоступно.')) return;
+
+    try {
+      await applicationService.submitApplication(parseInt(id!));
+      alert('Заявка успешно подана!');
+      // Перезагружаем данные
+      const data = await applicationService.getApplication(parseInt(id!));
+      setApplication(data.data);
+    } catch (error) {
+      console.error('Ошибка подачи:', error);
+      alert('Ошибка при подаче заявки');
     }
   };
 
@@ -51,6 +72,21 @@ export default function ApplicationView() {
       'Отклонена': 'bg-red-100 text-red-800',
     };
     return colors[statusName || ''] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Проверка, можно ли редактировать заявку
+  const canEdit = (statusName?: string) => {
+    return statusName === 'Черновик' || statusName === 'Отклонена';
+  };
+
+  // Проверка, можно ли подать заявку
+  const canSubmit = (statusName?: string) => {
+    return statusName === 'Черновик';
+  };
+
+  // Проверка, можно ли удалить заявку
+  const canDelete = (statusName?: string) => {
+    return statusName === 'Черновик' || statusName === 'Отклонена';
   };
 
   if (loading) {
@@ -78,17 +114,26 @@ export default function ApplicationView() {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">Просмотр заявки</h2>
           <div className="flex gap-2">
-            <Link
-              to={`/applications/${application.id}/edit`}
-              className="btn-header"
-            >
-              Редактировать
-            </Link>
-            <Link
-              to="/applications"
-              className="btn-cancel"
-            >
-              Назад к списку
+            {canEdit(application.status_name) ? (
+              <Link to={`/applications/${application.id}/edit`} className="btn-header">
+                Редактировать
+              </Link>
+            ) : (
+              <span className="px-4 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed" title="Редактирование доступно только для черновиков и отклонённых заявок">
+                Редактировать
+              </span>
+            )}
+            {canSubmit(application.status_name) ? (
+              <button onClick={handleSubmit} className="btn-primary">
+                Подать
+              </button>
+            ) : (
+              <span className="px-4 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed" title="Подать заявку можно только из статуса «Черновик»">
+                Подать
+              </span>
+            )}
+            <Link to="/applications" className="btn-cancel">
+              Вернуться
             </Link>
           </div>
         </div>
@@ -167,13 +212,16 @@ export default function ApplicationView() {
           </div>
 
           {/* Кнопка удаления */}
-          <div className="application-delete-container">
-            <button
-              onClick={handleDelete}
-              className="application-delete-button"
-            >
-              Удалить заявку
-            </button>
+          <div className="application-delete-container mt-6 pt-6 border-t">
+            {canDelete(application.status_name) ? (
+              <button onClick={handleDelete} className="application-delete-button">
+                Удалить заявку
+              </button>
+            ) : (
+              <span className="text-gray-400 cursor-not-allowed" title="Удаление доступно только для черновиков и отклонённых заявок">
+                Удалить заявку
+              </span>
+            )}
           </div>
         </div>
       </main>
