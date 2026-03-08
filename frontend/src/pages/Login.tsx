@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import logoWatermelon from '../assets/images/Melon.png';
+import Logo from '../components/Logo';
 
 /**
  * Страница входа
@@ -58,11 +58,7 @@ export default function Login() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        {/* Логотип */}
-        <div className="auth-logo">
-          <img src={logoWatermelon} alt="Арбузные гранты" />
-          <h1 className="auth-logo-text">Арбузные гранты</h1>
-        </div>
+        <Logo variant="auth" />
 
         {/* Заголовок */}
         <h1 className="auth-title">Вход в систему</h1>

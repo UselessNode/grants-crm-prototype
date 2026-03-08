@@ -224,7 +224,7 @@ export default function ApplicationsList() {
                           <Link to={`/applications/${app.id}`} className="applications-action-link">
                             Просмотр
                           </Link>
-                          {canEdit(app.status_name) ? (
+                          {/*{canEdit(app.status_name) ? (
                             <Link to={`/applications/${app.id}/edit`} className="applications-action-link-edit">
                               Редактировать
                             </Link>
@@ -232,7 +232,7 @@ export default function ApplicationsList() {
                             <span className="text-gray-400 cursor-not-allowed" title="Редактирование доступно только для черновиков и отклонённых заявок">
                               Редактировать
                             </span>
-                          )}
+                          )}*/}
                           {canDelete(app.status_name) ? (
                             <button onClick={() => app.id && handleDelete(app.id, app.status_name)} className="applications-action-button-delete">
                               Удалить

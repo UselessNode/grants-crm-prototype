@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import Icon from './Icon';
-import logoWatermelon from '../assets/images/Melon.png';
+import Logo from './Logo';
 
 /**
  * Компонент хедера с информацией о пользователе
@@ -62,11 +62,7 @@ export default function UserHeader() {
   return (
     <div className="page-header">
       <div className="page-header-content">
-        {/* Логотип */}
-        <div className="page-logo-wrapper">
-          <img src={logoWatermelon} alt="Арбузные гранты" className="page-logo" />
-          <span className="page-logo-text">Арбузные гранты</span>
-        </div>
+        <Logo variant="page" />
 
         {/* Меню пользователя */}
         <div className="relative" ref={menuRef}>

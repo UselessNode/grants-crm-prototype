@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import logoWatermelon from '../assets/images/Melon.png';
+import Logo from '../components/Logo';
 
 /**
  * Страница регистрации
@@ -108,11 +108,7 @@ export default function Register() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        {/* Логотип */}
-        <div className="auth-logo">
-          <img src={logoWatermelon} alt="Арбузные гранты" />
-          <h1 className="auth-logo-text">Арбузные гранты</h1>
-        </div>
+        <Logo variant="auth" />
 
         {/* Заголовок */}
         <h1 className="auth-title">Регистрация</h1>

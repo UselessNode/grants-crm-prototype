@@ -1,7 +1,8 @@
 // UIShowcase.tsx
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { ToggleButton } from '../components/ui/ToggleButton';
+import { Table, TableEmptyState, TableDivider, TableAddRow } from '../components/ui/Table';
 import UserHeader from '../components/UserHeader';
 
 export default function UIShowcase() {
@@ -13,6 +14,27 @@ export default function UIShowcase() {
   const [toggleActive, setToggleActive] = useState(false);
   const [toggleSuccess, setToggleSuccess] = useState(false);
   const [toggleWarning, setToggleWarning] = useState(false);
+
+  // Данные для демонстрации таблицы
+  const [tableData, setTableData] = useState([
+    { id: 1, name: 'Проект "Экология"', direction: 'Экология', status: 'На рассмотрении', date: '01.02.2024' },
+    { id: 2, name: 'Молодёжный форум', direction: 'Образование', status: 'Одобрена', date: '15.01.2024' },
+    { id: 3, name: 'Волонтёрская программа', direction: 'Социальное', status: 'Черновик', date: '20.02.2024' },
+  ]);
+
+  // Данные для интерактивной таблицы
+  const [budgetItems, setBudgetItems] = useState([
+    { id: 1, resource: 'Компьютеры', cost: '50000', quantity: '2', grant: '40000', own: '10000', comment: '' },
+    { id: 2, resource: 'Принтеры', cost: '20000', quantity: '1', grant: '15000', own: '5000', comment: '' },
+  ]);
+
+  const handleAddBudgetItem = () => {
+    setBudgetItems([...budgetItems, { id: Date.now(), resource: '', cost: '0', quantity: '1', grant: '0', own: '0', comment: '' }]);
+  };
+
+  const handleRemoveBudgetItem = (id: number) => {
+    setBudgetItems(budgetItems.filter(item => item.id !== id));
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -209,19 +231,11 @@ export default function UIShowcase() {
                 <p className="field-error">Сообщение об ошибке</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Большое поле (.field-input-lg)</h3>
-                <input
-                  type="text"
-                  className="field-input-lg"
-                  placeholder="Большое поле ввода"
-                />
-              </div>
-              <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Многострочное поле (textarea)</h3>
                 <textarea
+                  className="field-textarea"
                   value={textareaValue}
                   onChange={(e) => setTextareaValue(e.target.value)}
-                  className="field-input-lg"
                   rows={4}
                   placeholder="Введите многострочный текст"
                 />
@@ -229,9 +243,9 @@ export default function UIShowcase() {
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Выпадающий список (select)</h3>
                 <select
+                  className="field-select"
                   value={selectValue}
                   onChange={(e) => setSelectValue(e.target.value)}
-                  className="field-input"
                 >
                   <option value="">Выберите значение</option>
                   <option value="1">Опция 1</option>
@@ -394,9 +408,186 @@ export default function UIShowcase() {
             </div>
           </div>
 
+          {/* Таблицы */}
+          <div className="section-card">
+            <h2 className="section-title">9. Таблицы</h2>
+            <div className="space-y-6">
+              {/* Режим просмотра */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  Таблица в режиме просмотра (с данными)
+                </h3>
+                <Table
+                  columns={[
+                    { field: 'id', header: 'ID', width: 60 },
+                    { field: 'name', header: 'Название' },
+                    { field: 'direction', header: 'Направление' },
+                    {
+                      field: 'status',
+                      header: 'Статус',
+                      render: (item) => {
+                        const colors: Record<string, string> = {
+                          'Черновик': 'bg-gray-100 text-gray-800',
+                          'На рассмотрении': 'bg-yellow-100 text-yellow-800',
+                          'Одобрена': 'bg-green-100 text-green-800',
+                        };
+                        return (
+                          <span className={`px-2 py-1 text-xs rounded-full ${colors[item.status] || 'bg-gray-100'}`}>
+                            {item.status}
+                          </span>
+                        );
+                      },
+                    },
+                    { field: 'date', header: 'Дата', width: 120 },
+                  ]}
+                  data={tableData}
+                  emptyState={<TableEmptyState colSpan={5}>Список проектов пуст</TableEmptyState>}
+                />
+              </div>
+
+              {/* Интерактивная таблица */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  Интерактивная таблица (с полями ввода)
+                </h3>
+                <Table
+                  columns={[
+                    { field: 'resource', header: 'Ресурс', width: 200 },
+                    { field: 'cost', header: 'Стоимость', width: 120 },
+                    { field: 'quantity', header: 'Кол-во', width: 80, className: 'td-center' },
+                    { field: 'grant', header: 'Из гранта', width: 120 },
+                    { field: 'own', header: 'Собственные', width: 120 },
+                    { field: 'actions', header: '', width: 50, className: 'td-center' },
+                  ]}
+                  footer={
+                    <tr>
+                      <td className="table-footer-label">Итого:</td>
+                      <td className="table-footer-value">70 000 ₽</td>
+                      <td className="table-footer-value td-center">3</td>
+                      <td className="table-footer-value">55 000 ₽</td>
+                      <td className="table-footer-value">15 000 ₽</td>
+                      <td></td>
+                    </tr>
+                  }
+                >
+                  <tbody className="tbody">
+                    {budgetItems.map((item, idx) => (
+                      <Fragment key={item.id}>
+                        {idx > 0 && <TableDivider colSpan={6} />}
+                        <tr className="table-row">
+                          <td className="td">
+                            <input
+                              type="text"
+                              value={item.resource}
+                              onChange={(e) => {
+                                const newItems = [...budgetItems];
+                                newItems[idx].resource = e.target.value;
+                                setBudgetItems(newItems);
+                              }}
+                              className="table-input"
+                              placeholder="Название ресурса..."
+                            />
+                          </td>
+                          <td className="td">
+                            <input
+                              type="text"
+                              value={item.cost}
+                              onChange={(e) => {
+                                const newItems = [...budgetItems];
+                                newItems[idx].cost = e.target.value;
+                                setBudgetItems(newItems);
+                              }}
+                              className="table-input-number table-input-with-currency-right"
+                              placeholder="0.00"
+                            />
+                            <span className="table-input-currency-right">₽</span>
+                          </td>
+                          <td className="td td-center">
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const newItems = [...budgetItems];
+                                newItems[idx].quantity = e.target.value;
+                                setBudgetItems(newItems);
+                              }}
+                              className="table-input-center"
+                              placeholder="1"
+                            />
+                          </td>
+                          <td className="td">
+                            <input
+                              type="text"
+                              value={item.grant}
+                              onChange={(e) => {
+                                const newItems = [...budgetItems];
+                                newItems[idx].grant = e.target.value;
+                                setBudgetItems(newItems);
+                              }}
+                              className="table-input-number table-input-with-currency-right"
+                              placeholder="0.00"
+                            />
+                            <span className="table-input-currency-right">₽</span>
+                          </td>
+                          <td className="td">
+                            <input
+                              type="text"
+                              value={item.own}
+                              onChange={(e) => {
+                                const newItems = [...budgetItems];
+                                newItems[idx].own = e.target.value;
+                                setBudgetItems(newItems);
+                              }}
+                              className="table-input-number table-input-with-currency-right"
+                              placeholder="0.00"
+                            />
+                            <span className="table-input-currency-right">₽</span>
+                          </td>
+                          <td className="td td-center">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBudgetItem(item.id)}
+                              className="table-action-btn-delete"
+                              disabled={budgetItems.length <= 1}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                        <tr className="table-comment-row">
+                          <td colSpan={6} className="td-comment">
+                            <div className="table-comment-wrapper">
+                              <svg className="table-comment-icon w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                              </svg>
+                              <textarea
+                                value={item.comment}
+                                onChange={(e) => {
+                                  const newItems = [...budgetItems];
+                                  newItems[idx].comment = e.target.value;
+                                  setBudgetItems(newItems);
+                                }}
+                                rows={1}
+                                className="table-comment-input"
+                                placeholder="Добавить комментарий..."
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      </Fragment>
+                    ))}
+                    <TableAddRow colSpan={6} onAdd={handleAddBudgetItem} label="Добавить статью расходов" />
+                  </tbody>
+                </Table>
+              </div>
+            </div>
+          </div>
+
           {/* Заголовки */}
           <div className="section-card">
-            <h2 className="section-title">8. Типографика</h2>
+            <h2 className="section-title">10. Типографика</h2>
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Заголовки</h3>

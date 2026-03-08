@@ -124,7 +124,7 @@ export default function ApplicationView() {
               </span>
             )}
             {canSubmit(application.status_name) ? (
-              <button onClick={handleSubmit} className="btn-primary">
+              <button onClick={handleSubmit} className="px-4 btn-primary">
                 Подать
               </button>
             ) : (
