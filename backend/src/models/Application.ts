@@ -114,7 +114,8 @@ export interface ProjectPlan {
   task: string;
   event_name: string;
   event_description?: string | null;
-  deadline?: Date | null;
+  start_date?: Date | null;
+  end_date?: Date | null;
   results?: string | null;
   fixation_form?: string | null;
 }
@@ -377,9 +378,9 @@ export class ApplicationModel {
       if (project_plans && project_plans.length > 0) {
         for (const plan of project_plans) {
           await client.query(`
-            INSERT INTO project_plans (application_id, task, event_name, event_description, deadline, results, fixation_form)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-          `, [applicationId, plan.task, plan.event_name, plan.event_description || null, plan.deadline || null, plan.results || null, plan.fixation_form || null]);
+            INSERT INTO project_plans (application_id, task, event_name, event_description, start_date, end_date, results, fixation_form)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `, [applicationId, plan.task, plan.event_name, plan.event_description || null, plan.start_date || null, plan.end_date || null, plan.results || null, plan.fixation_form || null]);
         }
       }
 
@@ -484,9 +485,9 @@ export class ApplicationModel {
         await client.query('DELETE FROM project_plans WHERE application_id = $1', [id]);
         for (const plan of data.project_plans) {
           await client.query(`
-            INSERT INTO project_plans (application_id, task, event_name, event_description, deadline, results, fixation_form)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-          `, [id, plan.task, plan.event_name, plan.event_description || null, plan.deadline || null, plan.results || null, plan.fixation_form || null]);
+            INSERT INTO project_plans (application_id, task, event_name, event_description, start_date, end_date, results, fixation_form)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `, [id, plan.task, plan.event_name, plan.event_description || null, plan.start_date || null, plan.end_date || null, plan.results || null, plan.fixation_form || null]);
         }
       }
 

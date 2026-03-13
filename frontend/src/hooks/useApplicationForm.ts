@@ -60,7 +60,8 @@ const emptyPlan: ProjectPlan = {
   task: '',
   event_name: '',
   event_description: '',
-  deadline: '',
+  start_date: '',
+  end_date: '',
   results: '',
   fixation_form: '',
 };
