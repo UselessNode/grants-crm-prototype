@@ -69,7 +69,8 @@ export interface ProjectPlan {
   task: string;
   event_name: string;
   event_description?: string | null;
-  deadline?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
   results?: string | null;
   fixation_form?: string | null;
 }

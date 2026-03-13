@@ -21,12 +21,22 @@
 
 @media (min-width: 768px) {
   .ProjectPlanSection__grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
 .ProjectPlanSection__full-width {
   grid-column: 1 / -1;
+}
+
+.ProjectPlanSection__half-width {
+  grid-column: span 2;
+}
+
+@media (min-width: 768px) {
+  .ProjectPlanSection__half-width {
+    grid-column: span 2;
+  }
 }
 
 .ProjectPlanSection__mt {

@@ -46,14 +46,14 @@ export function ProjectBudgetSection({
       <h2 className="section-title">
         8. Бюджет проекта
       </h2>
-
+      <p className='mb-4'>Описание описание описание описание</p>
       <ResizableTable
         columns={[
           { field: 'resource_type', header: 'Ресурс', width: 200, minWidth: 150, maxWidth: 400 },
           { field: 'unit_cost', header: 'Стоимость ед.', width: 120, minWidth: 100 },
           { field: 'quantity', header: 'Кол-во', width: 80, minWidth: 60, className: 'td-center' },
-          { field: 'grant_funds', header: 'Из гранта', width: 120, minWidth: 100 },
-          { field: 'own_funds', header: 'Собственные', width: 130, minWidth: 100 },
+          { field: 'grant_funds', header: 'Средства гранта', width: 120, minWidth: 100 },
+          { field: 'own_funds', header: 'Собственные и привлечённые средства', width: 130, minWidth: 100 },
           { field: 'actions', header: '', width: 50, minWidth: 40, className: 'td-center' },
         ]}
         className="ProjectBudgetSection__table"

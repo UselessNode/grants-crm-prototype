@@ -153,7 +153,8 @@ CREATE TABLE IF NOT EXISTS "project_plans" (
 	"task" TEXT NOT NULL,
 	"event_name" TEXT NOT NULL,
 	"event_description" TEXT,
-	"deadline" DATE,
+	"start_date" DATE,
+	"end_date" DATE,
 	"results" TEXT,
 	"fixation_form" TEXT,
 	PRIMARY KEY("id")

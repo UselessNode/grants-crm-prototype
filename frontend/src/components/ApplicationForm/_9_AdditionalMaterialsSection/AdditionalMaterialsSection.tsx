@@ -62,7 +62,7 @@ export function AdditionalMaterialsSection({
           id="file-upload"
           className="AdditionalMaterialsSection__file-input"
           multiple
-          accept=".pdf,.xls,.xlsx,.doc,.docx,.ppt,.pptx,.odt"
+          accept=".jpg,.png,.bmp,.pdf,.xls,.xlsx,.doc,.docx,.ppt,.pptx,.odt"
           onChange={handleFileSelect}
         />
         <label htmlFor="file-upload" className="btn-header mt-2">

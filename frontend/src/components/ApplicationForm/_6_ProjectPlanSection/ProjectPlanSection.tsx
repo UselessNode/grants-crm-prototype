@@ -35,7 +35,7 @@ export function ProjectPlanSection({
             )}
           </div>
           <div className="ProjectPlanSection__grid">
-            <div>
+            <div className="ProjectPlanSection__half-width">
               <label className="field-label">Задача</label>
               <input
                 type="text"
@@ -45,7 +45,7 @@ export function ProjectPlanSection({
                 placeholder="Название решаемой задачи"
               />
             </div>
-            <div>
+            <div className="ProjectPlanSection__half-width">
               <label className="field-label">Мероприятие</label>
               <input
                 type="text"
@@ -65,22 +65,30 @@ export function ProjectPlanSection({
                 placeholder="Подробное описание"
               />
             </div>
-            <div>
-              <label className="field-label">Дата реализации</label>
+            <div className="ProjectPlanSection__half-width">
+              <label className="field-label">Дата начала</label>
               <DateInput
-                value={plan.deadline || ''}
-                onChange={(newValue) => onChange(idx, 'deadline', newValue)}
+                value={plan.start_date || ''}
+                onChange={(newValue) => onChange(idx, 'start_date', newValue)}
+                placeholder="ГГГГ-ММ-ДД"
+              />
+            </div>
+            <div className="ProjectPlanSection__half-width">
+              <label className="field-label">Дата окончания</label>
+              <DateInput
+                value={plan.end_date || ''}
+                onChange={(newValue) => onChange(idx, 'end_date', newValue)}
                 placeholder="ГГГГ-ММ-ДД"
               />
             </div>
             <div className="ProjectPlanSection__full-width">
-              <label className="field-label">Итоги</label>
+              <label className="field-label">Результат</label>
               <input
                 type="text"
                 value={plan.results || ''}
                 onChange={(e) => onChange(idx, 'results', e.target.value)}
                 className="field-input"
-                placeholder="Ожидаемые итоги"
+                placeholder="Ожидаемый результат"
               />
             </div>
             <div className="ProjectPlanSection__full-width">
@@ -101,7 +109,7 @@ export function ProjectPlanSection({
         onClick={onAdd}
         className="btn-add"
       >
-        + Добавить этап
+        + Добавить мероприятие
       </button>
     </div>
   );
