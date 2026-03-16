@@ -46,7 +46,7 @@ export function ProjectBudgetSection({
       <h2 className="section-title">
         8. Бюджет проекта
       </h2>
-      <p className='mb-4'>Описание описание описание описание</p>
+      <p className='mb-4'>Опишите какие ресурсы вам нужны и в каком объёме, укажите, что из этого вы можете найти самостоятельно и где, а на что требуется грант.</p>
       <ResizableTable
         columns={[
           { field: 'resource_type', header: 'Ресурс', width: 200, minWidth: 150, maxWidth: 400 },

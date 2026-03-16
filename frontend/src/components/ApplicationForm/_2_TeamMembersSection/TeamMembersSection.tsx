@@ -99,6 +99,7 @@ export function TeamMembersSection({
                 placeholder="VK, Telegram..."
               />
             </div>
+            {/*Тут добавить пункт для загрузки согласия об обработке персональных данных*/}
           </div>
         </div>
       ))}
