@@ -82,7 +82,7 @@ export function ProjectPlanSection({
               />
             </div>
             <div className="ProjectPlanSection__full-width">
-              <label className="field-label">Результат</label>
+              <label className="field-label">Результат мероприятия</label>
               <input
                 type="text"
                 value={plan.results || ''}
