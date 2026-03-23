@@ -1,7 +1,6 @@
 # 💼 Grants CRM — CRM система для управления заявками на гранты
 
 [![Last Commit](https://img.shields.io/github/last-commit/UselessNode/grants-crm-prototype/main?label=Last%20Commit&color=blue)](https://github.com/UselessNode/grants-crm-prototype)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-development-yellow)]()
 
 **Grants CRM** — это система для управления заявками на гранты с полным циклом: от создания черновика до экспертизы и финального решения.
@@ -111,7 +110,7 @@ npm run seed
 | HTTP-клиент | Axios |
 | Backend | Node.js + Express |
 | База данных | PostgreSQL |
-| ORM | Prisma (опционально) / pg |
+| ORM | pg |
 
 ### Структура проекта
 
@@ -220,40 +219,3 @@ VITE_API_BASE_URL=http://localhost:3001/api
 | PUT | `/api/admin/applications/:id/experts` | Назначить экспертов |
 | GET | `/api/admin/directions` | Направления |
 | GET | `/api/admin/tenders` | Тендеры |
-
----
-
-## 📅 Сроки проекта
-
-- **Финальная сверка:** 28 марта 2026
-- **Итоговый показ:** 4 апреля 2026
-
----
-
-## 📝 TODO
-
-Актуальный список задач в файле [TODO.md](TODO.md)
-
-### Приоритет 1 (Критично) — ✅ Выполнено
-- [x] Эксперты и вердикты
-- [x] Статусы заявок
-- [x] Подача заявки вручную
-- [x] Статус «Черновик» по умолчанию
-
-### Приоритет 2 (Важно) — 🔄 В работе
-- [x] Звёздочки обязательных полей
-- [x] Две даты мероприятия
-- [x] Админ может менять статусы
-- [ ] Поиск, сортировка, фильтрация (частично)
-
-### Приоритет 3 (Желательно)
-- [ ] Согласия на персональные данные (PDF)
-- [ ] Экспорт в PDF
-- [ ] Смена пароля
-- [ ] Ссылка на Dobro.ru
-
----
-
-## 📄 Лицензия
-
-MIT
