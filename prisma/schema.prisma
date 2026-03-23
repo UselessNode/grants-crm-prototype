@@ -1,0 +1,267 @@
+// Prisma Schema для CRM системы грантов
+// Единый источник правды для моделей данных
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// СПРАВОЧНИКИ И РОЛИ
+// ============================================
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50)
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  users       User[]
+
+  @@map("roles")
+}
+
+model Tender {
+  id           Int           @id @default(autoincrement())
+  name         String        @db.VarChar(255)
+  description  String?       @db.Text
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  directions   Direction[]
+  applications Application[]
+
+  @@map("tenders")
+}
+
+model Direction {
+  id           Int           @id @default(autoincrement())
+  name         String        @db.VarChar(255)
+  description  String?       @db.Text
+  tenderId     Int?          @map("tender_id")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  tender       Tender?       @relation(fields: [tenderId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  applications Application[]
+
+  @@map("directions")
+}
+
+model ApplicationStatus {
+  id           Int           @id @default(autoincrement())
+  name         String        @db.VarChar(50)
+  description  String?       @db.Text
+  isEditable   Boolean?      @default(false) @map("is_editable")
+  isDeletable  Boolean?      @default(false) @map("is_deletable")
+  applications Application[]
+
+  @@map("application_statuses")
+}
+
+// ============================================
+// ПОЛЬЗОВАТЕЛИ
+// ============================================
+
+model User {
+  id           Int           @id @default(autoincrement())
+  email        String        @unique @db.VarChar(255)
+  passwordHash String        @map("password_hash") @db.VarChar(255)
+  surname      String?       @db.VarChar(100)
+  name         String?       @db.VarChar(100)
+  patronymic   String?       @db.VarChar(100)
+  roleId       Int           @default(1) @map("role_id")
+  lastActivity DateTime      @default(now()) @map("last_activity")
+  deletedAt    DateTime?     @map("deleted_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  role         Role          @relation(fields: [roleId], references: [id], onDelete: SetDefault, onUpdate: Cascade)
+  applications Application[]
+  changeLogs   ChangeLog[]
+
+  @@map("users")
+}
+
+// ============================================
+// ЭКСПЕРТЫ (НОВАЯ ТАБЛИЦА)
+// ============================================
+
+model Expert {
+  id                    Int           @id @default(autoincrement())
+  surname               String        @db.VarChar(100)
+  name                  String        @db.VarChar(100)
+  patronymic            String?       @db.VarChar(100)
+  extraInfo             String?       @map("extra_info") @db.Text
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  applicationsAsExpert1 Application[] @relation("ApplicationExpert1")
+  applicationsAsExpert2 Application[] @relation("ApplicationExpert2")
+
+  @@map("experts")
+}
+
+// ============================================
+// ЗАЯВКИ
+// ============================================
+
+model Application {
+  id                       Int       @id @default(autoincrement())
+  ownerId                  Int?      @map("owner_id")
+  title                    String    @db.VarChar(255)
+  tenderId                 Int?      @map("tender_id")
+  directionId              Int?      @map("direction_id")
+  statusId                 Int?      @default(1) @map("status_id")
+  expert1                  Int?      @map("expert_1")
+  expert2                  Int?      @map("expert_2")
+  ideaDescription          String    @map("idea_description") @db.Text
+  importanceToTeam         String    @map("importance_to_team") @db.Text
+  projectGoal              String    @map("project_goal") @db.Text
+  projectTasks             String    @map("project_tasks") @db.Text
+  implementationExperience String?   @map("implementation_experience") @db.Text
+  resultsDescription       String?   @map("results_description") @db.Text
+  submittedAt              DateTime? @map("submitted_at")
+  deletedAt                DateTime? @map("deleted_at")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  owner               User?                @relation(fields: [ownerId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  tender              Tender?              @relation(fields: [tenderId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  direction           Direction?           @relation(fields: [directionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  status              ApplicationStatus?   @relation(fields: [statusId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  expert1Relation     Expert?              @relation("ApplicationExpert1", fields: [expert1], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  expert2Relation     Expert?              @relation("ApplicationExpert2", fields: [expert2], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  teamMembers         TeamMember[]
+  projectCoordinators ProjectCoordinator[]
+  dobroResponsibles   DobroResponsible[]
+  projectPlans        ProjectPlan[]
+  projectBudget       ProjectBudget[]
+  additionalMaterials AdditionalMaterial[]
+  changeLogs          ChangeLog[]
+
+  @@map("applications")
+}
+
+// ============================================
+// КОМАНДА ПРОЕКТА
+// ============================================
+
+model TeamMember {
+  id               Int         @id @default(autoincrement())
+  applicationId    Int         @map("application_id")
+  surname          String      @db.VarChar(100)
+  name             String      @db.VarChar(100)
+  patronymic       String?     @db.VarChar(100)
+  tasksInProject   String?     @map("tasks_in_project") @db.Text
+  contactInfo      String?     @map("contact_info") @db.VarChar(255)
+  socialMediaLinks String?     @map("social_media_links") @db.Text
+  application      Application @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("team_members")
+}
+
+model ProjectCoordinator {
+  id               Int         @id @default(autoincrement())
+  applicationId    Int         @map("application_id")
+  surname          String      @db.VarChar(100)
+  name             String      @db.VarChar(100)
+  patronymic       String?     @db.VarChar(100)
+  relationToTeam   String?     @map("relation_to_team") @db.VarChar(255)
+  contactInfo      String?     @map("contact_info") @db.VarChar(255)
+  socialMediaLinks String?     @map("social_media_links") @db.Text
+  education        String?     @db.Text
+  workExperience   String?     @map("work_experience") @db.Text
+  application      Application @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("project_coordinators")
+}
+
+model DobroResponsible {
+  id               Int         @id @default(autoincrement())
+  applicationId    Int         @map("application_id")
+  surname          String      @db.VarChar(100)
+  name             String      @db.VarChar(100)
+  patronymic       String?     @db.VarChar(100)
+  relationToTeam   String?     @map("relation_to_team") @db.VarChar(255)
+  contactInfo      String?     @map("contact_info") @db.VarChar(255)
+  socialMediaLinks String?     @map("social_media_links") @db.Text
+  profileLinks     String?     @map("profile_links") @db.Text // НОВОЕ ПОЛЕ
+  application      Application @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("dobro_responsible")
+}
+
+// ============================================
+// ПЛАН ПРОЕКТА
+// ============================================
+
+model ProjectPlan {
+  id               Int         @id @default(autoincrement())
+  applicationId    Int         @map("application_id")
+  task             String      @db.Text
+  eventName        String      @map("event_name") @db.Text
+  eventDescription String?     @map("event_description") @db.Text
+  startDate        DateTime?   @map("start_date") @db.Date
+  endDate          DateTime?   @map("end_date") @db.Date
+  results          String?     @db.Text
+  fixationForm     String?     @map("fixation_form") @db.Text
+  application      Application @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("project_plans")
+}
+
+// ============================================
+// БЮДЖЕТ ПРОЕКТА
+// ============================================
+
+model ProjectBudget {
+  id            Int         @id @default(autoincrement())
+  applicationId Int         @map("application_id")
+  resourceType  String      @map("resource_type") @db.VarChar(255)
+  unitCost      Decimal?    @map("unit_cost") @db.Decimal(10, 2)
+  quantity      Int?
+  totalCost     Decimal?    @map("total_cost") @db.Decimal(10, 2)
+  ownFunds      Decimal?    @map("own_funds") @db.Decimal(10, 2)
+  grantFunds    Decimal?    @map("grant_funds") @db.Decimal(10, 2)
+  comment       String?     @db.Text
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("project_budget")
+}
+
+// ============================================
+// ДОПОЛНИТЕЛЬНЫЕ МАТЕРИАЛЫ
+// ============================================
+
+model AdditionalMaterial {
+  id            Int         @id @default(autoincrement())
+  applicationId Int         @map("application_id")
+  filePath      String      @map("file_path") @db.VarChar(255)
+  fileName      String      @map("file_name") @db.VarChar(255)
+  fileType      String?     @map("file_type") @db.VarChar(50)
+  fileSize      Int?        @map("file_size")
+  comment       String?     @db.Text
+  uploadedAt    DateTime    @default(now()) @map("uploaded_at")
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("additional_materials")
+}
+
+// ============================================
+// ЛОГ ИЗМЕНЕНИЙ
+// ============================================
+
+model ChangeLog {
+  id            Int          @id @default(autoincrement())
+  applicationId Int?         @map("application_id")
+  userId        Int?         @map("user_id")
+  action        String       @db.VarChar(50)
+  oldValue      Json?        @map("old_value")
+  newValue      Json?        @map("new_value")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("change_logs")
+}
