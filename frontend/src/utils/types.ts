@@ -19,6 +19,8 @@ export interface Application {
   owner_id?: number | null;
   owner_email?: string | null;
   owner_name?: string | null;
+  expert_1?: number | null;
+  expert_2?: number | null;
   // Связанные данные (загружаются при получении полной заявки)
   team_members?: TeamMember[];
   project_coordinators?: ProjectCoordinator[];
@@ -26,6 +28,9 @@ export interface Application {
   project_plans?: ProjectPlan[];
   project_budget?: ProjectBudget[];
   additional_materials?: AdditionalMaterial[];
+  expert1?: Expert | null;
+  expert2?: Expert | null;
+  expert_verdicts?: ExpertVerdict[];
 }
 
 export interface TeamMember {
@@ -61,6 +66,27 @@ export interface DobroResponsible {
   relation_to_team?: string | null;
   contact_info?: string | null;
   social_media_links?: string | null;
+}
+
+export interface Expert {
+  id?: number;
+  surname: string;
+  name: string;
+  patronymic?: string | null;
+  extra_info?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ExpertVerdict {
+  id?: number;
+  application_id: number;
+  expert_id: number;
+  verdict: 'approved' | 'rejected';
+  comment?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  expert?: Expert;
 }
 
 export interface ProjectPlan {

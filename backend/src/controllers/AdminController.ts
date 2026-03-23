@@ -177,4 +177,116 @@ export class AdminController {
       });
     }
   }
+
+  /**
+   * Получить всех экспертов
+   * GET /api/admin/experts
+   */
+  static async getExperts(req: AuthRequest, res: Response) {
+    try {
+      // Только администраторы
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Требуются права администратора',
+        });
+      }
+
+      const experts = await ApplicationModel.getExperts();
+
+      res.json({
+        success: true,
+        data: experts,
+      });
+    } catch (error) {
+      console.error('Error fetching experts:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при получении экспертов',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
+
+  /**
+   * Назначить экспертов на заявку
+   * PUT /api/admin/applications/:id/experts
+   */
+  static async assignExperts(req: AuthRequest, res: Response) {
+    try {
+      // Только администраторы
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Требуются права администратора',
+        });
+      }
+
+      const { id } = req.params;
+      const { expert1Id, expert2Id } = req.body;
+
+      const application = await ApplicationModel.assignExperts(
+        parseInt(id),
+        expert1Id ? parseInt(expert1Id) : null,
+        expert2Id ? parseInt(expert2Id) : null
+      );
+
+      if (!application) {
+        return res.status(404).json({
+          success: false,
+          message: 'Заявка не найдена',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: application,
+      });
+    } catch (error) {
+      console.error('Error assigning experts:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при назначении экспертов',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
+
+  /**
+   * Получить вердикты экспертов для заявки
+   * GET /api/admin/applications/:id/verdicts
+   */
+  static async getVerdicts(req: AuthRequest, res: Response) {
+    try {
+      // Только администраторы
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Требуются права администратора',
+        });
+      }
+
+      const { id } = req.params;
+      const application = await ApplicationModel.findById(parseInt(id));
+
+      if (!application) {
+        return res.status(404).json({
+          success: false,
+          message: 'Заявка не найдена',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: application.expert_verdicts || [],
+      });
+    } catch (error) {
+      console.error('Error fetching verdicts:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при получении вердиктов',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
 }

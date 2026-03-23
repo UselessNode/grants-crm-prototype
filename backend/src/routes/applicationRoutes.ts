@@ -42,4 +42,10 @@ router.delete('/applications/:id', ApplicationController.delete);
 // Подать заявку
 router.post('/applications/:id/submit', ApplicationController.submit);
 
+// Выставить вердикт эксперта
+router.post('/applications/:id/verdict', ApplicationController.addVerdict);
+
+// Получить заявки, назначенные эксперту
+router.get('/expert/:id/applications', ApplicationController.getExpertApplications);
+
 export default router;

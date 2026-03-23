@@ -28,4 +28,9 @@ router.get('/admin/directions', AdminController.getDirections);
 // Тендеры (конкурсы)
 router.get('/admin/tenders', AdminController.getTenders);
 
+// Эксперты
+router.get('/admin/experts', AdminController.getExperts);
+router.put('/admin/applications/:id/experts', AdminController.assignExperts);
+router.get('/admin/applications/:id/verdicts', AdminController.getVerdicts);
+
 export default router;

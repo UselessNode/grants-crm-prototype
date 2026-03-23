@@ -1,5 +1,5 @@
 import api from './api';
-import type { Application, Direction, Tender } from './types';
+import type { Application, Direction, Tender, Expert, ExpertVerdict } from './types';
 
 export interface User {
   id: number;
@@ -42,6 +42,11 @@ export interface AdminUsersResponse {
     total: number;
     pages: number;
   };
+}
+
+export interface AssignExpertsData {
+  expert1Id: number | null;
+  expert2Id: number | null;
 }
 
 export const adminService = {
@@ -88,6 +93,35 @@ export const adminService = {
    */
   async getTenders() {
     const response = await api.get<{ success: boolean; data: Tender[] }>('/admin/tenders');
+    return response.data;
+  },
+
+  /**
+   * Получить всех экспертов
+   */
+  async getExperts() {
+    const response = await api.get<{ success: boolean; data: Expert[] }>('/admin/experts');
+    return response.data;
+  },
+
+  /**
+   * Назначить экспертов на заявку
+   */
+  async assignExperts(applicationId: number, data: AssignExpertsData) {
+    const response = await api.put<{ success: boolean; data: Application }>(
+      `/admin/applications/${applicationId}/experts`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Получить вердикты экспертов для заявки
+   */
+  async getVerdicts(applicationId: number) {
+    const response = await api.get<{ success: boolean; data: ExpertVerdict[] }>(
+      `/admin/applications/${applicationId}/verdicts`
+    );
     return response.data;
   },
 };

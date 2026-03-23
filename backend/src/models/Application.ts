@@ -46,6 +46,9 @@ export interface ApplicationWithRelations extends Application {
   project_plans?: ProjectPlan[];
   project_budget?: ProjectBudget[];
   additional_materials?: AdditionalMaterial[];
+  expert1?: Expert | null;
+  expert2?: Expert | null;
+  expert_verdicts?: ExpertVerdict[];
 }
 
 export interface Direction {
@@ -106,6 +109,27 @@ export interface DobroResponsible {
   relation_to_team?: string | null;
   contact_info?: string | null;
   social_media_links?: string | null;
+}
+
+export interface Expert {
+  id?: number;
+  surname: string;
+  name: string;
+  patronymic?: string | null;
+  extra_info?: string | null;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export interface ExpertVerdict {
+  id?: number;
+  application_id: number;
+  expert_id: number;
+  verdict: 'approved' | 'rejected';
+  comment?: string | null;
+  created_at?: Date;
+  updated_at?: Date;
+  expert?: Expert;
 }
 
 export interface ProjectPlan {
@@ -258,11 +282,19 @@ export class ApplicationModel {
           d.name as direction_name,
           d.description as direction_description,
           s.name as status_name,
-          t.name as tender_name
+          t.name as tender_name,
+          e1.surname as expert1_surname,
+          e1.name as expert1_name,
+          e1.patronymic as expert1_patronymic,
+          e2.surname as expert2_surname,
+          e2.name as expert2_name,
+          e2.patronymic as expert2_patronymic
         FROM applications a
         LEFT JOIN directions d ON a.direction_id = d.id
         LEFT JOIN application_statuses s ON a.status_id = s.id
         LEFT JOIN tenders t ON a.tender_id = t.id
+        LEFT JOIN experts e1 ON a.expert_1 = e1.id
+        LEFT JOIN experts e2 ON a.expert_2 = e2.id
         WHERE a.id = $1
       `, [id]);
 
@@ -273,17 +305,52 @@ export class ApplicationModel {
       const application = appResult.rows[0];
 
       // Получаем связанные данные параллельно
-      const [teamMembers, coordinators, dobro, plans, budget, materials] = await Promise.all([
+      const [teamMembers, coordinators, dobro, plans, budget, materials, verdicts] = await Promise.all([
         pool.query('SELECT * FROM team_members WHERE application_id = $1', [id]),
         pool.query('SELECT * FROM project_coordinators WHERE application_id = $1', [id]),
         pool.query('SELECT * FROM dobro_responsible WHERE application_id = $1', [id]),
         pool.query('SELECT * FROM project_plans WHERE application_id = $1', [id]),
         pool.query('SELECT * FROM project_budget WHERE application_id = $1', [id]),
         pool.query('SELECT * FROM additional_materials WHERE application_id = $1', [id]),
+        pool.query(`
+          SELECT ev.*, e.surname, e.name, e.patronymic
+          FROM expert_verdicts ev
+          LEFT JOIN experts e ON ev.expert_id = e.id
+          WHERE ev.application_id = $1
+        `, [id]),
       ]);
+
+      // Формируем объекты экспертов
+      const expert1 = application.expert1_surname ? {
+        id: application.expert_1,
+        surname: application.expert1_surname,
+        name: application.expert1_name,
+        patronymic: application.expert1_patronymic,
+      } : null;
+
+      const expert2 = application.expert2_surname ? {
+        id: application.expert_2,
+        surname: application.expert2_surname,
+        name: application.expert2_name,
+        patronymic: application.expert2_patronymic,
+      } : null;
+
+      // Добавляем данные об экспертах к вердиктам
+      const verdictsWithExpert = verdicts.rows.map((v) => ({
+        ...v,
+        expert: {
+          id: v.expert_id,
+          surname: v.surname,
+          name: v.name,
+          patronymic: v.patronymic,
+        },
+      }));
 
       return {
         ...application,
+        expert1,
+        expert2,
+        expert_verdicts: verdictsWithExpert,
         team_members: teamMembers.rows,
         project_coordinators: coordinators.rows,
         dobro_responsible: dobro.rows,
@@ -610,6 +677,124 @@ export class ApplicationModel {
       return result.rows;
     } catch (error) {
       console.warn('Database connection error in getTenders:', error instanceof Error ? error.message : 'Unknown error');
+      return [];
+    }
+  }
+
+  /**
+   * Получить всех экспертов
+   */
+  static async getExperts() {
+    try {
+      const result = await pool.query('SELECT * FROM experts ORDER BY surname, name');
+      return result.rows;
+    } catch (error) {
+      console.warn('Database connection error in getExperts:', error instanceof Error ? error.message : 'Unknown error');
+      return [];
+    }
+  }
+
+  /**
+   * Назначить экспертов на заявку
+   */
+  static async assignExperts(applicationId: number, expert1Id: number | null, expert2Id: number | null): Promise<ApplicationWithRelations | null> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      await client.query(`
+        UPDATE applications
+        SET expert_1 = $1, expert_2 = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+      `, [expert1Id, expert2Id, applicationId]);
+
+      await client.query('COMMIT');
+      return await this.findById(applicationId) as ApplicationWithRelations | null;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Добавить вердикт эксперта
+   */
+  static async addVerdict(applicationId: number, expertId: number, verdict: 'approved' | 'rejected', comment?: string | null): Promise<void> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Проверяем, есть ли уже вердикт от этого эксперта
+      const existing = await client.query(
+        'SELECT id FROM expert_verdicts WHERE application_id = $1 AND expert_id = $2',
+        [applicationId, expertId]
+      );
+
+      if (existing.rows.length > 0) {
+        // Обновляем существующий вердикт
+        await client.query(`
+          UPDATE expert_verdicts
+          SET verdict = $1, comment = $2, updated_at = CURRENT_TIMESTAMP
+          WHERE application_id = $1 AND expert_id = $2
+        `, [verdict, comment || null]);
+      } else {
+        // Создаём новый вердикт
+        await client.query(`
+          INSERT INTO expert_verdicts (application_id, expert_id, verdict, comment)
+          VALUES ($1, $2, $3, $4)
+        `, [applicationId, expertId, verdict, comment || null]);
+      }
+
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Проверить, все ли эксперты выставили вердикты
+   */
+  static async areAllVerdictsIn(applicationId: number): Promise<boolean> {
+    try {
+      const app = await this.findById(applicationId);
+      if (!app || !app.expert1 || !app.expert2) {
+        return false;
+      }
+
+      const result = await pool.query(
+        'SELECT COUNT(*) as count FROM expert_verdicts WHERE application_id = $1',
+        [applicationId]
+      );
+
+      const verdictCount = parseInt(result.rows[0].count);
+      // Нужно 2 вердикта (от обоих экспертов)
+      return verdictCount >= 2;
+    } catch (error) {
+      console.warn('Database connection error in areAllVerdictsIn:', error instanceof Error ? error.message : 'Unknown error');
+      return false;
+    }
+  }
+
+  /**
+   * Получить заявки, назначенные эксперту
+   */
+  static async findByExpert(expertId: number) {
+    try {
+      const result = await pool.query(`
+        SELECT a.*, s.name as status_name
+        FROM applications a
+        LEFT JOIN application_statuses s ON a.status_id = s.id
+        WHERE (a.expert_1 = $1 OR a.expert_2 = $1) AND a.deleted_at IS NULL
+        ORDER BY a.created_at DESC
+      `, [expertId]);
+      return result.rows;
+    } catch (error) {
+      console.warn('Database connection error in findByExpert:', error instanceof Error ? error.message : 'Unknown error');
       return [];
     }
   }

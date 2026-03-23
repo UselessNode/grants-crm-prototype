@@ -394,4 +394,116 @@ export class ApplicationController {
       });
     }
   }
+
+  /**
+   * Выставить вердикт эксперта
+   * POST /api/applications/:id/verdict
+   */
+  static async addVerdict(req: AuthRequest, res: Response) {
+    try {
+      const id = parseInt(req.params.id);
+      const expertId = req.body.expertId;
+      const { verdict, comment } = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Некорректный ID заявки',
+        });
+      }
+
+      if (!expertId || !verdict) {
+        return res.status(400).json({
+          success: false,
+          message: 'expertId и verdict обязательны',
+        });
+      }
+
+      if (verdict !== 'approved' && verdict !== 'rejected') {
+        return res.status(400).json({
+          success: false,
+          message: 'verdict должен быть "approved" или "rejected"',
+        });
+      }
+
+      const application = await ApplicationModel.findById(id);
+
+      if (!application) {
+        return res.status(404).json({
+          success: false,
+          message: 'Заявка не найдена',
+        });
+      }
+
+      // Проверяем, является ли пользователь одним из экспертов
+      const isExpert = application.expert1?.id === expertId || application.expert2?.id === expertId;
+      if (!isExpert && req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Вы не являетесь экспертом этой заявки',
+        });
+      }
+
+      await ApplicationModel.addVerdict(id, parseInt(expertId), verdict, comment || null);
+
+      // Проверяем, все ли эксперты выставили вердикты
+      const allVerdictsIn = await ApplicationModel.areAllVerdictsIn(id);
+
+      res.json({
+        success: true,
+        message: 'Вердикт успешно выставлен',
+        data: {
+          allVerdictsIn,
+        },
+      });
+    } catch (error) {
+      console.error('Error adding verdict:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при выставлении вердикта',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
+
+  /**
+   * Получить заявки, назначенные эксперту
+   * GET /api/expert/:id/applications
+   */
+  static async getExpertApplications(req: AuthRequest, res: Response) {
+    try {
+      const expertId = parseInt(req.params.id);
+
+      if (isNaN(expertId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Некорректный ID эксперта',
+        });
+      }
+
+      // Только администраторы или сам эксперт
+      if (req.user?.role !== 'admin') {
+        // Здесь можно добавить проверку, что запрашивающий является этим экспертом
+        // Но пока оставим доступным для админа
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён',
+        });
+      }
+
+      const applications = await ApplicationModel.findByExpert(expertId);
+
+      res.json({
+        success: true,
+        data: applications,
+      });
+    } catch (error) {
+      console.error('Error fetching expert applications:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при получении заявок эксперта',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
 }
