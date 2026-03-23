@@ -98,3 +98,7 @@ temp/
 .eslintcache
 .stylelintcache
 .prettierignore
+# ========================================
+# ПРОЧЕЕ
+# ========================================
+TODO.md

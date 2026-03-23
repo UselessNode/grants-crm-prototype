@@ -36,7 +36,9 @@ export function ProjectPlanSection({
           </div>
           <div className="ProjectPlanSection__grid">
             <div className="ProjectPlanSection__half-width">
-              <label className="field-label">Задача</label>
+              <label className="field-label">
+                Задача <span className="required-mark">*</span>
+              </label>
               <input
                 type="text"
                 value={plan.task}
@@ -46,7 +48,9 @@ export function ProjectPlanSection({
               />
             </div>
             <div className="ProjectPlanSection__half-width">
-              <label className="field-label">Мероприятие</label>
+              <label className="field-label">
+                Мероприятие <span className="required-mark">*</span>
+              </label>
               <input
                 type="text"
                 value={plan.event_name}

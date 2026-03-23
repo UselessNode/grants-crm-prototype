@@ -49,6 +49,13 @@ export interface AssignExpertsData {
   expert2Id: number | null;
 }
 
+export interface AddExpertData {
+  surname: string;
+  name: string;
+  patronymic?: string | null;
+  extra_info?: string | null;
+}
+
 export const adminService = {
   /**
    * Получить статистику
@@ -121,6 +128,17 @@ export const adminService = {
   async getVerdicts(applicationId: number) {
     const response = await api.get<{ success: boolean; data: ExpertVerdict[] }>(
       `/admin/applications/${applicationId}/verdicts`
+    );
+    return response.data;
+  },
+
+  /**
+   * Добавить эксперта
+   */
+  async addExpert(data: AddExpertData) {
+    const response = await api.post<{ success: boolean; data: Expert }>(
+      '/admin/experts',
+      data
     );
     return response.data;
   },

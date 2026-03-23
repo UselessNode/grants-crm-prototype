@@ -3,11 +3,17 @@ import { Link } from 'react-router-dom';
 import { adminService } from '../utils/adminService';
 import { useAuthStore } from '../store/authStore';
 import type { User } from '../utils/adminService';
-import type { Application } from '../utils/types';
+import type { Application, Expert } from '../utils/types';
+import ApplicationsList from '../components/AdminPanel/ApplicationsList';
+import AddExpertModal from '../components/AdminPanel/AddExpertModal';
 
 interface AdminStats {
   users: number;
   applications: number;
+}
+
+interface ExpertWithStats extends Expert {
+  applicationsCount?: number;
 }
 
 /**
@@ -15,14 +21,16 @@ interface AdminStats {
  */
 export function AdminPanel() {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'applications' | 'directories'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'applications' | 'directories' | 'experts'>('dashboard');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [applications, setApplications] = useState<(Application & { owner_email?: string; owner_name?: string })[]>([]);
   const [directions, setDirections] = useState<{ id: number; name: string; description?: string | null }[]>([]);
   const [tenders, setTenders] = useState<{ id: number; name: string; description?: string | null }[]>([]);
+  const [experts, setExperts] = useState<ExpertWithStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAddExpertModalOpen, setIsAddExpertModalOpen] = useState(false);
 
   // Проверка прав администратора
   useEffect(() => {
@@ -49,6 +57,7 @@ export function AdminPanel() {
   useEffect(() => {
     if (user?.role === 'admin' && activeTab === 'applications') {
       loadApplications();
+      loadExperts(); // Загружаем экспертов для фильтров и назначения
     }
   }, [activeTab, user]);
 
@@ -56,6 +65,13 @@ export function AdminPanel() {
   useEffect(() => {
     if (user?.role === 'admin' && activeTab === 'directories') {
       loadDirectories();
+    }
+  }, [activeTab, user]);
+
+  // Загрузка экспертов
+  useEffect(() => {
+    if (user?.role === 'admin' && activeTab === 'experts') {
+      loadExperts();
     }
   }, [activeTab, user]);
 
@@ -115,6 +131,19 @@ export function AdminPanel() {
     }
   };
 
+  const loadExperts = async () => {
+    setLoading(true);
+    try {
+      const data = await adminService.getExperts();
+      setExperts(data.data);
+    } catch (err) {
+      setError('Ошибка загрузки экспертов');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (user?.role !== 'admin') {
     return (
       <div className="container mx-auto p-6">
@@ -149,17 +178,18 @@ export function AdminPanel() {
       {/* Вкладки */}
       <nav className="bg-white border-b">
         <div className="container mx-auto px-6">
-          <div className="flex space-x-4">
+          <div className="flex space-x-4 overflow-x-auto">
             {[
               { id: 'dashboard', label: 'Обзор' },
               { id: 'users', label: 'Пользователи' },
               { id: 'applications', label: 'Заявки' },
+              { id: 'experts', label: 'Эксперты' },
               { id: 'directories', label: 'Справочники' },
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`py-4 px-2 border-b-2 font-medium transition-colors ${
+                className={`py-4 px-2 border-b-2 font-medium transition-colors whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -255,47 +285,13 @@ export function AdminPanel() {
 
         {/* Заявки */}
         {activeTab === 'applications' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Название</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Владелец</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Статус</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Дата создания</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Действия</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {applications.map(app => (
-                  <tr key={app.id}>
-                    <td className="px-6 py-4 text-sm text-gray-900">{app.id}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{app.title}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {app.owner_name || app.owner_email || `ID: ${app.owner_id || '—'}`}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                        {app.status_name || 'Черновик'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {app.created_at ? new Date(app.created_at).toLocaleDateString('ru-RU') : '—'}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <Link
-                        to={`/applications/${app.id}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        Просмотр
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ApplicationsList
+            applications={applications}
+            experts={experts}
+            onExpertsAssigned={() => {
+              loadApplications();
+            }}
+          />
         )}
 
         {/* Справочники */}
@@ -332,7 +328,75 @@ export function AdminPanel() {
             </div>
           </div>
         )}
+
+        {/* Эксперты */}
+        {activeTab === 'experts' && (
+          <div className="experts-list-container">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-800">Список экспертов</h2>
+              <button
+                onClick={() => setIsAddExpertModalOpen(true)}
+                className="btn-add-icon"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Добавить эксперта
+              </button>
+            </div>
+            <table className="experts-table">
+              <thead className="experts-table-header">
+                <tr>
+                  <th className="experts-th">ID</th>
+                  <th className="experts-th">ФИО</th>
+                  <th className="experts-th">Дополнительная информация</th>
+                  <th className="experts-th">Дата добавления</th>
+                </tr>
+              </thead>
+              <tbody>
+                {experts.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="experts-empty-state">
+                      Эксперты ещё не добавлены
+                    </td>
+                  </tr>
+                ) : (
+                  experts.map(expert => (
+                    <tr key={expert.id} className="experts-table-row">
+                      <td className="experts-td">{expert.id}</td>
+                      <td className="experts-td">
+                        <div className="font-medium text-gray-900">
+                          {`${expert.surname || ''} ${expert.name || ''}`.trim() || '—'}
+                        </div>
+                        {expert.patronymic && (
+                          <div className="text-sm text-gray-500">{expert.patronymic}</div>
+                        )}
+                      </td>
+                      <td className="experts-td">
+                        {expert.extra_info || (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="experts-td text-gray-500">
+                        {expert.created_at ? new Date(expert.created_at).toLocaleDateString('ru-RU') : '—'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
+
+      {/* Модальное окно добавления эксперта */}
+      <AddExpertModal
+        isOpen={isAddExpertModalOpen}
+        onClose={() => setIsAddExpertModalOpen(false)}
+        onExpertAdded={() => {
+          loadExperts();
+        }}
+      />
     </div>
   );
 }

@@ -1,0 +1,177 @@
+/* ApplicationsList.css - Компактный список заявок */
+
+.applications-list-component {
+  @apply space-y-4;
+}
+
+/* ========================================
+   ПАНЕЛЬ УПРАВЛЕНИЯ
+   ======================================== */
+
+.applications-controls {
+  @apply space-y-3;
+}
+
+/* Фильтры */
+.applications-filters {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4;
+}
+
+.applications-filters__row {
+  @apply grid grid-cols-2 md:grid-cols-4 gap-3 mb-3;
+}
+
+.applications-filters__field {
+  @apply space-y-1;
+}
+
+.applications-label {
+  @apply block text-xs font-medium text-gray-600;
+}
+
+.applications-input,
+.applications-select {
+  @apply w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded
+         focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500;
+}
+
+.applications-select--sm {
+  @apply w-32;
+}
+
+.applications-filters__count {
+  @apply text-xs text-gray-600 pt-2 border-t border-gray-200;
+}
+
+/* Массовые действия */
+.applications-bulk-actions {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex flex-wrap items-center gap-3;
+}
+
+.applications-checkbox {
+  @apply flex items-center text-sm text-gray-700 cursor-pointer;
+}
+
+.applications-bulk-actions__assign {
+  @apply flex items-center gap-2 ml-auto;
+}
+
+/* ========================================
+   СПИСОК КАРТОЧЕК
+   ======================================== */
+
+.applications-cards {
+  @apply space-y-2;
+}
+
+.application-card {
+  @apply bg-white rounded-lg border border-gray-200 p-3
+         flex flex-wrap items-center gap-3
+         hover:shadow-md hover:border-indigo-200
+         transition-all duration-200;
+}
+
+/* Чекбокс */
+.application-card__select {
+  @apply flex items-center;
+}
+
+/* Основная информация */
+.application-card__main {
+  @apply flex-1 min-w-[200px];
+}
+
+.application-card__header {
+  @apply flex items-center gap-2 mb-1;
+}
+
+.application-card__id {
+  @apply text-xs text-gray-400 font-mono;
+}
+
+.application-card__title {
+  @apply text-sm font-medium text-gray-900 hover:text-indigo-600 hover:underline;
+}
+
+.application-card__meta {
+  @apply flex flex-wrap items-center gap-x-3 gap-y-1 text-xs;
+}
+
+.application-card__meta-item {
+  @apply flex items-center gap-1;
+}
+
+.application-card__meta-label {
+  @apply text-gray-500;
+}
+
+.application-card__meta-value {
+  @apply text-gray-700;
+}
+
+/* Эксперты */
+.application-card__experts {
+  @apply flex flex-col items-start gap-1;
+}
+
+.application-card__experts-label {
+  @apply text-xs text-gray-500;
+}
+
+.application-card__experts-list {
+  @apply flex gap-1;
+}
+
+.expert-tag {
+  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+         bg-indigo-50 text-indigo-700 border border-indigo-100;
+  min-width: 60px;
+}
+
+.expert-tag--empty {
+  @apply bg-gray-50 text-gray-400 border-gray-200;
+}
+
+/* Действия */
+.application-card__actions {
+  @apply flex items-center gap-1;
+}
+
+.application-card__action-btn {
+  @apply p-2 text-lg rounded hover:bg-gray-100 transition-colors;
+}
+
+/* Пустое состояние */
+.applications-empty {
+  @apply text-center text-gray-500 py-12;
+}
+
+/* ========================================
+   АДАПТИВНОСТЬ
+   ======================================== */
+
+@media (max-width: 640px) {
+  .applications-filters__row {
+    @apply grid-cols-1;
+  }
+
+  .application-card {
+    @apply flex-col items-stretch;
+  }
+
+  .application-card__experts {
+    @apply flex-row items-center;
+  }
+
+  .application-card__actions {
+    @apply justify-end;
+  }
+
+  .applications-bulk-actions__assign {
+    @apply flex-wrap;
+  }
+
+  .applications-select--sm {
+    @apply w-full;
+  }
+}

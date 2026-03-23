@@ -37,7 +37,9 @@ export function TeamMembersSection({
           </div>
           <div className="TeamMembersSection__grid">
             <div>
-              <label className="field-label">Фамилия *</label>
+              <label className="field-label">
+                Фамилия <span className="required-mark">*</span>
+              </label>
               <input
                 type="text"
                 value={member.surname}
@@ -48,7 +50,9 @@ export function TeamMembersSection({
               {errors[`team_member_${idx}`] && <p className="field-error">{errors[`team_member_${idx}`]}</p>}
             </div>
             <div>
-              <label className="field-label">Имя *</label>
+              <label className="field-label">
+                Имя <span className="required-mark">*</span>
+              </label>
               <input
                 type="text"
                 value={member.name}

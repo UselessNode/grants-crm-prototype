@@ -1,0 +1,65 @@
+/* AddExpertModal.css */
+
+.add-expert-modal {
+  @apply fixed inset-0 z-50 flex items-center justify-center;
+}
+
+.add-expert-modal__overlay {
+  @apply absolute inset-0 bg-black bg-opacity-50;
+}
+
+.add-expert-modal__content {
+  @apply relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 p-6;
+}
+
+.add-expert-modal__header {
+  @apply flex items-center justify-between mb-6 pb-4 border-b border-gray-200;
+}
+
+.add-expert-modal__title {
+  @apply text-xl font-semibold text-gray-900;
+}
+
+.add-expert-modal__close {
+  @apply text-gray-400 hover:text-gray-600 text-2xl leading-none p-2;
+}
+
+.add-expert-modal__form {
+  @apply space-y-4;
+}
+
+.add-expert-modal__error {
+  @apply p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm;
+}
+
+.add-expert-modal__grid {
+  @apply grid grid-cols-2 gap-4;
+}
+
+.add-expert-modal__field {
+  @apply space-y-1;
+}
+
+.add-expert-modal__field--full {
+  @apply col-span-2;
+}
+
+.add-expert-modal__label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+.add-expert-modal__input {
+  @apply w-full px-3 py-2 border border-gray-300 rounded
+         focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+         text-gray-900 placeholder-gray-400;
+}
+
+.add-expert-modal__textarea {
+  @apply w-full px-3 py-2 border border-gray-300 rounded
+         focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+         text-gray-900 placeholder-gray-400 resize-y;
+}
+
+.add-expert-modal__actions {
+  @apply flex gap-3 pt-4 border-t border-gray-200 mt-6;
+}

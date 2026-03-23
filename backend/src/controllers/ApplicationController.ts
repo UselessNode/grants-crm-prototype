@@ -131,7 +131,7 @@ export class ApplicationController {
         title,
         tender_id,
         direction_id,
-        status_id,
+        status_id: status_id || 1, // По умолчанию Черновик
         idea_description,
         importance_to_team,
         project_goal,

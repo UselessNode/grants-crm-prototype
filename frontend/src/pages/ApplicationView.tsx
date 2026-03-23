@@ -2,12 +2,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { applicationService } from '../utils/applicationService';
+import { useAuthStore } from '../store/authStore';
 import type { Application } from '../utils/types';
 import UserHeader from '../components/UserHeader';
+import ExpertAssignment from '../components/ApplicationForm/ExpertAssignment';
+import './ApplicationView.css';
 
 export default function ApplicationView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [application, setApplication] = useState<Application | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -109,121 +113,165 @@ export default function ApplicationView() {
     <div className="application-view-page bg-gray-50">
       <UserHeader />
 
-      <main className="page-main">
-        {/* Заголовок с кнопками */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Просмотр заявки</h2>
-          <div className="flex gap-2">
-            {canEdit(application.status_name) ? (
-              <Link to={`/applications/${application.id}/edit`} className="btn-header">
-                Редактировать
+      <main className="page-main-lg application-view-layout">
+        {/* Основной контент */}
+        <div className="application-view-content">
+          {/* Заголовок с кнопками */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Просмотр заявки</h2>
+            <div className="flex gap-2">
+              {canEdit(application.status_name) ? (
+                <Link to={`/applications/${application.id}/edit`} className="btn-header">
+                  Редактировать
+                </Link>
+              ) : (
+                <span className="px-4 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed" title="Редактирование доступно только для черновиков и отклонённых заявок">
+                  Редактировать
+                </span>
+              )}
+              {canSubmit(application.status_name) ? (
+                <button onClick={handleSubmit} className="px-4 btn-primary">
+                  Подать
+                </button>
+              ) : (
+                <span className="px-4 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed" title="Подать заявку можно только из статуса «Черновик»">
+                  Подать
+                </span>
+              )}
+              <Link to="/applications" className="btn-cancel">
+                Вернуться
               </Link>
-            ) : (
-              <span className="px-4 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed" title="Редактирование доступно только для черновиков и отклонённых заявок">
-                Редактировать
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            {/* Заголовок и статус */}
+            <div className="application-info-container">
+              <div>
+                <h2 className="application-title">{application.title}</h2>
+                <p className="application-subtitle">
+                  Заявка №{application.id} от {application.created_at ? new Date(application.created_at).toLocaleDateString('ru-RU', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : '—'}
+                </p>
+              </div>
+              <span className={`px-3 py-1 text-sm rounded-full ${getStatusColor(application.status_name)}`}>
+                {application.status_name || '—'}
               </span>
-            )}
-            {canSubmit(application.status_name) ? (
-              <button onClick={handleSubmit} className="px-4 btn-primary">
-                Подать
-              </button>
-            ) : (
-              <span className="px-4 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed" title="Подать заявку можно только из статуса «Черновик»">
-                Подать
-              </span>
-            )}
-            <Link to="/applications" className="btn-cancel">
-              Вернуться
-            </Link>
+            </div>
+
+            {/* Основная информация */}
+            <div className="application-data-grid">
+              <div>
+                <h3 className="application-data-label">Направление</h3>
+                <p className="application-data-value">{application.direction_name || 'Не выбрано'}</p>
+              </div>
+              <div>
+                <h3 className="application-data-label">Дата подачи</h3>
+                <p className="application-data-value">
+                  {application.submitted_at
+                    ? new Date(application.submitted_at).toLocaleDateString('ru-RU')
+                    : 'Не подана'}
+                </p>
+              </div>
+            </div>
+
+            {/* Описание проекта */}
+            <div className="application-section">
+              <section>
+                <h3 className="application-section-title">Описание идеи</h3>
+                <p className="application-section-text">{application.idea_description}</p>
+              </section>
+
+              <section>
+                <h3 className="application-section-title">Важность для команды</h3>
+                <p className="application-section-text">{application.importance_to_team}</p>
+              </section>
+
+              <section>
+                <h3 className="application-section-title">Цель проекта</h3>
+                <p className="application-section-text">{application.project_goal}</p>
+              </section>
+
+              <section>
+                <h3 className="application-section-title">Задачи проекта</h3>
+                <p className="application-section-text">{application.project_tasks}</p>
+              </section>
+
+              {application.implementation_experience && (
+                <section>
+                  <h3 className="application-section-title">Опыт реализации</h3>
+                  <p className="application-section-text">{application.implementation_experience}</p>
+                </section>
+              )}
+
+              {application.results_description && (
+                <section>
+                  <h3 className="application-section-title">Ожидаемые результаты</h3>
+                  <p className="application-section-text">{application.results_description}</p>
+                </section>
+              )}
+            </div>
+
+            {/* Кнопка удаления */}
+            <div className="application-delete-container mt-6 pt-6 border-t">
+              {canDelete(application.status_name) ? (
+                <button onClick={handleDelete} className="application-delete-button">
+                  Удалить заявку
+                </button>
+              ) : (
+                <span className="text-gray-400 cursor-not-allowed" title="Удаление доступно только для черновиков и отклонённых заявок">
+                  Удалить заявку
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          {/* Заголовок и статус */}
-          <div className="application-info-container">
-            <div>
-              <h2 className="application-title">{application.title}</h2>
-              <p className="application-subtitle">
-                Заявка №{application.id} от {application.created_at ? new Date(application.created_at).toLocaleDateString('ru-RU', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                }) : '—'}
-              </p>
+        {/* Сайдбар с экспертами */}
+        {user?.role === 'admin' && (
+          <aside className="application-view-sidebar">
+            <div className="sidebar-card">
+              <h3 className="sidebar-title">Эксперты</h3>
+
+              {/* Назначенные эксперты */}
+              <div className="sidebar-experts-list mb-4">
+                <div className="sidebar-expert-item">
+                  <span className="sidebar-expert-label">Первый эксперт:</span>
+                  <span className="sidebar-expert-name">
+                    {application.expert1
+                      ? `${application.expert1.surname || ''} ${application.expert1.name || ''}`.trim()
+                      : 'Не назначен'}
+                  </span>
+                </div>
+                <div className="sidebar-expert-item">
+                  <span className="sidebar-expert-label">Второй эксперт:</span>
+                  <span className="sidebar-expert-name">
+                    {application.expert2
+                      ? `${application.expert2.surname || ''} ${application.expert2.name || ''}`.trim()
+                      : 'Не назначен'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Назначение экспертов */}
+              <ExpertAssignment
+                applicationId={application.id!}
+                currentExpert1Id={application.expert_1}
+                currentExpert2Id={application.expert_2}
+                onSuccess={() => {
+                  applicationService.getApplication(parseInt(id!)).then(data => {
+                    setApplication(data.data);
+                  });
+                }}
+              />
             </div>
-            <span className={`px-3 py-1 text-sm rounded-full ${getStatusColor(application.status_name)}`}>
-              {application.status_name || '—'}
-            </span>
-          </div>
-
-          {/* Основная информация */}
-          <div className="application-data-grid">
-            <div>
-              <h3 className="application-data-label">Направление</h3>
-              <p className="application-data-value">{application.direction_name || 'Не выбрано'}</p>
-            </div>
-            <div>
-              <h3 className="application-data-label">Дата подачи</h3>
-              <p className="application-data-value">
-                {application.submitted_at
-                  ? new Date(application.submitted_at).toLocaleDateString('ru-RU')
-                  : 'Не подана'}
-              </p>
-            </div>
-          </div>
-
-          {/* Описание проекта */}
-          <div className="application-section">
-            <section>
-              <h3 className="application-section-title">Описание идеи</h3>
-              <p className="application-section-text">{application.idea_description}</p>
-            </section>
-
-            <section>
-              <h3 className="application-section-title">Важность для команды</h3>
-              <p className="application-section-text">{application.importance_to_team}</p>
-            </section>
-
-            <section>
-              <h3 className="application-section-title">Цель проекта</h3>
-              <p className="application-section-text">{application.project_goal}</p>
-            </section>
-
-            <section>
-              <h3 className="application-section-title">Задачи проекта</h3>
-              <p className="application-section-text">{application.project_tasks}</p>
-            </section>
-
-            {application.implementation_experience && (
-              <section>
-                <h3 className="application-section-title">Опыт реализации</h3>
-                <p className="application-section-text">{application.implementation_experience}</p>
-              </section>
-            )}
-
-            {application.results_description && (
-              <section>
-                <h3 className="application-section-title">Ожидаемые результаты</h3>
-                <p className="application-section-text">{application.results_description}</p>
-              </section>
-            )}
-          </div>
-
-          {/* Кнопка удаления */}
-          <div className="application-delete-container mt-6 pt-6 border-t">
-            {canDelete(application.status_name) ? (
-              <button onClick={handleDelete} className="application-delete-button">
-                Удалить заявку
-              </button>
-            ) : (
-              <span className="text-gray-400 cursor-not-allowed" title="Удаление доступно только для черновиков и отклонённых заявок">
-                Удалить заявку
-              </span>
-            )}
-          </div>
-        </div>
+          </aside>
+        )}
       </main>
     </div>
   );

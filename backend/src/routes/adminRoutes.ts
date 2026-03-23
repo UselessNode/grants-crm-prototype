@@ -32,5 +32,6 @@ router.get('/admin/tenders', AdminController.getTenders);
 router.get('/admin/experts', AdminController.getExperts);
 router.put('/admin/applications/:id/experts', AdminController.assignExperts);
 router.get('/admin/applications/:id/verdicts', AdminController.getVerdicts);
+router.post('/admin/experts', AdminController.addExpert);
 
 export default router;

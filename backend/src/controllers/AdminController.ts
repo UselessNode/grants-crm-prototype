@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { UserModel } from '../models/User';
 import { ApplicationModel } from '../models/Application';
 import { AuthRequest } from '../middleware/auth';
+import pool from '../config/database';
 
 /**
  * Контроллер для админ-панели
@@ -285,6 +286,62 @@ export class AdminController {
       res.status(500).json({
         success: false,
         message: 'Ошибка при получении вердиктов',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
+
+  /**
+   * Добавить эксперта
+   * POST /api/admin/experts
+   */
+  static async addExpert(req: AuthRequest, res: Response) {
+    try {
+      // Только администраторы
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Требуются права администратора',
+        });
+      }
+
+      const { surname, name, patronymic, extra_info } = req.body;
+
+      if (!surname || !name) {
+        return res.status(400).json({
+          success: false,
+          message: 'Фамилия и имя обязательны',
+        });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        const result = await client.query(`
+          INSERT INTO experts (surname, name, patronymic, extra_info)
+          VALUES ($1, $2, $3, $4)
+          RETURNING *
+        `, [surname, name, patronymic || null, extra_info || null]);
+
+        await client.query('COMMIT');
+
+        res.json({
+          success: true,
+          message: 'Эксперт успешно добавлен',
+          data: result.rows[0],
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error adding expert:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при добавлении эксперта',
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
       });
     }

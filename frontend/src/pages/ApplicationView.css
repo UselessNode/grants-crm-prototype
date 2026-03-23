@@ -1,0 +1,57 @@
+/* ApplicationView.css - Стили для просмотра заявки с сайдбаром */
+
+.application-view-layout {
+  @apply max-w-7xl mx-auto py-6 px-4;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.5rem;
+}
+
+.application-view-content {
+  @apply min-w-0;
+}
+
+/* Сайдбар */
+.application-view-sidebar {
+  @apply space-y-4;
+}
+
+.sidebar-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-6;
+}
+
+.sidebar-title {
+  @apply text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200;
+}
+
+/* Список экспертов в сайдбаре */
+.sidebar-experts-list {
+  @apply space-y-3;
+}
+
+.sidebar-expert-item {
+  @apply flex flex-col gap-1 p-3 bg-gray-50 rounded-lg;
+}
+
+.sidebar-expert-label {
+  @apply text-xs font-medium text-gray-500 uppercase;
+}
+
+.sidebar-expert-name {
+  @apply text-sm text-gray-900 font-medium;
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+  .application-view-layout {
+    @apply grid-cols-1;
+  }
+
+  .application-view-sidebar {
+    @apply order-first;
+  }
+
+  .sidebar-card {
+    @apply sticky top-0 z-10;
+  }
+}

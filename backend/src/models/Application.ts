@@ -635,6 +635,23 @@ export class ApplicationModel {
         throw new Error('Заявку можно подать только из статуса "Черновик"');
       }
 
+      // Проверяем заполненность обязательных полей
+      const requiredFields = {
+        'Название': application.title,
+        'Описание идеи': application.idea_description,
+        'Важность для команды': application.importance_to_team,
+        'Цель проекта': application.project_goal,
+        'Задачи проекта': application.project_tasks,
+      };
+
+      const emptyFields = Object.entries(requiredFields)
+        .filter(([_, value]) => !value || value.trim() === '')
+        .map(([name]) => name);
+
+      if (emptyFields.length > 0) {
+        throw new Error(`Не заполнены обязательные поля: ${emptyFields.join(', ')}`);
+      }
+
       await client.query('BEGIN');
 
       // Обновляем статус на "Подана" (id=2) и устанавливаем дату подачи
