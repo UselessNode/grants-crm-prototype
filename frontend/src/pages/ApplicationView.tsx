@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { applicationService } from '../utils/applicationService';
 import { useAuthStore } from '../store/authStore';
-import type { Application } from '../utils/types';
+import type { Application, Status } from '../utils/types';
 import UserHeader from '../components/UserHeader';
 import ExpertAssignment from '../components/ApplicationForm/ExpertAssignment';
+import { Icon } from '../components/Icon';
 import './ApplicationView.css';
 
 export default function ApplicationView() {
@@ -13,13 +14,19 @@ export default function ApplicationView() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [application, setApplication] = useState<Application | null>(null);
+  const [statuses, setStatuses] = useState<Status[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusChanging, setStatusChanging] = useState(false);
 
   useEffect(() => {
     const loadApplication = async () => {
       try {
-        const data = await applicationService.getApplication(parseInt(id!));
-        setApplication(data.data);
+        const [appData, statusesData] = await Promise.all([
+          applicationService.getApplication(parseInt(id!)),
+          applicationService.getStatuses(),
+        ]);
+        setApplication(appData.data);
+        setStatuses(statusesData.data);
       } catch (error) {
         console.error('Ошибка загрузки:', error);
         alert('Ошибка при загрузке заявки');
@@ -67,6 +74,26 @@ export default function ApplicationView() {
     }
   };
 
+  const handleStatusChange = async (newStatusId: number) => {
+    if (!application) return;
+
+    const newStatus = statuses.find(s => s.id === newStatusId);
+    if (!confirm(`Вы уверены, что хотите изменить статус заявки на "${newStatus?.name}"?`)) return;
+
+    setStatusChanging(true);
+    try {
+      await applicationService.updateApplicationStatus(parseInt(id!), newStatusId);
+      alert('Статус успешно изменён!');
+      const data = await applicationService.getApplication(parseInt(id!));
+      setApplication(data.data);
+    } catch (error) {
+      console.error('Ошибка изменения статуса:', error);
+      alert('Ошибка при изменении статуса');
+    } finally {
+      setStatusChanging(false);
+    }
+  };
+
   const getStatusColor = (statusName?: string) => {
     const colors: Record<string, string> = {
       'Черновик': 'bg-gray-100 text-gray-800',
@@ -79,8 +106,13 @@ export default function ApplicationView() {
   };
 
   // Проверка, можно ли редактировать заявку
+  // Пользователь может редактировать в статусах: Черновик, Одобрена, Отклонена
+  // Администратор может редактировать в любом статусе
   const canEdit = (statusName?: string) => {
-    return statusName === 'Черновик' || statusName === 'Отклонена';
+    if (user?.role === 'admin') {
+      return true;
+    }
+    return statusName === 'Черновик' || statusName === 'Одобрена' || statusName === 'Отклонена';
   };
 
   // Проверка, можно ли подать заявку
@@ -121,24 +153,29 @@ export default function ApplicationView() {
             <h2 className="text-2xl font-bold text-gray-900">Просмотр заявки</h2>
             <div className="flex gap-2">
               {canEdit(application.status_name) ? (
-                <Link to={`/applications/${application.id}/edit`} className="btn-header">
+                <Link to={`/applications/${application.id}/edit`} className="btn-header inline-flex items-center gap-2">
+                  <Icon name="edit" size={18} />
                   Редактировать
                 </Link>
               ) : (
-                <span className="px-4 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed" title="Редактирование доступно только для черновиков и отклонённых заявок">
+                <span className="px-4 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed inline-flex items-center gap-2" title="Редактирование доступно только для черновиков и отклонённых заявок">
+                  <Icon name="edit" size={18} />
                   Редактировать
                 </span>
               )}
               {canSubmit(application.status_name) ? (
-                <button onClick={handleSubmit} className="px-4 btn-primary">
+                <button onClick={handleSubmit} className="px-4 btn-primary inline-flex items-center gap-2">
+                  <Icon name="check" size={18} />
                   Подать
                 </button>
               ) : (
-                <span className="px-4 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed" title="Подать заявку можно только из статуса «Черновик»">
+                <span className="px-4 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed inline-flex items-center gap-2" title="Подать заявку можно только из статуса «Черновик»">
+                  <Icon name="check" size={18} />
                   Подать
                 </span>
               )}
-              <Link to="/applications" className="btn-cancel">
+              <Link to="/applications" className="btn-cancel inline-flex items-center gap-2">
+                <Icon name="arrow-left" size={18} />
                 Вернуться
               </Link>
             </div>
@@ -159,9 +196,25 @@ export default function ApplicationView() {
                   }) : '—'}
                 </p>
               </div>
-              <span className={`px-3 py-1 text-sm rounded-full ${getStatusColor(application.status_name)}`}>
-                {application.status_name || '—'}
-              </span>
+              {user?.role === 'admin' ? (
+                <select
+                  value={application.status_id || ''}
+                  onChange={(e) => handleStatusChange(parseInt(e.target.value))}
+                  disabled={statusChanging}
+                  className="filter-select text-sm font-medium"
+                  style={{ minWidth: '180px' }}
+                >
+                  {statuses.map((status) => (
+                    <option key={status.id} value={status.id}>
+                      {status.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className={`px-3 py-1 text-sm rounded-full ${getStatusColor(application.status_name)}`}>
+                  {application.status_name || '—'}
+                </span>
+              )}
             </div>
 
             {/* Основная информация */}
@@ -220,11 +273,13 @@ export default function ApplicationView() {
             {/* Кнопка удаления */}
             <div className="application-delete-container mt-6 pt-6 border-t">
               {canDelete(application.status_name) ? (
-                <button onClick={handleDelete} className="application-delete-button">
+                <button onClick={handleDelete} className="application-delete-button inline-flex items-center gap-2">
+                  <Icon name="trash" size={18} />
                   Удалить заявку
                 </button>
               ) : (
-                <span className="text-gray-400 cursor-not-allowed" title="Удаление доступно только для черновиков и отклонённых заявок">
+                <span className="text-gray-400 cursor-not-allowed inline-flex items-center gap-2" title="Удаление доступно только для черновиков и отклонённых заявок">
+                  <Icon name="trash" size={18} />
                   Удалить заявку
                 </span>
               )}
@@ -237,26 +292,6 @@ export default function ApplicationView() {
           <aside className="application-view-sidebar">
             <div className="sidebar-card">
               <h3 className="sidebar-title">Эксперты</h3>
-
-              {/* Назначенные эксперты */}
-              <div className="sidebar-experts-list mb-4">
-                <div className="sidebar-expert-item">
-                  <span className="sidebar-expert-label">Первый эксперт:</span>
-                  <span className="sidebar-expert-name">
-                    {application.expert1
-                      ? `${application.expert1.surname || ''} ${application.expert1.name || ''}`.trim()
-                      : 'Не назначен'}
-                  </span>
-                </div>
-                <div className="sidebar-expert-item">
-                  <span className="sidebar-expert-label">Второй эксперт:</span>
-                  <span className="sidebar-expert-name">
-                    {application.expert2
-                      ? `${application.expert2.surname || ''} ${application.expert2.name || ''}`.trim()
-                      : 'Не назначен'}
-                  </span>
-                </div>
-              </div>
 
               {/* Назначение экспертов */}
               <ExpertAssignment

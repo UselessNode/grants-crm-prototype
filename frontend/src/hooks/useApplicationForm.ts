@@ -80,7 +80,7 @@ const initialFormData: FormData = {
   title: '',
   tender_id: '',
   direction_id: '',
-  status_id: '2',
+  status_id: '1', // По умолчанию Черновик
   team_members: [{ ...emptyTeamMember }],
   coordinators: [{ ...emptyCoordinator }],
   implementation_experience: '',
@@ -320,7 +320,7 @@ export function useApplicationForm(): UseApplicationFormReturn {
         title: formData.title,
         tender_id: formData.tender_id ? parseInt(formData.tender_id) : null,
         direction_id: formData.direction_id ? parseInt(formData.direction_id) : null,
-        status_id: formData.status_id ? parseInt(formData.status_id) : 2,
+        status_id: formData.status_id ? parseInt(formData.status_id) : 1, // По умолчанию Черновик
         idea_description: formData.idea_description,
         importance_to_team: formData.importance_to_team,
         project_goal: formData.project_goal,

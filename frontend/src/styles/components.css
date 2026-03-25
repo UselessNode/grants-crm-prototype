@@ -713,7 +713,7 @@
   }
 
   .page-logo-wrapper {
-    @apply flex items-center gap-2;
+    @apply flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity;
   }
 
   .page-logo-text {

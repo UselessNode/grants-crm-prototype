@@ -479,10 +479,27 @@ export class ApplicationModel {
     const client = await pool.connect();
     try {
       // Проверяем права доступа
+      const existingApp = await this.findById(id);
+
+      if (!existingApp) {
+        throw new Error('Заявка не найдена');
+      }
+
+      // Администратор может редактировать любые заявки
+      // Пользователь может редактировать только свои заявки
       if (userRole !== 'admin') {
-        const existingApp = await this.findById(id);
-        if (existingApp && existingApp.owner_id !== userId && existingApp.owner_id !== null) {
+        if (existingApp.owner_id !== userId && existingApp.owner_id !== null) {
           throw new Error('Доступ запрещён. Вы можете редактировать только свои заявки');
+        }
+
+        // Проверяем, можно ли редактировать заявку в текущем статусе
+        // Администратор может редактировать в любом статусе (в т.ч. для исправления ошибок)
+        // Пользователь может редактировать только статусы с флагом is_editable = true
+        // По умолчанию: Черновик (id=1) и Отклонена (id=5) имеют is_editable = true
+        // Также добавляем Одобрена (id=4) для редактирования пользователем
+        const editableStatuses = [1, 4, 5]; // Черновик, Одобрена, Отклонена
+        if (existingApp.status_id && !editableStatuses.includes(existingApp.status_id)) {
+          throw new Error(`Редактирование запрещено. Заявку можно редактировать только в статусах: Черновик, Одобрена, Отклонена`);
         }
       }
 
@@ -673,6 +690,61 @@ export class ApplicationModel {
   }
 
   /**
+   * Изменить статус заявки (только для администратора)
+   * Позволяет администратору перевести заявку в любой статус
+   */
+  static async updateStatus(id: number, newStatusId: number, userRole?: 'user' | 'admin'): Promise<ApplicationWithRelations | null> {
+    const client = await pool.connect();
+    try {
+      // Проверяем, что пользователь — администратор
+      if (userRole !== 'admin') {
+        throw new Error('Доступ запрещён. Только администратор может менять статус заявки');
+      }
+
+      const application = await this.findById(id);
+
+      if (!application) {
+        throw new Error('Заявка не найдена');
+      }
+
+      // Проверяем, что статус существует
+      const statuses = await this.getStatuses();
+      const statusExists = statuses.some(s => s.id === newStatusId);
+
+      if (!statusExists) {
+        throw new Error('Некорректный ID статуса');
+      }
+
+      await client.query('BEGIN');
+
+      // Обновляем статус
+      await client.query(`
+        UPDATE applications
+        SET status_id = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [newStatusId, id]);
+
+      // Если заявка подаётся (переход в статус "Подана"), устанавливаем дату подачи
+      if (newStatusId === 2 && application.status_id !== 2) {
+        await client.query(`
+          UPDATE applications
+          SET submitted_at = CURRENT_TIMESTAMP
+          WHERE id = $1
+        `, [id]);
+      }
+
+      await client.query('COMMIT');
+
+      return await this.findById(id) as ApplicationWithRelations | null;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Получить все статусы
    */
   static async getStatuses() {
@@ -737,6 +809,7 @@ export class ApplicationModel {
 
   /**
    * Добавить вердикт эксперта
+   * Автоматически меняет статус заявки, если все эксперты выставили вердикты
    */
   static async addVerdict(applicationId: number, expertId: number, verdict: 'approved' | 'rejected', comment?: string | null): Promise<void> {
     const client = await pool.connect();
@@ -764,36 +837,40 @@ export class ApplicationModel {
         `, [applicationId, expertId, verdict, comment || null]);
       }
 
+      // Проверяем, все ли эксперты выставили вердикты
+      const verdictsResult = await client.query(
+        'SELECT COUNT(*) as count FROM expert_verdicts WHERE application_id = $1',
+        [applicationId]
+      );
+      const verdictCount = parseInt(verdictsResult.rows[0].count);
+
+      // Если оба эксперта выставили вердикты (2 вердикта), меняем статус заявки
+      if (verdictCount >= 2) {
+        // Получаем все вердикты
+        const allVerdicts = await client.query(
+          'SELECT verdict FROM expert_verdicts WHERE application_id = $1',
+          [applicationId]
+        );
+
+        // Проверяем, есть ли хотя бы один 'rejected'
+        const hasRejection = allVerdicts.rows.some((v: { verdict: string }) => v.verdict === 'rejected');
+
+        // Если есть отклонение — статус "Отклонена" (id=5), иначе "Одобрена" (id=4)
+        const newStatusId = hasRejection ? 5 : 4;
+
+        await client.query(`
+          UPDATE applications
+          SET status_id = $1, updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2
+        `, [newStatusId, applicationId]);
+      }
+
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
     } finally {
       client.release();
-    }
-  }
-
-  /**
-   * Проверить, все ли эксперты выставили вердикты
-   */
-  static async areAllVerdictsIn(applicationId: number): Promise<boolean> {
-    try {
-      const app = await this.findById(applicationId);
-      if (!app || !app.expert1 || !app.expert2) {
-        return false;
-      }
-
-      const result = await pool.query(
-        'SELECT COUNT(*) as count FROM expert_verdicts WHERE application_id = $1',
-        [applicationId]
-      );
-
-      const verdictCount = parseInt(result.rows[0].count);
-      // Нужно 2 вердикта (от обоих экспертов)
-      return verdictCount >= 2;
-    } catch (error) {
-      console.warn('Database connection error in areAllVerdictsIn:', error instanceof Error ? error.message : 'Unknown error');
-      return false;
     }
   }
 

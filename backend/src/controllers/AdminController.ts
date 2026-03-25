@@ -254,6 +254,57 @@ export class AdminController {
   }
 
   /**
+   * Изменить статус заявки (только для администратора)
+   * POST /api/admin/applications/:id/change-status
+   */
+  static async changeStatus(req: AuthRequest, res: Response) {
+    try {
+      // Только администраторы
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Требуются права администратора',
+        });
+      }
+
+      const { id } = req.params;
+      const { status_id } = req.body;
+
+      if (!status_id || isNaN(parseInt(status_id))) {
+        return res.status(400).json({
+          success: false,
+          message: 'status_id обязателен и должен быть числом',
+        });
+      }
+
+      const application = await ApplicationModel.updateStatus(
+        parseInt(id),
+        parseInt(status_id),
+        'admin'
+      );
+
+      if (!application) {
+        return res.status(404).json({
+          success: false,
+          message: 'Заявка не найдена',
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Статус заявки успешно изменён',
+        data: application,
+      });
+    } catch (error) {
+      console.error('Error changing application status:', error);
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Ошибка при изменении статуса заявки',
+      });
+    }
+  }
+
+  /**
    * Получить вердикты экспертов для заявки
    * GET /api/admin/applications/:id/verdicts
    */
@@ -342,6 +393,282 @@ export class AdminController {
       res.status(500).json({
         success: false,
         message: 'Ошибка при добавлении эксперта',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
+
+  /**
+   * Обновить данные пользователя
+   * PUT /api/admin/users/:id
+   */
+  static async updateUser(req: AuthRequest, res: Response) {
+    try {
+      // Только администраторы
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Требуются права администратора',
+        });
+      }
+
+      const { id } = req.params;
+      const { surname, name, patronymic, role_id } = req.body;
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        const result = await client.query(`
+          UPDATE users
+          SET
+            surname = $1,
+            name = $2,
+            patronymic = $3,
+            role_id = $4,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $5
+          RETURNING *
+        `, [surname || null, name || null, patronymic || null, role_id || 1, parseInt(id)]);
+
+        if (result.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({
+            success: false,
+            message: 'Пользователь не найден',
+          });
+        }
+
+        await client.query('COMMIT');
+
+        res.json({
+          success: true,
+          message: 'Пользователь успешно обновлён',
+          data: result.rows[0],
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при обновлении пользователя',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
+
+  /**
+   * Удалить пользователя
+   * DELETE /api/admin/users/:id
+   */
+  static async deleteUser(req: AuthRequest, res: Response) {
+    try {
+      // Только администраторы
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Требуются права администратора',
+        });
+      }
+
+      const { id } = req.params;
+      const userId = parseInt(id);
+
+      // Нельзя удалить самого себя
+      if (req.user.userId === userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Нельзя удалить самого себя',
+        });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // Проверяем, есть ли у пользователя заявки
+        const applicationsCheck = await client.query(
+          'SELECT COUNT(*) FROM applications WHERE owner_id = $1',
+          [userId]
+        );
+
+        const applicationsCount = parseInt(applicationsCheck.rows[0].count);
+
+        if (applicationsCount > 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({
+            success: false,
+            message: `Нельзя удалить пользователя: у него есть ${applicationsCount} заявка(ок)`,
+          });
+        }
+
+        // Мягкое удаление - устанавливаем deleted_at
+        await client.query(
+          'UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1',
+          [userId]
+        );
+
+        await client.query('COMMIT');
+
+        res.json({
+          success: true,
+          message: 'Пользователь успешно удалён',
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при удалении пользователя',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
+
+  /**
+   * Обновить данные эксперта
+   * PUT /api/admin/experts/:id
+   */
+  static async updateExpert(req: AuthRequest, res: Response) {
+    try {
+      // Только администраторы
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Требуются права администратора',
+        });
+      }
+
+      const { id } = req.params;
+      const { surname, name, patronymic, extra_info } = req.body;
+
+      if (!surname || !name) {
+        return res.status(400).json({
+          success: false,
+          message: 'Фамилия и имя обязательны',
+        });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        const result = await client.query(`
+          UPDATE experts
+          SET
+            surname = $1,
+            name = $2,
+            patronymic = $3,
+            extra_info = $4,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $5
+          RETURNING *
+        `, [surname, name, patronymic || null, extra_info || null, parseInt(id)]);
+
+        if (result.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({
+            success: false,
+            message: 'Эксперт не найден',
+          });
+        }
+
+        await client.query('COMMIT');
+
+        res.json({
+          success: true,
+          message: 'Эксперт успешно обновлён',
+          data: result.rows[0],
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error updating expert:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при обновлении эксперта',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
+
+  /**
+   * Удалить эксперта
+   * DELETE /api/admin/experts/:id
+   */
+  static async deleteExpert(req: AuthRequest, res: Response) {
+    try {
+      // Только администраторы
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ запрещён. Требуются права администратора',
+        });
+      }
+
+      const { id } = req.params;
+      const expertId = parseInt(id);
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // Проверяем, назначен ли эксперт на заявки
+        const assignmentsCheck = await client.query(`
+          SELECT COUNT(*) FROM (
+            SELECT 1 FROM applications WHERE expert_1 = $1
+            UNION ALL
+            SELECT 1 FROM applications WHERE expert_2 = $1
+          ) AS assignments
+        `, [expertId]);
+
+        const assignmentsCount = parseInt(assignmentsCheck.rows[0].count);
+
+        if (assignmentsCount > 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({
+            success: false,
+            message: `Нельзя удалить эксперта: он назначен на ${assignmentsCount} заявка(ок)`,
+          });
+        }
+
+        // Удаляем вердикты эксперта (каскадно)
+        await client.query('DELETE FROM expert_verdicts WHERE expert_id = $1', [expertId]);
+
+        // Удаляем эксперта
+        await client.query('DELETE FROM experts WHERE id = $1', [expertId]);
+
+        await client.query('COMMIT');
+
+        res.json({
+          success: true,
+          message: 'Эксперт успешно удалён',
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error deleting expert:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при удалении эксперта',
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
       });
     }

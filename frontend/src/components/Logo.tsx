@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import logoWatermelon from '../assets/images/Melon.png';
 
 export interface LogoProps {
@@ -16,10 +17,10 @@ const logoText = "Арбузный грант";
 export default function Logo({ variant = 'auth' }: LogoProps) {
   if (variant === 'page') {
     return (
-      <div className="page-logo-wrapper">
+      <Link to="/admin" className="page-logo-wrapper">
         <img src={logoWatermelon} alt={logoText} className="page-logo" />
         <span className="page-logo-text">{logoText}</span>
-      </div>
+      </Link>
     );
   }
 

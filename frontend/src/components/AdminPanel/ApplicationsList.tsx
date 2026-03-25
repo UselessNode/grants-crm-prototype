@@ -1,13 +1,15 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { adminService } from '../../utils/adminService';
-import type { Application, Expert } from '../../utils/types';
+import type { Application, Expert, Status } from '../../utils/types';
 import './ApplicationsList.css';
 
 interface ApplicationsListProps {
   applications: (Application & { owner_email?: string; owner_name?: string })[];
   experts: Expert[];
+  statuses: Status[];
   onExpertsAssigned?: () => void;
+  onStatusChanged?: () => void;
 }
 
 interface FilterState {
@@ -20,7 +22,9 @@ interface FilterState {
 export function ApplicationsList({
   applications,
   experts,
+  statuses,
   onExpertsAssigned,
+  onStatusChanged,
 }: ApplicationsListProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [filters, setFilters] = useState<FilterState>({
@@ -32,6 +36,8 @@ export function ApplicationsList({
   const [assigningExpert1, setAssigningExpert1] = useState<number | ''>('');
   const [assigningExpert2, setAssigningExpert2] = useState<number | ''>('');
   const [saving, setSaving] = useState(false);
+  const [changingStatusId, setChangingStatusId] = useState<number | null>(null);
+  const [newStatusId, setNewStatusId] = useState<Record<number, number>>({});
 
   // Фильтрация заявок
   const filteredApplications = useMemo(() => {
@@ -117,6 +123,24 @@ export function ApplicationsList({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleChangeStatus = async (applicationId: number, statusId: number) => {
+    setChangingStatusId(applicationId);
+    try {
+      await adminService.changeStatus(applicationId, { status_id: statusId });
+      alert('Статус заявки успешно изменён');
+      onStatusChanged?.();
+    } catch (err) {
+      alert('Ошибка при изменении статуса');
+      console.error(err);
+    } finally {
+      setChangingStatusId(null);
+    }
+  };
+
+  const handleStatusSelect = (applicationId: number, statusId: number) => {
+    setNewStatusId(prev => ({ ...prev, [applicationId]: statusId }));
   };
 
   const getStatusBadgeClass = (statusName?: string) => {
@@ -314,21 +338,36 @@ export function ApplicationsList({
                 </div>
               </div>
 
+              {/* Смена статуса */}
+              <div className="application-card__status-change">
+                <label className="application-card__status-label">Сменить статус:</label>
+                <select
+                  value={newStatusId[app.id!] || app.status_id || ''}
+                  onChange={(e) => handleStatusSelect(app.id!, parseInt(e.target.value))}
+                  className="applications-select applications-select--sm"
+                  disabled={changingStatusId === app.id}
+                >
+                  {statuses.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => handleChangeStatus(app.id!, newStatusId[app.id!] || app.status_id!)}
+                  disabled={changingStatusId === app.id || (newStatusId[app.id!] === app.status_id && !newStatusId[app.id!])}
+                  className="btn-primary btn-sm"
+                >
+                  {changingStatusId === app.id ? '...' : 'Применить'}
+                </button>
+              </div>
+
               {/* Действия */}
               <div className="application-card__actions">
-                <Link
-                  to={`/applications/${app.id}`}
-                  className="application-card__action-btn"
-                  title="Просмотр"
-                >
-                  👁
-                </Link>
                 <Link
                   to={`/applications/${app.id}/edit`}
                   className="application-card__action-btn"
                   title="Редактировать"
                 >
-                  ✏️
+                  {/*<Icon name="edit" size={16} />*/}
                 </Link>
               </div>
             </div>

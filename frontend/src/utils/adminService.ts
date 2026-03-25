@@ -49,11 +49,22 @@ export interface AssignExpertsData {
   expert2Id: number | null;
 }
 
+export interface ChangeStatusData {
+  status_id: number;
+}
+
 export interface AddExpertData {
   surname: string;
   name: string;
   patronymic?: string | null;
   extra_info?: string | null;
+}
+
+export interface UpdateUserData {
+  surname?: string | null;
+  name?: string | null;
+  patronymic?: string | null;
+  role_id?: number;
 }
 
 export const adminService = {
@@ -123,6 +134,17 @@ export const adminService = {
   },
 
   /**
+   * Изменить статус заявки (только для администратора)
+   */
+  async changeStatus(applicationId: number, data: ChangeStatusData) {
+    const response = await api.post<{ success: boolean; data: Application }>(
+      `/applications/${applicationId}/change-status`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
    * Получить вердикты экспертов для заявки
    */
   async getVerdicts(applicationId: number) {
@@ -139,6 +161,48 @@ export const adminService = {
     const response = await api.post<{ success: boolean; data: Expert }>(
       '/admin/experts',
       data
+    );
+    return response.data;
+  },
+
+  /**
+   * Обновить данные пользователя
+   */
+  async updateUser(userId: number, data: UpdateUserData) {
+    const response = await api.put<{ success: boolean; data: User }>(
+      `/admin/users/${userId}`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Удалить пользователя
+   */
+  async deleteUser(userId: number) {
+    const response = await api.delete<{ success: boolean }>(
+      `/admin/users/${userId}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Обновить данные эксперта
+   */
+  async updateExpert(expertId: number, data: AddExpertData) {
+    const response = await api.put<{ success: boolean; data: Expert }>(
+      `/admin/experts/${expertId}`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Удалить эксперта
+   */
+  async deleteExpert(expertId: number) {
+    const response = await api.delete<{ success: boolean }>(
+      `/admin/experts/${expertId}`
     );
     return response.data;
   },

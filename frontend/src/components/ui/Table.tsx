@@ -79,7 +79,7 @@ export function Table<T = any>({
                       key={String(col.field)}
                       className={`td ${col.className || ''}`}
                     >
-                      {col.render ? col.render(item, index) : (item[col.field] as React.ReactNode)}
+                      {col.render ? col.render(item, index) : ((item as any)[col.field as string] as React.ReactNode)}
                     </td>
                   ))}
                 </tr>

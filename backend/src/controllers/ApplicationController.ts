@@ -299,6 +299,56 @@ export class ApplicationController {
   }
 
   /**
+   * Изменить статус заявки (только для администратора)
+   * POST /api/applications/:id/change-status
+   */
+  static async changeStatus(req: AuthRequest, res: Response) {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user?.userId;
+      const userRole = req.user?.role || 'user';
+      const { status_id } = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Некорректный ID заявки',
+        });
+      }
+
+      if (!status_id || isNaN(parseInt(status_id))) {
+        return res.status(400).json({
+          success: false,
+          message: 'status_id обязателен и должен быть числом',
+        });
+      }
+
+      const application = await ApplicationModel.findById(id);
+
+      if (!application) {
+        return res.status(404).json({
+          success: false,
+          message: 'Заявка не найдена',
+        });
+      }
+
+      const updatedApplication = await ApplicationModel.updateStatus(id, parseInt(status_id), userRole as 'user' | 'admin');
+
+      res.json({
+        success: true,
+        message: 'Статус заявки успешно изменён',
+        data: updatedApplication,
+      });
+    } catch (error) {
+      console.error('Error changing application status:', error);
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Ошибка при изменении статуса заявки',
+      });
+    }
+  }
+
+  /**
    * Получить список направлений
    * GET /api/directions
    */
@@ -446,14 +496,22 @@ export class ApplicationController {
 
       await ApplicationModel.addVerdict(id, parseInt(expertId), verdict, comment || null);
 
-      // Проверяем, все ли эксперты выставили вердикты
-      const allVerdictsIn = await ApplicationModel.areAllVerdictsIn(id);
+      // Получаем обновлённую заявку для проверки статуса и вердиктов
+      const updatedApplication = await ApplicationModel.findById(id);
+
+      // Формируем ответ с информацией о вердиктах
+      const verdictsCount = updatedApplication?.expert_verdicts?.length || 0;
+      const allVerdictsIn = verdictsCount >= 2;
+      const statusChanged = allVerdictsIn; // Если все вердикты выставлены, статус уже изменён
 
       res.json({
         success: true,
         message: 'Вердикт успешно выставлен',
         data: {
           allVerdictsIn,
+          statusChanged,
+          verdictsCount,
+          currentStatusId: updatedApplication?.status_id,
         },
       });
     } catch (error) {

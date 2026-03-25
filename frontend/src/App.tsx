@@ -8,6 +8,13 @@ import UIShowcase from './pages/UIShowcase';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import PrivateRoute from './components/PrivateRoute';
+import { useAuthStore } from './store/authStore';
+
+function HomeRedirect() {
+  const { user } = useAuthStore();
+  const redirectTo = user?.role === 'admin' ? '/admin' : '/applications';
+  return <Navigate to={redirectTo} replace />;
+}
 
 function App() {
   return (
@@ -17,12 +24,12 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Защищённые маршруты */}
+        {/* Главная страница — редирект в зависимости от роли */}
         <Route
           path="/"
           element={
             <PrivateRoute>
-              <Navigate to="/applications" replace />
+              <HomeRedirect />
             </PrivateRoute>
           }
         />

@@ -1,15 +1,20 @@
 // ApplicationsList.tsx
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { applicationService } from '../utils/applicationService';
+import { useAuthStore } from '../store/authStore';
 import type { Application, Direction, Status } from '../utils/types';
+import { Icon } from '../components/Icon';
 import UserHeader from '../components/UserHeader';
 
 export default function ApplicationsList() {
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [applications, setApplications] = useState<Application[]>([]);
   const [directions, setDirections] = useState<Direction[]>([]);
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusChangingId, setStatusChangingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -79,6 +84,27 @@ export default function ApplicationsList() {
     }
   };
 
+  // Изменение статуса заявки (для админа)
+  const handleStatusChange = async (applicationId: number, newStatusId: number) => {
+    const newStatus = statuses.find(s => s.id === newStatusId);
+    if (!confirm(`Вы уверены, что хотите изменить статус заявки на "${newStatus?.name}"?`)) {
+      loadData(); // Возвращаем старый статус при отмене
+      return;
+    }
+
+    setStatusChangingId(applicationId);
+    try {
+      await applicationService.updateApplicationStatus(applicationId, newStatusId);
+      loadData();
+    } catch (error) {
+      console.error('Ошибка изменения статуса:', error);
+      alert('Ошибка при изменении статуса');
+      loadData();
+    } finally {
+      setStatusChangingId(null);
+    }
+  };
+
   const getStatusColor = (statusName?: string) => {
     const colors: Record<string, string> = {
       'Черновик': 'bg-gray-100 text-gray-800',
@@ -91,8 +117,13 @@ export default function ApplicationsList() {
   };
 
   // Проверка, можно ли редактировать заявку
+  // Пользователь может редактировать в статусах: Черновик, Одобрена, Отклонена
+  // Администратор может редактировать в любом статусе
   const canEdit = (statusName?: string) => {
-    return statusName === 'Черновик' || statusName === 'Отклонена';
+    if (user?.role === 'admin') {
+      return true;
+    }
+    return statusName === 'Черновик' || statusName === 'Одобрена' || statusName === 'Отклонена';
   };
 
   // Проверка, можно ли удалить заявку

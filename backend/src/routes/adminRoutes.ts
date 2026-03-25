@@ -33,5 +33,14 @@ router.get('/admin/experts', AdminController.getExperts);
 router.put('/admin/applications/:id/experts', AdminController.assignExperts);
 router.get('/admin/applications/:id/verdicts', AdminController.getVerdicts);
 router.post('/admin/experts', AdminController.addExpert);
+router.put('/admin/experts/:id', AdminController.updateExpert);
+router.delete('/admin/experts/:id', AdminController.deleteExpert);
+
+// Изменение статуса заявки
+router.post('/admin/applications/:id/change-status', AdminController.changeStatus);
+
+// Пользователи - редактирование и удаление
+router.put('/admin/users/:id', AdminController.updateUser);
+router.delete('/admin/users/:id', AdminController.deleteUser);
 
 export default router;

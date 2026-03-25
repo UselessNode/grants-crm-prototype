@@ -80,6 +80,14 @@ export const applicationService = {
   },
 
   /**
+   * Изменить статус заявки
+   */
+  async updateApplicationStatus(id: number, statusId: number) {
+    const response = await api.put<SingleApplicationResponse>(`/applications/${id}/status`, { status_id: statusId });
+    return response.data;
+  },
+
+  /**
    * Получить список направлений
    */
   async getDirections() {

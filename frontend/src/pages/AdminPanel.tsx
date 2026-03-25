@@ -3,14 +3,12 @@ import { Link } from 'react-router-dom';
 import { adminService } from '../utils/adminService';
 import { useAuthStore } from '../store/authStore';
 import type { User } from '../utils/adminService';
-import type { Application, Expert } from '../utils/types';
+import type { Application, Expert, Status } from '../utils/types';
 import ApplicationsList from '../components/AdminPanel/ApplicationsList';
 import AddExpertModal from '../components/AdminPanel/AddExpertModal';
-
-interface AdminStats {
-  users: number;
-  applications: number;
-}
+import EditUserModal from '../components/AdminPanel/EditUserModal';
+import EditExpertModal from '../components/AdminPanel/EditExpertModal';
+import { AdminUsersTable } from '../components/AdminPanel/AdminUsersTable';
 
 interface ExpertWithStats extends Expert {
   applicationsCount?: number;
@@ -21,16 +19,20 @@ interface ExpertWithStats extends Expert {
  */
 export function AdminPanel() {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'applications' | 'directories' | 'experts'>('dashboard');
-  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [activeTab, setActiveTab] = useState<'users' | 'applications' | 'directories' | 'experts'>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [applications, setApplications] = useState<(Application & { owner_email?: string; owner_name?: string })[]>([]);
   const [directions, setDirections] = useState<{ id: number; name: string; description?: string | null }[]>([]);
   const [tenders, setTenders] = useState<{ id: number; name: string; description?: string | null }[]>([]);
+  const [statuses, setStatuses] = useState<Status[]>([]);
   const [experts, setExperts] = useState<ExpertWithStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAddExpertModalOpen, setIsAddExpertModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [editingExpert, setEditingExpert] = useState<Expert | null>(null);
+  const [deletingExpert, setDeletingExpert] = useState<Expert | null>(null);
 
   // Проверка прав администратора
   useEffect(() => {
@@ -38,13 +40,6 @@ export function AdminPanel() {
       setError('Доступ запрещён. Требуются права администратора.');
     }
   }, [user]);
-
-  // Загрузка статистики
-  useEffect(() => {
-    if (user?.role === 'admin' && activeTab === 'dashboard') {
-      loadStats();
-    }
-  }, [activeTab, user]);
 
   // Загрузка пользователей
   useEffect(() => {
@@ -58,6 +53,7 @@ export function AdminPanel() {
     if (user?.role === 'admin' && activeTab === 'applications') {
       loadApplications();
       loadExperts(); // Загружаем экспертов для фильтров и назначения
+      loadStatuses(); // Загружаем статусы для смены статуса
     }
   }, [activeTab, user]);
 
@@ -74,19 +70,6 @@ export function AdminPanel() {
       loadExperts();
     }
   }, [activeTab, user]);
-
-  const loadStats = async () => {
-    setLoading(true);
-    try {
-      const data = await adminService.getStats();
-      setStats(data);
-    } catch (err) {
-      setError('Ошибка загрузки статистики');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadUsers = async () => {
     setLoading(true);
@@ -144,6 +127,22 @@ export function AdminPanel() {
     }
   };
 
+  const loadStatuses = async () => {
+    setLoading(true);
+    try {
+      const data = await adminService.getDirections(); // Используем getDirections как заглушку, т.к. statuses нет в adminService
+      // Получаем статусы через отдельный запрос
+      const api = (await import('../utils/api')).default;
+      const statusesResponse = await api.get('/statuses');
+      setStatuses(statusesResponse.data.data || []);
+    } catch (err) {
+      setError('Ошибка загрузки статусов');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (user?.role !== 'admin') {
     return (
       <div className="container mx-auto p-6">
@@ -180,7 +179,6 @@ export function AdminPanel() {
         <div className="container mx-auto px-6">
           <div className="flex space-x-4 overflow-x-auto">
             {[
-              { id: 'dashboard', label: 'Обзор' },
               { id: 'users', label: 'Пользователи' },
               { id: 'applications', label: 'Заявки' },
               { id: 'experts', label: 'Эксперты' },
@@ -216,71 +214,74 @@ export function AdminPanel() {
           </div>
         )}
 
-        {/* Обзор */}
-        {activeTab === 'dashboard' && stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-700 mb-2">Пользователи</h2>
-              <p className="text-4xl font-bold text-blue-600">{stats.users}</p>
-              <button
-                onClick={() => setActiveTab('users')}
-                className="mt-4 text-blue-600 hover:underline text-sm"
-              >
-                Посмотреть всех →
-              </button>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-700 mb-2">Заявки</h2>
-              <p className="text-4xl font-bold text-green-600">{stats.applications}</p>
-              <button
-                onClick={() => setActiveTab('applications')}
-                className="mt-4 text-blue-600 hover:underline text-sm"
-              >
-                Посмотреть все →
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Пользователи */}
         {activeTab === 'users' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ФИО</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Роль</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Дата регистрации</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {users.map(u => (
-                  <tr key={u.id}>
-                    <td className="px-6 py-4 text-sm text-gray-900">{u.id}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {`${u.surname || ''} ${u.name || ''}`.trim() || '—'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{u.email}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        u.role === 'admin'
-                          ? 'bg-purple-100 text-purple-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {u.role === 'admin' ? 'Администратор' : 'Пользователь'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {u.created_at ? new Date(u.created_at).toLocaleDateString('ru-RU') : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <AdminUsersTable
+              users={users}
+              onEdit={(u: User) => setEditingUser(u)}
+              onDelete={(u: User) => setDeletingUser(u)}
+            />
+
+            {/* Модальное окно редактирования пользователя */}
+            <EditUserModal
+              isOpen={!!editingUser}
+              onClose={() => setEditingUser(null)}
+              user={editingUser}
+              onSave={async (data) => {
+                if (!editingUser) return;
+                setLoading(true);
+                try {
+                  await adminService.updateUser(editingUser.id, data);
+                  await loadUsers();
+                  setEditingUser(null);
+                } catch (err) {
+                  setError('Ошибка обновления пользователя');
+                  console.error(err);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            />
+
+            {/* Подтверждение удаления */}
+            {deletingUser && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Подтверждение удаления</h2>
+                  <p className="text-gray-600 mb-6">
+                    Вы уверены, что хотите удалить пользователя <strong>{deletingUser.email}</strong>?
+                  </p>
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setDeletingUser(null)}
+                      className="btn btn-cancel"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          await adminService.deleteUser(deletingUser.id);
+                          await loadUsers();
+                          setDeletingUser(null);
+                        } catch (err) {
+                          setError('Ошибка удаления пользователя');
+                          console.error(err);
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      className="btn btn-danger"
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Заявки */}
@@ -288,7 +289,11 @@ export function AdminPanel() {
           <ApplicationsList
             applications={applications}
             experts={experts}
+            statuses={statuses}
             onExpertsAssigned={() => {
+              loadApplications();
+            }}
+            onStatusChanged={() => {
               loadApplications();
             }}
           />
@@ -331,61 +336,142 @@ export function AdminPanel() {
 
         {/* Эксперты */}
         {activeTab === 'experts' && (
-          <div className="experts-list-container">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-800">Список экспертов</h2>
-              <button
-                onClick={() => setIsAddExpertModalOpen(true)}
-                className="btn-add-icon"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Добавить эксперта
-              </button>
-            </div>
-            <table className="experts-table">
-              <thead className="experts-table-header">
-                <tr>
-                  <th className="experts-th">ID</th>
-                  <th className="experts-th">ФИО</th>
-                  <th className="experts-th">Дополнительная информация</th>
-                  <th className="experts-th">Дата добавления</th>
-                </tr>
-              </thead>
-              <tbody>
-                {experts.length === 0 ? (
+          <>
+            <div className="experts-list-container">
+              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 className="text-lg font-semibold text-gray-800">Список экспертов</h2>
+                <button
+                  onClick={() => setIsAddExpertModalOpen(true)}
+                  className="btn-add-icon"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Добавить эксперта
+                </button>
+              </div>
+              <table className="experts-table">
+                <thead className="experts-table-header">
                   <tr>
-                    <td colSpan={4} className="experts-empty-state">
-                      Эксперты ещё не добавлены
-                    </td>
+                    <th className="experts-th">ID</th>
+                    <th className="experts-th">ФИО</th>
+                    <th className="experts-th">Дополнительная информация</th>
+                    <th className="experts-th">Дата добавления</th>
+                    <th className="experts-th">Действия</th>
                   </tr>
-                ) : (
-                  experts.map(expert => (
-                    <tr key={expert.id} className="experts-table-row">
-                      <td className="experts-td">{expert.id}</td>
-                      <td className="experts-td">
-                        <div className="font-medium text-gray-900">
-                          {`${expert.surname || ''} ${expert.name || ''}`.trim() || '—'}
-                        </div>
-                        {expert.patronymic && (
-                          <div className="text-sm text-gray-500">{expert.patronymic}</div>
-                        )}
-                      </td>
-                      <td className="experts-td">
-                        {expert.extra_info || (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="experts-td text-gray-500">
-                        {expert.created_at ? new Date(expert.created_at).toLocaleDateString('ru-RU') : '—'}
+                </thead>
+                <tbody>
+                  {experts.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="experts-empty-state">
+                        Эксперты ещё не добавлены
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    experts.map(expert => (
+                      <tr key={expert.id} className="experts-table-row">
+                        <td className="experts-td">{expert.id}</td>
+                        <td className="experts-td">
+                          <div className="font-medium text-gray-900">
+                            {`${expert.surname || ''} ${expert.name || ''}`.trim() || '—'}
+                          </div>
+                          {expert.patronymic && (
+                            <div className="text-sm text-gray-500">{expert.patronymic}</div>
+                          )}
+                        </td>
+                        <td className="experts-td">
+                          {expert.extra_info || (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                        <td className="experts-td text-gray-500">
+                          {expert.created_at ? new Date(expert.created_at).toLocaleDateString('ru-RU') : '—'}
+                        </td>
+                        <td className="experts-td">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditingExpert(expert)}
+                              className="text-blue-600 hover:text-blue-800 hover:underline text-sm font-medium"
+                              title="Редактировать"
+                            >
+                              Редактировать
+                            </button>
+                            <button
+                              onClick={() => setDeletingExpert(expert)}
+                              className="text-red-600 hover:text-red-800 hover:underline text-sm font-medium"
+                              title="Удалить"
+                            >
+                              Удалить
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Модальное окно редактирования эксперта */}
+            <EditExpertModal
+              isOpen={!!editingExpert}
+              onClose={() => setEditingExpert(null)}
+              expert={editingExpert}
+              onSave={async (data) => {
+                if (!editingExpert || editingExpert.id === undefined) return;
+                setLoading(true);
+                try {
+                  await adminService.updateExpert(editingExpert.id, data);
+                  await loadExperts();
+                  setEditingExpert(null);
+                } catch (err) {
+                  setError('Ошибка обновления эксперта');
+                  console.error(err);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            />
+
+            {/* Подтверждение удаления эксперта */}
+            {deletingExpert && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Подтверждение удаления</h2>
+                  <p className="text-gray-600 mb-6">
+                    Вы уверены, что хотите удалить эксперта <strong>{`${deletingExpert.surname} ${deletingExpert.name}`.trim()}</strong>?
+                  </p>
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setDeletingExpert(null)}
+                      className="btn btn-cancel"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (deletingExpert.id === undefined) return;
+                        setLoading(true);
+                        try {
+                          await adminService.deleteExpert(deletingExpert.id);
+                          await loadExperts();
+                          setDeletingExpert(null);
+                        } catch (err) {
+                          setError('Ошибка удаления эксперта');
+                          console.error(err);
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      className="btn btn-danger"
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
 
