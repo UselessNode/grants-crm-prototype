@@ -5,7 +5,7 @@ import { applicationService } from '../utils/applicationService';
 import { useAuthStore } from '../store/authStore';
 import type { Application, Direction, Status } from '../utils/types';
 import { Icon } from '../components/Icon';
-import UserHeader from '../components/UserHeader';
+import { UserPanelLayout } from '../components/UserPanel/UserPanelLayout';
 
 export default function ApplicationsList() {
   const { user } = useAuthStore();
@@ -132,20 +132,17 @@ export default function ApplicationsList() {
   };
 
   return (
-    <div className="applications-list-page bg-gray-50">
-      <UserHeader />
-
-      <main className="page-main-lg">
-        {/* Заголовок с кнопкой */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Заявки</h2>
-          <Link
-            to="/applications/new"
-            className="btn-header"
-          >
-            + Новая заявка
-          </Link>
-        </div>
+    <UserPanelLayout title="Заявки">
+      {/* Заголовок с кнопкой */}
+      <div className="flex justify-between items-center mb-6">
+        <div></div> {/* Пустой div для выравнивания */}
+        <Link
+          to="/applications/new"
+          className="btn-header"
+        >
+          + Новая заявка
+        </Link>
+      </div>
 
         {/* Фильтры */}
         <div className="filters-container">
@@ -292,7 +289,6 @@ export default function ApplicationsList() {
             </>
           )}
         </div>
-      </main>
-    </div>
+    </UserPanelLayout>
   );
 }

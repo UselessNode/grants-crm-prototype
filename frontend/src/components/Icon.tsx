@@ -24,6 +24,7 @@ import SettingsIcon from '../assets/icons/settings.svg?react';
 import MenuIcon from '../assets/icons/menu.svg?react';
 import CheckIcon from '../assets/icons/check.svg?react';
 import LoadingIcon from '../assets/icons/loading.svg?react';
+import DownloadIcon from '../assets/icons/download.svg?react';
 
 /**
  * Типы поддерживаемых иконок
@@ -53,7 +54,8 @@ export type IconName =
   | 'settings'
   | 'menu'
   | 'check'
-  | 'loading';
+  | 'loading'
+  | 'download';
 
 /**
  * Пропсы для компонента Icon
@@ -93,6 +95,7 @@ const iconMap: Record<IconName, React.ComponentType<SVGProps<SVGSVGElement>>> = 
   'menu': MenuIcon,
   'check': CheckIcon,
   'loading': LoadingIcon,
+  'download': DownloadIcon,
 };
 
 /**

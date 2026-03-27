@@ -43,7 +43,7 @@ router.delete('/applications/:id', ApplicationController.delete);
 router.post('/applications/:id/submit', ApplicationController.submit);
 
 // Изменить статус заявки (только для администратора)
-router.post('/applications/:id/change-status', ApplicationController.changeStatus);
+router.put('/applications/:id/status', ApplicationController.changeStatus);
 
 // Выставить вердикт эксперта
 router.post('/applications/:id/verdict', ApplicationController.addVerdict);

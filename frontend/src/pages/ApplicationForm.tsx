@@ -1,6 +1,6 @@
 // ApplicationForm.tsx
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useApplicationForm } from '../hooks/useApplicationForm';
 import {
   BasicInfoSection,
@@ -14,7 +14,8 @@ import {
   AdditionalMaterialsSection,
 } from '../components/ApplicationForm';
 import type { ProjectCoordinator, DobroResponsible, ProjectPlan, ProjectBudget } from '../utils/types';
-import UserHeader from '../components/UserHeader';
+import { UserPanelLayout } from '../components/UserPanel/UserPanelLayout';
+import { Icon } from '../components/Icon';
 
 export default function ApplicationForm() {
   const {
@@ -40,30 +41,22 @@ export default function ApplicationForm() {
     emptyBudget,
   } = useApplicationForm();
 
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Загрузка...</div>
-      </div>
+      <UserPanelLayout title={isEdit ? 'Редактирование заявки' : 'Новая заявка'}>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-500">Загрузка...</div>
+        </div>
+      </UserPanelLayout>
     );
   }
 
   return (
-    <div className="application-form-page bg-gray-50">
-      <UserHeader />
-
-      <main className="page-main">
-        {/* Заголовок с кнопкой */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {isEdit ? 'Редактирование заявки' : 'Новая заявка'}
-          </h2>
-          <Link to="/applications" className="btn-ghost">
-            ← Назад к списку
-          </Link>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <UserPanelLayout title={isEdit ? 'Редактирование заявки' : 'Новая заявка'}>
+      <form onSubmit={handleSubmit} className="space-y-6">
 
           {/* Секция 1: Основная информация */}
           <BasicInfoSection
@@ -166,7 +159,6 @@ export default function ApplicationForm() {
             </Link>
           </div>
         </form>
-      </main>
-    </div>
+    </UserPanelLayout>
   );
 }

@@ -7,6 +7,8 @@ import AdminPanel from './pages/AdminPanel';
 import UIShowcase from './pages/UIShowcase';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Profile from './pages/Profile';
+import Documents from './pages/Documents';
 import PrivateRoute from './components/PrivateRoute';
 import { useAuthStore } from './store/authStore';
 
@@ -33,6 +35,8 @@ function App() {
             </PrivateRoute>
           }
         />
+
+        {/* Пользовательские маршруты с вкладками */}
         <Route
           path="/applications"
           element={
@@ -66,6 +70,23 @@ function App() {
           }
         />
         <Route
+          path="/documents"
+          element={
+            <PrivateRoute>
+              <Documents />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <Profile />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
           path="/ui_showcase"
           element={
             <PrivateRoute>
@@ -73,6 +94,7 @@ function App() {
             </PrivateRoute>
           }
         />
+
         {/* Админ-панель (доступ только для admin) */}
         <Route
           path="/admin"

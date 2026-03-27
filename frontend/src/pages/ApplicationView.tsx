@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { applicationService } from '../utils/applicationService';
 import { useAuthStore } from '../store/authStore';
 import type { Application, Status } from '../utils/types';
-import UserHeader from '../components/UserHeader';
+import { UserPanelLayout } from '../components/UserPanel/UserPanelLayout';
 import ExpertAssignment from '../components/ApplicationForm/ExpertAssignment';
 import { Icon } from '../components/Icon';
 import './ApplicationView.css';
@@ -17,6 +17,7 @@ export default function ApplicationView() {
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusChanging, setStatusChanging] = useState(false);
+  const [isEditingStatus, setIsEditingStatus] = useState(false);
 
   useEffect(() => {
     const loadApplication = async () => {
@@ -78,7 +79,10 @@ export default function ApplicationView() {
     if (!application) return;
 
     const newStatus = statuses.find(s => s.id === newStatusId);
-    if (!confirm(`Вы уверены, что хотите изменить статус заявки на "${newStatus?.name}"?`)) return;
+    if (!confirm(`Вы уверены, что хотите изменить статус заявки на "${newStatus?.name}"?`)) {
+      setIsEditingStatus(false);
+      return;
+    }
 
     setStatusChanging(true);
     try {
@@ -86,9 +90,11 @@ export default function ApplicationView() {
       alert('Статус успешно изменён!');
       const data = await applicationService.getApplication(parseInt(id!));
       setApplication(data.data);
+      setIsEditingStatus(false);
     } catch (error) {
       console.error('Ошибка изменения статуса:', error);
       alert('Ошибка при изменении статуса');
+      setIsEditingStatus(false);
     } finally {
       setStatusChanging(false);
     }
@@ -142,12 +148,10 @@ export default function ApplicationView() {
   }
 
   return (
-    <div className="application-view-page bg-gray-50">
-      <UserHeader />
-
-      <main className="page-main-lg application-view-layout">
+    <UserPanelLayout title="Просмотр заявки">
+      <div className="flex gap-6">
         {/* Основной контент */}
-        <div className="application-view-content">
+        <div className="flex-1">
           {/* Заголовок с кнопками */}
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Просмотр заявки</h2>
@@ -197,19 +201,46 @@ export default function ApplicationView() {
                 </p>
               </div>
               {user?.role === 'admin' ? (
-                <select
-                  value={application.status_id || ''}
-                  onChange={(e) => handleStatusChange(parseInt(e.target.value))}
-                  disabled={statusChanging}
-                  className="filter-select text-sm font-medium"
-                  style={{ minWidth: '180px' }}
-                >
-                  {statuses.map((status) => (
-                    <option key={status.id} value={status.id}>
-                      {status.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  {!isEditingStatus ? (
+                    <>
+                      <span className={`px-3 py-1 text-sm rounded-full ${getStatusColor(application.status_name)}`}>
+                        {application.status_name || '—'}
+                      </span>
+                      <button
+                        onClick={() => setIsEditingStatus(true)}
+                        className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Изменить статус"
+                      >
+                        <Icon name="edit" size={14} />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={application.status_id || ''}
+                        onChange={(e) => handleStatusChange(parseInt(e.target.value))}
+                        disabled={statusChanging}
+                        className="filter-select text-sm font-medium"
+                        style={{ minWidth: '180px' }}
+                        autoFocus
+                      >
+                        {statuses.map((status) => (
+                          <option key={status.id} value={status.id}>
+                            {status.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => setIsEditingStatus(false)}
+                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                        title="Отменить"
+                      >
+                        <Icon name="close" size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <span className={`px-3 py-1 text-sm rounded-full ${getStatusColor(application.status_name)}`}>
                   {application.status_name || '—'}
@@ -224,6 +255,10 @@ export default function ApplicationView() {
                 <p className="application-data-value">{application.direction_name || 'Не выбрано'}</p>
               </div>
               <div>
+                <h3 className="application-data-label">Конкурс</h3>
+                <p className="application-data-value">{application.tender_name || 'Не выбран'}</p>
+              </div>
+              <div>
                 <h3 className="application-data-label">Дата подачи</h3>
                 <p className="application-data-value">
                   {application.submitted_at
@@ -231,7 +266,112 @@ export default function ApplicationView() {
                     : 'Не подана'}
                 </p>
               </div>
+              <div>
+                <h3 className="application-data-label">Участников</h3>
+                <p className="application-data-value">
+                  {application.team_members?.length || 0}
+                </p>
+              </div>
             </div>
+
+            {/* Координаторы */}
+            {application.project_coordinators && application.project_coordinators.length > 0 && (
+              <div className="application-section">
+                <h3 className="application-section-title">Координаторы проекта</h3>
+                <div className="mt-3 space-y-3">
+                  {application.project_coordinators.map((coord, index) => (
+                    <div key={coord.id || index} className="p-4 bg-gray-50 rounded-lg">
+                      <p className="font-medium text-gray-900">
+                        {coord.surname} {coord.name} {coord.patronymic}
+                      </p>
+                      {coord.relation_to_team && (
+                        <p className="text-sm text-gray-600 mt-1">{coord.relation_to_team}</p>
+                      )}
+                      {coord.contact_info && (
+                        <p className="text-sm text-gray-600">{coord.contact_info}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Бюджет */}
+            {application.project_budget && application.project_budget.length > 0 && (
+              <div className="application-section">
+                <h3 className="application-section-title">Бюджет проекта</h3>
+                <div className="mt-3 overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ресурс</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Цена</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Кол-во</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Сумма</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Грант</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Свои</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {application.project_budget.map((item, index) => (
+                        <tr key={item.id || index}>
+                          <td className="px-4 py-3 text-sm text-gray-900">{item.resource_type}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                            {item.unit_cost ? `${item.unit_cost.toLocaleString('ru-RU')} ₽` : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900 text-right">{item.quantity || '—'}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
+                            {item.total_cost ? `${item.total_cost.toLocaleString('ru-RU')} ₽` : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-green-700 text-right">
+                            {item.grant_funds ? `${item.grant_funds.toLocaleString('ru-RU')} ₽` : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-blue-700 text-right">
+                            {item.own_funds ? `${item.own_funds.toLocaleString('ru-RU')} ₽` : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* План проекта (даты мероприятия) */}
+            {application.project_plans && application.project_plans.length > 0 && (
+              <div className="application-section">
+                <h3 className="application-section-title">План мероприятия</h3>
+                <div className="mt-3 space-y-3">
+                  {application.project_plans.map((plan, index) => (
+                    <div key={plan.id || index} className="p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium text-gray-900">{plan.event_name}</p>
+                        {(plan.start_date || plan.end_date) && (
+                          <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                            {plan.start_date ? new Date(plan.start_date).toLocaleDateString('ru-RU') : '—'}
+                            {' – '}
+                            {plan.end_date ? new Date(plan.end_date).toLocaleDateString('ru-RU') : '—'}
+                          </span>
+                        )}
+                      </div>
+                      {plan.event_description && (
+                        <p className="text-sm text-gray-600">{plan.event_description}</p>
+                      )}
+                      {plan.task && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          <span className="font-medium">Задача:</span> {plan.task}
+                        </p>
+                      )}
+                      {plan.results && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          <span className="font-medium">Результат:</span> {plan.results}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Описание проекта */}
             <div className="application-section">
@@ -289,7 +429,7 @@ export default function ApplicationView() {
 
         {/* Сайдбар с экспертами */}
         {user?.role === 'admin' && (
-          <aside className="application-view-sidebar">
+          <aside className="w-80 flex-shrink-0">
             <div className="sidebar-card">
               <h3 className="sidebar-title">Эксперты</h3>
 
@@ -307,7 +447,7 @@ export default function ApplicationView() {
             </div>
           </aside>
         )}
-      </main>
-    </div>
+      </div>
+    </UserPanelLayout>
   );
 }
