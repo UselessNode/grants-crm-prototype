@@ -1,5 +1,5 @@
-import { UserPanelLayout } from '../components/UserPanel/UserPanelLayout';
-import { Icon } from '../components/Icon';
+import { UserPanelLayout } from '../components/UserPanel/user-panel-layout';
+import { Icon } from '../components/common/icon';
 
 // Временные тестовые данные
 const documents = [
@@ -47,9 +47,9 @@ const documents = [
 
 const categories = ['Все', 'Положения', 'Методички', 'Формы', 'Документы'];
 
-export default function Documents() {
+export function Documents() {
   return (
-    <UserPanelLayout title="Документы">
+    <UserPanelLayout>
       <div className="max-w-6xl mx-auto">
         {/* Фильтр по категориям */}
         <div className="mb-6">
@@ -145,3 +145,5 @@ export default function Documents() {
     </UserPanelLayout>
   );
 }
+
+export default Documents;

@@ -1,23 +1,23 @@
 // UI Components Library
 // Единая точка импорта всех UI компонентов
 
-export { Button } from './Button';
-export type { ButtonProps } from './Button';
+export { Button } from './button';
+export type { ButtonProps } from './button';
 
-export { Card, CardHeader } from './Card';
-export type { CardProps, CardHeaderProps } from './Card';
+export { Card, CardHeader } from './card';
+export type { CardProps, CardHeaderProps } from './card';
 
-export { Input, TextArea, Select } from './Input';
-export type { InputProps, TextAreaProps, SelectProps } from './Input';
+export { Input, TextArea, Select } from './input';
+export type { InputProps, TextAreaProps, SelectProps } from './input';
 
-export { Badge } from './Badge';
-export type { BadgeProps } from './Badge';
+export { Badge } from './badge';
+export type { BadgeProps } from './badge';
 
-export { Modal } from './Modal';
-export type { ModalProps } from './Modal';
+export { Modal } from './modal';
+export type { ModalProps } from './modal';
 
-export { ToggleSwitch } from './ToggleSwitch';
-export type { ToggleSwitchProps } from './ToggleSwitch';
+export { ToggleSwitch } from './toggle-switch';
+export type { ToggleSwitchProps } from './toggle-switch';
 
-export { ToggleButton } from './ToggleButton';
-export type { ToggleButtonProps } from './ToggleButton';
+export { ToggleButton } from './toggle-button';
+export type { ToggleButtonProps } from './toggle-button';

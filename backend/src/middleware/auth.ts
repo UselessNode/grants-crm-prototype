@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, TokenPayload } from '../utils/jwt';
-import { UserModel } from '../models/User';
+import { UserModel } from '../models/user';
 
 /**
  * Расширенный интерфейс Request с данными пользователя

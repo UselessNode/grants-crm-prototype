@@ -30,9 +30,9 @@ app.get('/api/health', (req, res) => {
 });
 
 // Подключение маршрутов
-import authRoutes from './routes/authRoutes';
-import applicationRoutes from './routes/applicationRoutes';
-import adminRoutes from './routes/adminRoutes';
+import authRoutes from './routes/auth-routes';
+import applicationRoutes from './routes/application-routes';
+import adminRoutes from './routes/admin-routes';
 
 app.use('/api', authRoutes);
 app.use('/api', applicationRoutes);

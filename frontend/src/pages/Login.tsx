@@ -1,12 +1,12 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import Logo from '../components/Logo';
+import { useAuth } from '../hooks/use-auth';
+import Logo from '../components/common/logo';
 
 /**
  * Страница входа
  */
-export default function Login() {
+export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, loading, error } = useAuth();
@@ -136,3 +136,5 @@ export default function Login() {
     </div>
   );
 }
+
+export default Login;

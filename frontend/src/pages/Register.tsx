@@ -1,12 +1,12 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import Logo from '../components/Logo';
+import { useAuth } from '../hooks/use-auth';
+import Logo from '../components/common/logo';
 
 /**
  * Страница регистрации
  */
-export default function Register() {
+export function Register() {
   const navigate = useNavigate();
   const { register, loading, error } = useAuth();
 
@@ -266,3 +266,5 @@ export default function Register() {
     </div>
   );
 }
+
+export default Register;

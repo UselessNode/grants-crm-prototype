@@ -1,16 +1,16 @@
 // App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import ApplicationsList from './pages/ApplicationsList';
-import ApplicationForm from './pages/ApplicationForm';
-import ApplicationView from './pages/ApplicationView';
-import AdminPanel from './pages/AdminPanel';
-import UIShowcase from './pages/UIShowcase';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Profile from './pages/Profile';
-import Documents from './pages/Documents';
-import PrivateRoute from './components/PrivateRoute';
-import { useAuthStore } from './store/authStore';
+import { ApplicationsList } from './pages/applications-list';
+import { ApplicationForm } from './pages/application-form';
+import { ApplicationView } from './pages/application-view';
+import { AdminPanel } from './pages/admin-panel';
+import { UiShowcase } from './pages/ui-showcase';
+import { Login } from './pages/login';
+import { Register } from './pages/register';
+import { Profile } from './pages/profile';
+import { Documents } from './pages/documents';
+import { PrivateRoute } from './components/common/private-route';
+import { useAuthStore } from './store/auth-store';
 
 function HomeRedirect() {
   const { user } = useAuthStore();
@@ -18,7 +18,7 @@ function HomeRedirect() {
   return <Navigate to={redirectTo} replace />;
 }
 
-function App() {
+export function App() {
   return (
     <BrowserRouter>
       <Routes>
@@ -87,10 +87,10 @@ function App() {
         />
 
         <Route
-          path="/ui_showcase"
+          path="/ui-showcase"
           element={
             <PrivateRoute>
-              <UIShowcase />
+              <UiShowcase />
             </PrivateRoute>
           }
         />

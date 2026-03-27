@@ -19,81 +19,87 @@
 | Аутентификация | JWT (7-дневные сессии) |
 | Хэширование | bcrypt |
 
-### Архитектура проекта
+## Структура проекта
 
 ```
 src/
-├── frontend/              # Клиентская часть (Vite + React)
+├── frontend/
 │   └── src/
-│       ├── components/    # UI-компоненты
-│       │   ├── AdminPanel/
-│       │   │   ├── AdminApplicationsTable.tsx
-│       │   │   ├── AdminDashboard.tsx
-│       │   │   ├── AdminDirectories.tsx
-│       │   │   ├── AdminPanelHeader.tsx
-│       │   │   ├── AdminPanelTabs.tsx
-│       │   │   ├── AdminUsersTable.tsx
-│       │   │   ├── ApplicationsList.tsx
-│       │   │   ├── AddExpertModal.tsx
-│       │   │   ├── EditExpertModal.tsx
-│       │   │   └── EditUserModal.tsx
-│       │   ├── ApplicationForm/
-│       │   │   └── ExpertAssignment.tsx
-│       │   ├── ui/
-│       │   │   ├── Card.tsx
-│       │   │   └── Table.tsx
-│       │   ├── Icon.tsx
-│       │   ├── Logo.tsx
-│       │   ├── PrivateRoute.tsx
-│       │   ├── SessionWarningModal.tsx
-│       │   └── UserHeader.tsx
-│       │   └── UserPanel/
-│       │       ├── UserPanelLayout.tsx
-│       │       └── UserPanelTabs.tsx
-│       ├── pages/
-│       │   ├── AdminPanel.tsx
-│       │   ├── ApplicationForm.tsx
-│       │   ├── ApplicationsList.tsx
-│       │   ├── ApplicationView.tsx
-│       │   ├── Documents.tsx       # Вкладка документов
-│       │   ├── Login.tsx
-│       │   ├── Profile.tsx         # Профиль пользователя
-│       │   ├── Register.tsx
-│       │   └── UIShowcase.tsx
+│       ├── assets/
+│       │   ├── icons/          # SVG иконки
+│       │   └── images/         # Изображения
+│       ├── components/
+│       │   ├── admin-panel/    # Компоненты админ-панели
+│       │   ├── ApplicationForm/ # Секции формы заявки
+│       │   ├── common/         # Общие компоненты
+│       │   │   ├── icon.tsx
+│       │   │   ├── logo.tsx
+│       │   │   ├── private-route.tsx
+│       │   │   └── session-warning-modal.tsx
+│       │   ├── layout/         # Layout компоненты
+│       │   │   └── user-header.tsx
+│       │   ├── ui/             # UI компоненты
+│       │   │   ├── badge.tsx
+│       │   │   ├── button.tsx
+│       │   │   ├── card.tsx
+│       │   │   ├── date-input.tsx
+│       │   │   ├── index.ts
+│       │   │   ├── input.tsx
+│       │   │   ├── modal.tsx
+│       │   │   ├── resizable-table.tsx
+│       │   │   ├── table.tsx
+│       │   │   ├── toggle-button.tsx
+│       │   │   └── toggle-switch.tsx
+│       │   └── UserPanel/      # Пользовательская панель
+│       │       ├── user-panel-layout.tsx
+│       │       └── user-panel-tabs.tsx
 │       ├── hooks/
-│       │   └── useApplicationForm.ts
-│       ├── store/
-│       │   └── authStore.ts
-│       ├── utils/
+│       │   ├── use-application-form.ts
+│       │   └── use-auth.ts
+│       ├── pages/
+│       │   ├── admin-panel.tsx
+│       │   ├── application-form.tsx
+│       │   ├── application-view.tsx
+│       │   ├── applications-list.tsx
+│       │   ├── documents.tsx
+│       │   ├── login.tsx
+│       │   ├── profile.tsx
+│       │   ├── register.tsx
+│       │   └── ui-showcase.tsx
+│       ├── services/
+│       │   ├── adminService.ts
 │       │   ├── api.ts
 │       │   ├── applicationService.ts
-│       │   ├── adminService.ts
-│       │   └── types.ts
+│       │   ├── config.ts
+│       │   └── expertService.ts
+│       ├── store/
+│       │   └── auth-store.ts
 │       ├── styles/
 │       │   ├── components.css
-│       │   └── global.css
-│       ├── assets/
-│       │   ├── icons/
-│       │   └── images/
+│       │   ├── global.css
+│       │   └── pages/
+│       ├── types/
+│       │   ├── format.ts
+│       │   └── index.ts
 │       ├── App.tsx
 │       └── main.tsx
-├── backend/               # Серверная часть (Express)
+├── backend/
 │   └── src/
 │       ├── controllers/
-│       │   ├── AdminController.ts
-│       │   ├── ApplicationController.ts
-│       │   └── AuthController.ts
-│       ├── models/
-│       │   ├── Application.ts
-│       │   ├── User.ts
-│       │   └── Expert.ts
-│       ├── routes/
-│       │   ├── adminRoutes.ts
-│       │   ├── applicationRoutes.ts
-│       │   └── authRoutes.ts
+│       │   ├── admin-controller.ts
+│       │   ├── application-controller.ts
+│       │   └── auth-controller.ts
 │       ├── middleware/
 │       │   └── auth.ts
+│       ├── models/
+│       │   ├── application.ts
+│       │   └── user.ts
+│       ├── routes/
+│       │   ├── admin-routes.ts
+│       │   ├── application-routes.ts
+│       │   └── auth-routes.ts
 │       ├── utils/
+│       │   └── jwt.ts
 │       ├── config/
 │       │   └── database.ts
 │       └── app.ts
@@ -115,8 +121,6 @@ npm install
 ```
 
 ### Режим разработки
-
-Запускает одновременно frontend (Vite) и backend (ts-node-dev):
 
 ```bash
 npm run dev
@@ -152,7 +156,7 @@ npm run db:rebuild
 
 ## Переменные окружения
 
-### Backend (.env в корне или backend/)
+### Backend
 
 ```bash
 BACKEND_PORT=3001
@@ -163,7 +167,7 @@ DB_PASSWORD=postgres
 DB_PORT=5432
 ```
 
-### Frontend (.env в frontend/)
+### Frontend
 
 ```bash
 VITE_API_BASE_URL=http://localhost:3001/api
@@ -183,152 +187,65 @@ VITE_API_BASE_URL=http://localhost:3001/api
 
 | Метод | Эндпоинт | Описание |
 |-------|----------|----------|
-| POST | `/register` | Регистрация нового пользователя |
-| POST | `/login` | Вход (возвращает JWT) |
-| GET | `/verify` | Проверка валидности токена |
-| GET | `/me` | Получение профиля текущего пользователя |
+| POST | `/register` | Регистрация |
+| POST | `/login` | Вход |
+| GET | `/verify` | Проверка токена |
+| GET | `/me` | Профиль |
 
 ### Заявки (`/api/applications`)
 
 | Метод | Эндпоинт | Описание |
 |-------|----------|----------|
-| GET | `/applications` | Список заявок (с фильтрацией) |
-| GET | `/applications/:id` | Детальная информация о заявке |
-| POST | `/applications` | Создание новой заявки |
-| PUT | `/applications/:id` | Обновление заявки |
-| DELETE | `/applications/:id` | Удаление заявки |
-| POST | `/applications/:id/submit` | Подать заявку на рассмотрение |
+| GET | `/applications` | Список заявок |
+| GET | `/applications/:id` | Заявка по ID |
+| POST | `/applications` | Создание |
+| PUT | `/applications/:id` | Обновление |
+| DELETE | `/applications/:id` | Удаление |
+| POST | `/applications/:id/submit` | Подать заявку |
 | POST | `/applications/:id/verdict` | Вердикт эксперта |
-| PUT | `/applications/:id/status` | Изменить статус заявки (админ) |
+| PUT | `/applications/:id/status` | Изменить статус (админ) |
 
 ### Админ-панель (`/api/admin`)
 
 | Метод | Эндпоинт | Описание |
 |-------|----------|----------|
-| GET | `/admin/stats` | Статистика системы |
-| GET | `/admin/users` | Список пользователей |
-| PUT | `/admin/users/:id` | Обновление пользователя |
-| DELETE | `/admin/users/:id` | Удаление пользователя |
-| GET | `/admin/applications` | Все заявки (для админа) |
-| GET | `/admin/experts` | Список экспертов |
+| GET | `/admin/users` | Пользователи |
+| PUT | `/admin/users/:id` | Обновить пользователя |
+| DELETE | `/admin/users/:id` | Удалить пользователя |
+| GET | `/admin/experts` | Эксперты |
 | POST | `/admin/experts` | Добавить эксперта |
-| PUT | `/admin/experts/:id` | Обновление эксперта |
-| DELETE | `/admin/experts/:id` | Удаление эксперта |
-| PUT | `/admin/applications/:id/experts` | Назначить экспертов на заявку |
-| GET | `/admin/directions` | Направления грантов |
+| PUT | `/admin/experts/:id` | Обновить эксперта |
+| DELETE | `/admin/experts/:id` | Удалить эксперта |
+| GET | `/admin/directions` | Направления |
 | GET | `/admin/tenders` | Тендеры |
-
-## Модель данных
-
-### Статусы заявок
-
-| ID | Статус | Редактирование | Удаление | Описание |
-|----|--------|---------------|----------|----------|
-| 1 | Черновик | ✅ | ✅ | Заявка в создании |
-| 2 | Подана | ❌ (пользователь), ✅ (админ) | ❌ | Ожидает назначения экспертов |
-| 3 | На рассмотрении | ❌ | ❌ | Эксперты проверяют |
-| 4 | Одобрена | ✅ | ❌ | Можно вносить правки |
-| 5 | Отклонена | ✅ | ✅ | Можно исправить и подать снова |
-
-### Правила редактирования по ролям
-
-| Роль | Статусы для редактирования | Статусы для удаления |
-|------|---------------------------|---------------------|
-| Пользователь | Черновик, Одобрена, Отклонена | Черновик, Отклонена |
-| Администратор | **Все статусы** | Черновик, Отклонена |
-
-### Ключевые таблицы БД
-
-- `users` — пользователи (с ролями)
-- `roles` — роли (user, admin)
-- `applications` — заявки на гранты
-- `tenders` — тендеры/конкурсы
-- `directions` — направления грантов
-- `application_statuses` — справочник статусов (с флагами is_editable, is_deletable)
-- `experts` — эксперты
-- `expert_verdicts` — вердикты экспертов
-- `team_members` — члены команды проекта
-- `project_coordinators` — координаторы проекта
-- `dobro_responsible` — ответственные Dobro.ru
-- `project_budget` — бюджет проекта
-- `project_plans` — план проекта
-- `additional_materials` — прикреплённые файлы
-- `change_logs` — журнал изменений
 
 ## Навигация
 
 ### Пользовательская панель
 
-Пользователи имеют доступ к трём вкладкам:
-
-1. **Заявки** (`/applications`) — список всех заявок пользователя
-2. **Документы** (`/documents`) — справочные документы и положения
-3. **Профиль** (`/profile`) — редактирование личных данных и смена пароля
+- **Заявки** (`/applications`) — список заявок
+- **Документы** (`/documents`) — справочные документы
+- **Профиль** (`/profile`) — настройки профиля
 
 ### Админ-панель
 
-Администраторы имеют доступ к четырём вкладкам:
-
-1. **Пользователи** — управление пользователями
-2. **Заявки** — все заявки системы
-3. **Эксперты** — управление экспертами и вердиктами
-4. **Справочники** — направления и тендеры
+- **Пользователи** — управление пользователями
+- **Заявки** — все заявки системы
+- **Эксперты** — управление экспертами
+- **Справочники** — направления и тендеры
 
 ## Правила разработки
 
-1. **Не делать того, что не просили** — следовать точным требованиям.
-2. **Не использовать эмодзи** в коде и документации (кроме README.md, TODO.md).
-3. **README.md** держать кратким и сжатым.
-4. **Документацию** писать в корне проекта, а не в исходном коде.
-5. **Комментарии в коде** писать на русском языке.
-
-## Актуальные задачи
-
-### Выполнено (Приоритет 1 — Критично)
-
-- [x] Эксперты: таблица экспертов, вердикты, назначение 2 экспертов на заявку
-- [x] Статусы заявок: полная логика переходов
-- [x] Подача заявки вручную (в окне просмотра, с проверкой полей)
-- [x] Создание заявки в статусе «Черновик»
-
-### Выполнено (Приоритет 2 — Важно)
-
-- [x] Звёздочки обязательных полей
-- [x] Две даты мероприятия (начало и окончание)
-- [x] Поиск и фильтрация заявок
-- [x] Замена «этап» на «мероприятие»
-- [x] Админ может менять статусы заявок
-- [x] Редактирование экспертов в админ-панели с отображением вердиктов
-- [x] Редактирование пользователей в админ-панели
-- [x] Вкладки для пользователей (Заявки, Документы, Профиль)
-- [x] Страница профиля пользователя с редактированием и сменой пароля
-- [x] Логотип и название отображаются во всех разделах
-
-### Остались задачи (Приоритет 2–3)
-
-- [ ] Поиск/сортировка для списка пользователей
-- [ ] Поиск/сортировка для списка экспертов
-- [ ] Вкладка «Заявки на рассмотрении» в админ-панели
-- [ ] Согласия на персональные данные (PDF)
-- [ ] Предупреждение при подаче заявки
-- [ ] Интерфейс комментариев для экспертов
-- [ ] Ссылка на Dobro.ru в БД
-- [ ] Список заявок в формате карточек
-- [ ] Экспорт заявок в PDF
-- [ ] Управление документами (админ может менять список)
+1. **Не делать того, что не просили**
+2. **Не использовать эмодзи** в коде (кроме README.md, TODO.md)
+3. **README.md** держать кратким
+4. **Документацию** писать в корне проекта
+5. **Комментарии в коде** писать на русском языке
 
 ## Сроки
 
 - **Финальная сверка**: 28 марта 2026
 - **Итоговый показ**: 4 апреля 2026
-
-## Примечания для разработки
-
-- **Образец для подражания**: сайт «Гранты ФМ» (https://grantsfm.ru/)
-- Материалы образца находятся в папке `../Образец/`
-- Схема базы данных находится в `../Диаграммы/`
-- Проект использует monorepo-структуру с workspaces (frontend, backend)
-- Для пре-коммит хуков настроен Husky
 
 ## Ссылки
 

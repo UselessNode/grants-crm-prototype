@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import { UserPanelLayout } from '../components/UserPanel/UserPanelLayout';
-import { Icon } from '../components/Icon';
+import { useAuthStore } from '../store/auth-store';
+import { UserPanelLayout } from '../components/UserPanel/user-panel-layout';
+import { Icon } from '../components/common/icon';
 
-export default function Profile() {
+export function Profile() {
   const navigate = useNavigate();
   const { user, updateUser } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
@@ -104,7 +104,7 @@ export default function Profile() {
   };
 
   return (
-    <UserPanelLayout title="Профиль">
+    <UserPanelLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Основная информация */}
         <div className="bg-white rounded-lg shadow p-6">
@@ -293,3 +293,5 @@ export default function Profile() {
     </UserPanelLayout>
   );
 }
+
+export default Profile;
