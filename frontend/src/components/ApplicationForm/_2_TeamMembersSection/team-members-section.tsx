@@ -1,4 +1,6 @@
-import type { TeamMember } from '../../../types';
+import { useState, useEffect } from 'react';
+import type { TeamMember, Document } from '../../../types';
+import { adminService } from '../../../services/adminService';
 import './TeamMembersSection.css';
 import { Icon } from '../../common/icon';
 
@@ -17,10 +19,57 @@ export function TeamMembersSection({
   onAdd,
   onRemove,
 }: TeamMembersSectionProps) {
+  const [consentTemplates, setConsentTemplates] = useState<{
+    adult: Document | null;
+    minor: Document | null;
+  }>({ adult: null, minor: null });
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  useEffect(() => {
+    loadConsentTemplates();
+  }, []);
+
+  const loadConsentTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const [adultResponse, minorResponse] = await Promise.all([
+        adminService.getTemplates('consent_adult').catch(() => ({ data: [] })),
+        adminService.getTemplates('consent_minor').catch(() => ({ data: [] })),
+      ]);
+      setConsentTemplates({
+        adult: adultResponse.data[0] || null,
+        minor: minorResponse.data[0] || null,
+      });
+    } catch (err) {
+      console.error('Error loading consent templates:', err);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
   const handleFileChange = (index: number, file: File | null) => {
     if (file) {
       // Для прототипа сохраняем только имя файла
       onChange(index, 'consent_file', file.name);
+    }
+  };
+
+  const handleDownloadTemplate = async (type: 'adult' | 'minor') => {
+    const template = type === 'adult' ? consentTemplates.adult : consentTemplates.minor;
+    if (!template) return;
+
+    try {
+      const blob = await adminService.downloadDocument(template.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = template.file_name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading template:', err);
     }
   };
 
@@ -38,23 +87,39 @@ export function TeamMembersSection({
         </div>
         <div className="TeamMembersSection__samples">
           <span className="text-sm font-medium text-gray-700">Образцы согласий:</span>
-          <button
-            type="button"
-            className="text-sm text-blue-600 hover:text-blue-700 hover:underline inline-flex items-center gap-1"
-            onClick={() => alert('Скачивание образца для совершеннолетних (14+)... (прототип)')}
-          >
-            <Icon name="download" size={14} />
-            Для совершеннолетних (14+)
-          </button>
-          <span className="text-gray-300">|</span>
-          <button
-            type="button"
-            className="text-sm text-blue-600 hover:text-blue-700 hover:underline inline-flex items-center gap-1"
-            onClick={() => alert('Скачивание образца для несовершеннолетних (до 14)... (прототип)')}
-          >
-            <Icon name="download" size={14} />
-            Для несовершеннолетних (до 14)
-          </button>
+          {loadingTemplates ? (
+            <span className="text-sm text-gray-500">Загрузка...</span>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={!consentTemplates.adult}
+                className={`text-sm hover:underline inline-flex items-center gap-1 ${
+                  consentTemplates.adult
+                    ? 'text-blue-600 hover:text-blue-700'
+                    : 'text-gray-400 cursor-not-allowed'
+                }`}
+                onClick={() => handleDownloadTemplate('adult')}
+              >
+                <Icon name="download" size={14} />
+                Для совершеннолетних (14+)
+              </button>
+              <span className="text-gray-300">|</span>
+              <button
+                type="button"
+                disabled={!consentTemplates.minor}
+                className={`text-sm hover:underline inline-flex items-center gap-1 ${
+                  consentTemplates.minor
+                    ? 'text-blue-600 hover:text-blue-700'
+                    : 'text-gray-400 cursor-not-allowed'
+                }`}
+                onClick={() => handleDownloadTemplate('minor')}
+              >
+                <Icon name="download" size={14} />
+                Для несовершеннолетних (до 14)
+              </button>
+            </>
+          )}
         </div>
       </div>
       {team_members.map((member, idx) => (

@@ -1,5 +1,5 @@
 import api from './api';
-import type { Application, Direction, Tender, Expert, ExpertVerdict } from '../types';
+import type { Application, Direction, Tender, Expert, ExpertVerdict, Document, DocumentCategory } from '../types';
 
 export interface User {
   id: number;
@@ -65,6 +65,29 @@ export interface UpdateUserData {
   name?: string | null;
   patronymic?: string | null;
   role_id?: number;
+}
+
+export interface AddDocumentData {
+  title: string;
+  description?: string | null;
+  category_id?: number | null;
+  is_template?: boolean;
+  template_type?: string | null;
+  file: File;
+}
+
+export interface UpdateDocumentData {
+  title?: string;
+  description?: string | null;
+  category_id?: number | null;
+  is_template?: boolean;
+  template_type?: string | null;
+}
+
+export interface AddDocumentCategoryData {
+  name: string;
+  description?: string | null;
+  sort_order?: number;
 }
 
 export const adminService = {
@@ -203,6 +226,160 @@ export const adminService = {
   async deleteExpert(expertId: number) {
     const response = await api.delete<{ success: boolean }>(
       `/admin/experts/${expertId}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Получить список документов
+   */
+  async getDocuments(params?: {
+    page?: number;
+    limit?: number;
+    category_id?: number;
+    is_template?: boolean;
+    template_type?: string;
+  }) {
+    const response = await api.get<{
+      success: boolean;
+      data: Document[];
+      pagination: { page: number; limit: number; total: number; pages: number };
+    }>('/documents', { params });
+    return response.data;
+  },
+
+  /**
+   * Получить документ по ID
+   */
+  async getDocument(id: number) {
+    const response = await api.get<{ success: boolean; data: Document }>(
+      `/documents/${id}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Скачать документ
+   */
+  async downloadDocument(id: number) {
+    const response = await api.get(`/documents/${id}/download`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  /**
+   * Загрузить новый документ
+   */
+  async createDocument(data: AddDocumentData) {
+    const formData = new FormData();
+    formData.append('file', data.file);
+    formData.append('title', data.title);
+    if (data.description) formData.append('description', data.description);
+    if (data.category_id) formData.append('category_id', String(data.category_id));
+    if (data.is_template) formData.append('is_template', String(data.is_template));
+    if (data.template_type) formData.append('template_type', data.template_type);
+
+    const response = await api.post<{ success: boolean; data: Document }>(
+      '/documents',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Обновить документ (метаданные)
+   */
+  async updateDocument(id: number, data: UpdateDocumentData) {
+    const response = await api.put<{ success: boolean; data: Document }>(
+      `/documents/${id}`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Заменить файл документа
+   */
+  async updateDocumentFile(id: number, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.put<{ success: boolean; data: Document }>(
+      `/documents/${id}/file`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Удалить документ
+   */
+  async deleteDocument(id: number) {
+    const response = await api.delete<{ success: boolean }>(
+      `/documents/${id}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Получить категории документов
+   */
+  async getDocumentCategories() {
+    const response = await api.get<{ success: boolean; data: DocumentCategory[] }>(
+      '/documents/categories'
+    );
+    return response.data;
+  },
+
+  /**
+   * Создать категорию документов
+   */
+  async createDocumentCategory(data: AddDocumentCategoryData) {
+    const response = await api.post<{ success: boolean; data: DocumentCategory }>(
+      '/documents/categories',
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Обновить категорию документов
+   */
+  async updateDocumentCategory(id: number, data: AddDocumentCategoryData) {
+    const response = await api.put<{ success: boolean; data: DocumentCategory }>(
+      `/documents/categories/${id}`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Удалить категорию документов
+   */
+  async deleteDocumentCategory(id: number) {
+    const response = await api.delete<{ success: boolean }>(
+      `/documents/categories/${id}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Получить шаблоны по типу
+   */
+  async getTemplates(templateType: string) {
+    const response = await api.get<{ success: boolean; data: Document[] }>(
+      `/documents/templates/${templateType}`
     );
     return response.data;
   },

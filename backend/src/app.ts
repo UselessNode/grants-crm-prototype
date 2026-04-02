@@ -44,10 +44,12 @@ app.get('/api/health', (req, res) => {
 import authRoutes from './routes/auth-routes';
 import applicationRoutes from './routes/application-routes';
 import adminRoutes from './routes/admin-routes';
+import documentRoutes from './routes/document-routes';
 
 app.use('/api', authRoutes);
 app.use('/api', applicationRoutes);
 app.use('/api', adminRoutes);
+app.use('/api', documentRoutes);
 
 // Обработка 404
 app.use((req, res) => {

@@ -1,0 +1,167 @@
+.AddDocumentModal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.AddDocumentModal__overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.AddDocumentModal__content {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.AddDocumentModal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.AddDocumentModal__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.AddDocumentModal__close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.AddDocumentModal__close:hover {
+  color: #4b5563;
+}
+
+.AddDocumentModal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.AddDocumentModal__error {
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.AddDocumentModal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.AddDocumentModal__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.AddDocumentModal__input,
+.AddDocumentModal__textarea,
+.AddDocumentModal__select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.AddDocumentModal__input:focus,
+.AddDocumentModal__textarea:focus,
+.AddDocumentModal__select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.AddDocumentModal__textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.AddDocumentModal__file-input {
+  padding: 10px 12px;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: #f9fafb;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.AddDocumentModal__file-input:hover {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.AddDocumentModal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-cancel,
+.btn-primary {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-cancel {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.btn-cancel:disabled,
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

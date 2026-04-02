@@ -1,15 +1,16 @@
 import './AdminPanelTabs.css';
 
 type AdminPanelTabsProps = {
-  activeTab: 'dashboard' | 'users' | 'applications' | 'directories';
-  setActiveTab: (tab: 'dashboard' | 'users' | 'applications' | 'directories') => void;
+  activeTab: 'dashboard' | 'users' | 'applications' | 'directories' | 'experts' | 'documents';
+  setActiveTab: (tab: 'dashboard' | 'users' | 'applications' | 'directories' | 'experts' | 'documents') => void;
 };
 
 export function AdminPanelTabs({ activeTab, setActiveTab }: AdminPanelTabsProps) {
   const tabs = [
-    { id: 'dashboard', label: 'Обзор' },
     { id: 'users', label: 'Пользователи' },
     { id: 'applications', label: 'Заявки' },
+    { id: 'experts', label: 'Эксперты' },
+    { id: 'documents', label: 'Документы' },
     { id: 'directories', label: 'Справочники' },
   ];
 

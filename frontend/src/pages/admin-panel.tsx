@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { adminService } from '../services/adminService';
 import { useAuthStore } from '../store/auth-store';
 import type { User } from '../services/adminService';
-import type { Application, Expert, Status } from '../types';
-import { ApplicationsList, AddExpertModal, EditUserModal, EditExpertModal, AdminUsersTable, AdminDirectories, AdminPanelTabs } from '../components/admin-panel';
+import type { Application, Expert, Status, Document } from '../types';
+import { ApplicationsList, AddExpertModal, EditUserModal, EditExpertModal, AdminUsersTable, AdminDirectories, AdminPanelTabs, AdminDocumentsTable, AddDocumentModal } from '../components/admin-panel';
 
 interface ExpertWithStats extends Expert {
   applicationsCount?: number;
@@ -15,16 +15,20 @@ interface ExpertWithStats extends Expert {
  */
 export function AdminPanel() {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'users' | 'applications' | 'directories' | 'experts'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'applications' | 'directories' | 'experts' | 'documents'>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [applications, setApplications] = useState<(Application & { owner_email?: string; owner_name?: string })[]>([]);
   const [directions, setDirections] = useState<{ id: number; name: string; description?: string | null }[]>([]);
   const [tenders, setTenders] = useState<{ id: number; name: string; description?: string | null }[]>([]);
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [experts, setExperts] = useState<ExpertWithStats[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAddExpertModalOpen, setIsAddExpertModalOpen] = useState(false);
+  const [isAddDocumentModalOpen, setIsAddDocumentModalOpen] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const [deletingDocument, setDeletingDocument] = useState<Document | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [editingExpert, setEditingExpert] = useState<Expert | null>(null);
@@ -64,6 +68,13 @@ export function AdminPanel() {
   useEffect(() => {
     if (user?.role === 'admin' && activeTab === 'experts') {
       loadExperts();
+    }
+  }, [activeTab, user]);
+
+  // Загрузка документов
+  useEffect(() => {
+    if (user?.role === 'admin' && activeTab === 'documents') {
+      loadDocuments();
     }
   }, [activeTab, user]);
 
@@ -117,6 +128,19 @@ export function AdminPanel() {
       setExperts(data.data);
     } catch (err) {
       setError('Ошибка загрузки экспертов');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDocuments = async () => {
+    setLoading(true);
+    try {
+      const data = await adminService.getDocuments({ limit: 50 });
+      setDocuments(data.data);
+    } catch (err) {
+      setError('Ошибка загрузки документов');
       console.error(err);
     } finally {
       setLoading(false);
@@ -404,6 +428,96 @@ export function AdminPanel() {
                           setDeletingExpert(null);
                         } catch (err) {
                           setError('Ошибка удаления эксперта');
+                          console.error(err);
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      className="btn btn-danger"
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Документы */}
+        {activeTab === 'documents' && (
+          <>
+            <div className="experts-list-container">
+              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 className="text-lg font-semibold text-gray-800">Управление документами</h2>
+                <button
+                  onClick={() => setIsAddDocumentModalOpen(true)}
+                  className="btn-add-icon"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Добавить документ
+                </button>
+              </div>
+              <AdminDocumentsTable
+                documents={documents}
+                onEdit={(doc: Document) => setEditingDocument(doc)}
+                onDelete={(doc: Document) => setDeletingDocument(doc)}
+                onDownload={async (doc: Document) => {
+                  try {
+                    const blob = await adminService.downloadDocument(doc.id);
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = doc.file_name;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    setError('Ошибка при скачивании документа');
+                    console.error(err);
+                  }
+                }}
+              />
+            </div>
+
+            {/* Модальное окно добавления/редактирования документа */}
+            <AddDocumentModal
+              isOpen={isAddDocumentModalOpen}
+              onClose={() => setIsAddDocumentModalOpen(false)}
+              document={editingDocument}
+              onDocumentAdded={() => {
+                loadDocuments();
+                setEditingDocument(null);
+              }}
+            />
+
+            {/* Подтверждение удаления документа */}
+            {deletingDocument && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Подтверждение удаления</h2>
+                  <p className="text-gray-600 mb-6">
+                    Вы уверены, что хотите удалить документ <strong>{deletingDocument.title}</strong>?
+                  </p>
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setDeletingDocument(null)}
+                      className="btn btn-cancel"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          await adminService.deleteDocument(deletingDocument.id);
+                          await loadDocuments();
+                          setDeletingDocument(null);
+                        } catch (err) {
+                          setError('Ошибка удаления документа');
                           console.error(err);
                         } finally {
                           setLoading(false);

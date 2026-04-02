@@ -191,3 +191,29 @@ export interface BadgeOption {
     | 'status-approved'
     | 'status-rejected';
 }
+
+export interface Document {
+  id: number;
+  title: string;
+  description?: string | null;
+  category_id?: number | null;
+  category_name?: string | null;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  is_template?: boolean;
+  template_type?: string | null;
+  download_count?: number;
+  created_by?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DocumentCategory {
+  id: number;
+  name: string;
+  description?: string | null;
+  sort_order?: number;
+  created_at?: string;
+  updated_at?: string;
+}
