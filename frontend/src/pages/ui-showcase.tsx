@@ -3,6 +3,7 @@ import { useState, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { ToggleButton } from '../components/ui/toggle-button';
 import { Table, TableEmptyState, TableDivider, TableAddRow } from '../components/ui/table';
+import { Badge } from '../components/ui/badge';
 import UserHeader from '../components/layout/user-header';
 
 export function UiShowcase() {
@@ -333,25 +334,97 @@ export function UiShowcase() {
           {/* Бейджи */}
           <div className="section-card">
             <h2 className="section-title">5. Бейджи</h2>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Цветовые варианты</h3>
                 <div className="flex gap-2 flex-wrap">
-                  <span className="badge-default px-3 py-1">Default</span>
-                  <span className="badge-success px-3 py-1">Success</span>
-                  <span className="badge-warning px-3 py-1">Warning</span>
-                  <span className="badge-error px-3 py-1">Error</span>
-                  <span className="badge-info px-3 py-1">Info</span>
+                  <Badge variant="default">Default</Badge>
+                  <Badge variant="success">Success</Badge>
+                  <Badge variant="warning">Warning</Badge>
+                  <Badge variant="error">Error</Badge>
+                  <Badge variant="info">Info</Badge>
                 </div>
               </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Типы документов</h3>
+                <div className="flex gap-2 flex-wrap">
+                  <Badge variant="document">Документ</Badge>
+                  <Badge variant="regulation">Нормативный</Badge>
+                  <Badge variant="form">Форма</Badge>
+                </div>
+              </div>
+
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Статусы заявок</h3>
                 <div className="flex gap-2 flex-wrap">
-                  <span className="badge-status-draft px-3 py-1">Черновик</span>
-                  <span className="badge-status-submitted px-3 py-1">Отправлена</span>
-                  <span className="badge-status-review px-3 py-1">На рассмотрении</span>
-                  <span className="badge-status-approved px-3 py-1">Одобрена</span>
-                  <span className="badge-status-rejected px-3 py-1">Отклонена</span>
+                  <Badge variant="status-draft">Черновик</Badge>
+                  <Badge variant="status-submitted">Отправлена</Badge>
+                  <Badge variant="status-review">На рассмотрении</Badge>
+                  <Badge variant="status-approved">Одобрена</Badge>
+                  <Badge variant="status-rejected">Отклонена</Badge>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Размеры</h3>
+                <div className="flex gap-2 flex-wrap items-center">
+                  <Badge variant="info" size="sm">Small</Badge>
+                  <Badge variant="info" size="md">Medium</Badge>
+                  <Badge variant="info" size="lg">Large</Badge>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Редактируемые бейджи</h3>
+                <div className="flex gap-2 flex-wrap items-center">
+                  <Badge mode="interactive" variant="status-draft" onEdit={() => alert('Редактировать статус')} editTooltip="Изменить статус">
+                    Черновик
+                  </Badge>
+                  <Badge mode="interactive" variant="document" onEdit={() => alert('Редактировать тип')} editTooltip="Изменить тип">
+                    Документ
+                  </Badge>
+                  <Badge mode="interactive" variant="status-approved" onEdit={() => {}} editTooltip="Недоступно">
+                    Одобрена
+                  </Badge>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Бейдж с раскрытием (Expandable)</h3>
+                <div className="flex gap-4 flex-wrap items-start">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">Статусы:</p>
+                    <Badge
+                      mode="expandable"
+                      variant="status-draft"
+                      options={[
+                        { id: 1, label: 'Черновик', variant: 'status-draft' },
+                        { id: 2, label: 'Отправлена', variant: 'status-submitted' },
+                        { id: 3, label: 'На рассмотрении', variant: 'status-review' },
+                        { id: 4, label: 'Одобрена', variant: 'status-approved' },
+                        { id: 5, label: 'Отклонена', variant: 'status-rejected' },
+                      ]}
+                      value={1}
+                      colorizeOptions
+                      onSelect={(option) => alert(`Выбрано: ${option.label}`)}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">Типы:</p>
+                    <Badge
+                      mode="expandable"
+                      variant="document"
+                      options={[
+                        { id: 'doc', label: 'Документ', variant: 'document' },
+                        { id: 'reg', label: 'Нормативный', variant: 'regulation' },
+                        { id: 'form', label: 'Форма', variant: 'form' },
+                      ]}
+                      value="reg"
+                      colorizeOptions
+                      onSelect={(option) => alert(`Выбрано: ${option.label}`)}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

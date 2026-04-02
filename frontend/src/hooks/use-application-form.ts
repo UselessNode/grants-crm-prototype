@@ -34,6 +34,8 @@ const emptyTeamMember: TeamMember = {
   tasks_in_project: '',
   contact_info: '',
   social_media_links: '',
+  consent_file: null,
+  is_minor: false,
 };
 
 const emptyCoordinator: ProjectCoordinator = {
@@ -54,6 +56,7 @@ const emptyDobroResponsible: DobroResponsible = {
   relation_to_team: '',
   contact_info: '',
   social_media_links: '',
+  dobro_link: '',
 };
 
 const emptyPlan: ProjectPlan = {

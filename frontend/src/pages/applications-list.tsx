@@ -2,10 +2,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { applicationService } from '../services/applicationService';
+import { adminService } from '../services/adminService';
 import { useAuthStore } from '../store/auth-store';
-import type { Application, Direction, Status } from '../types';
+import { Badge, type BadgeProps } from '../components/ui/badge';
+import type { Application, Direction, Status, Expert } from '../types';
 import { Icon } from '../components/common/icon';
 import { UserPanelLayout } from '../components/UserPanel/user-panel-layout';
+import { ApplicationsList as AdminApplicationsList } from '../components/admin-panel';
 
 export function ApplicationsList() {
   const { user } = useAuthStore();
@@ -25,7 +28,13 @@ export function ApplicationsList() {
   const [statusFilter, setStatusFilter] = useState('');
   const [limit, setLimit] = useState(10);
 
-  // Загрузка данных
+  // Админ-панель (для встроенных функций)
+  const [experts, setExperts] = useState<Expert[]>([]);
+  const [adminApplications, setAdminApplications] = useState<(Application & { owner_email?: string; owner_name?: string })[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Загрузка обычных заявок (для пользователей и вкладки заявок у админа)
   const loadData = async () => {
     setLoading(true);
     try {
@@ -52,9 +61,50 @@ export function ApplicationsList() {
     }
   };
 
+  // Загрузка данных для админ-панели (только для встроенного списка заявок)
+  const loadAdminData = async () => {
+    setAdminLoading(true);
+    try {
+      const data = await adminService.getApplications({ limit: 50 });
+      setAdminApplications(data.data);
+      setTotalItems(data.pagination.total);
+      loadExperts();
+      loadStatuses();
+    } catch (err) {
+      setError('Ошибка загрузки данных');
+      console.error(err);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const loadExperts = async () => {
+    try {
+      const data = await adminService.getExperts();
+      setExperts(data.data);
+    } catch (err) {
+      console.error('Ошибка загрузки экспертов:', err);
+    }
+  };
+
+  const loadStatuses = async () => {
+    try {
+      const api = (await import('../services/api')).default;
+      const statusesResponse = await api.get('/statuses');
+      setStatuses(statusesResponse.data.data || []);
+    } catch (err) {
+      console.error('Ошибка загрузки статусов:', err);
+    }
+  };
+
   useEffect(() => {
-    loadData();
-  }, [page, limit]);
+    if (user?.role === 'admin') {
+      loadAdminData();
+    } else {
+      loadData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, limit, user?.role]);
 
   // Поиск с debounce
   useEffect(() => {
@@ -105,15 +155,15 @@ export function ApplicationsList() {
     }
   };
 
-  const getStatusColor = (statusName?: string) => {
-    const colors: Record<string, string> = {
-      'Черновик': 'bg-gray-100 text-gray-800',
-      'Подана': 'bg-blue-100 text-blue-800',
-      'На рассмотрении': 'bg-yellow-100 text-yellow-800',
-      'Одобрена': 'bg-green-100 text-green-800',
-      'Отклонена': 'bg-red-100 text-red-800',
+  const getStatusVariant = (statusName?: string): BadgeProps['variant'] => {
+    const variants: Record<string, BadgeProps['variant']> = {
+      'Черновик': 'status-draft',
+      'Подана': 'status-submitted',
+      'На рассмотрении': 'status-review',
+      'Одобрена': 'status-approved',
+      'Отклонена': 'status-rejected',
     };
-    return colors[statusName || ''] || 'bg-gray-100 text-gray-800';
+    return variants[statusName || ''] || 'default';
   };
 
   // Проверка, можно ли редактировать заявку
@@ -132,163 +182,110 @@ export function ApplicationsList() {
   };
 
   return (
-    <UserPanelLayout>
-      {/* Заголовок с кнопкой */}
-      <div className="flex justify-between items-center mb-6">
-        <div></div> {/* Пустой div для выравнивания */}
-        <Link
-          to="/applications/new"
-          className="btn-header"
-        >
-          + Новая заявка
-        </Link>
-      </div>
-
-        {/* Фильтры */}
-        <div className="filters-container">
-          <div className="filters-grid">
-            <div>
-              <label className="filter-label">
-                Поиск
-              </label>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Название или описание..."
-                className="filter-input"
-              />
-            </div>
-
-            <div>
-              <label className="filter-label">
-                Направление
-              </label>
-              <select
-                value={directionFilter}
-                onChange={(e) => setDirectionFilter(e.target.value)}
-                className="filter-select"
-              >
-                <option value="">Все направления</option>
-                {directions.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="filter-label">
-                Статус
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="filter-select"
-              >
-                <option value="">Все статусы</option>
-                {statuses.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="filter-label">
-                На странице
-              </label>
-              <select
-                value={limit}
-                onChange={(e) => { setLimit(parseInt(e.target.value)); setPage(1); }}
-                className="filter-select"
-              >
-                <option value="10">10</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
-            </div>
-          </div>
+    <UserPanelLayout showTabs={true} useMainNavigation={true}>
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+          {error}
         </div>
+      )}
 
-        {/* Таблица заявок */}
-        <div className="applications-table-container">
-          {loading ? (
-            <div className="p-8 text-center text-gray-500">Загрузка...</div>
-          ) : applications.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              Заявок не найдено. <Link to="/applications/new" className="text-indigo-600 hover:underline">Создайте первую!</Link>
-            </div>
-          ) : (
+      {/* Контент */}
+      {adminLoading || loading ? (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        <>
+          {/* Вкладка заявок для обычного пользователя */}
+          {user?.role !== 'admin' && (
             <>
-              <div className="overflow-x-auto">
-                <table className="applications-table">
-                  <thead className="applications-table-header">
-                    <tr>
-                      <th className="applications-th">ID</th>
-                      <th className="applications-th">Название</th>
-                      <th className="applications-th">Направление</th>
-                      <th className="applications-th">Статус</th>
-                      <th className="applications-th">Дата создания</th>
-                      <th className="applications-th">Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody className="applications-tbody">
-                    {applications.map((app) => (
-                      <tr key={app.id} className="applications-table-row">
-                        <td className="applications-td">#{app.id}</td>
-                        <td className="applications-td-title">
-                          <span className="text-sm font-medium text-gray-900">{app.title}</span>
-                        </td>
-                        <td className="applications-td">{app.direction_name || '—'}</td>
-                        <td className="applications-td">
-                          <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(app.status_name)}`}>
-                            {app.status_name || '—'}
-                          </span>
-                        </td>
-                        <td className="applications-td">
-                          {app.created_at ? new Date(app.created_at).toLocaleDateString('ru-RU') : '—'}
-                        </td>
-                        <td className="applications-td-text">
-                          <Link to={`/applications/${app.id}`} className="applications-action-link">
-                            Просмотр
-                          </Link>
-                          {/*{canEdit(app.status_name) ? (
-                            <Link to={`/applications/${app.id}/edit`} className="applications-action-link-edit">
-                              Редактировать
-                            </Link>
-                          ) : (
-                            <span className="text-gray-400 cursor-not-allowed" title="Редактирование доступно только для черновиков и отклонённых заявок">
-                              Редактировать
-                            </span>
-                          )}*/}
-                          {canDelete(app.status_name) ? (
-                            <button onClick={() => app.id && handleDelete(app.id, app.status_name)} className="applications-action-button-delete">
-                              Удалить
-                            </button>
-                          ) : (
-                            <span className="text-gray-400 cursor-not-allowed" title="Удаление доступно только для черновиков и отклонённых заявок">
-                              Удалить
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="flex justify-between items-center mb-6">
+                <div></div>
+                <Link to="/applications/new" className="btn-header">+ Новая заявка</Link>
               </div>
 
-              {/* Пагинация */}
-              <div className="pagination-container">
-                <div className="pagination-info">Показано {applications.length} из {totalItems} заявок</div>
-                <div className="pagination-buttons">
-                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="pagination-button">← Назад</button>
-                  <span className="px-3 py-1 text-gray-700">Страница {page} из {totalPages}</span>
-                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="pagination-button">Вперед →</button>
+              {/* Таблица заявок пользователя */}
+              <div className="applications-table-container">
+                <div className="overflow-x-auto">
+                  <table className="applications-table">
+                    <thead className="applications-table-header">
+                      <tr>
+                        <th className="applications-th">ID</th>
+                        <th className="applications-th">Название</th>
+                        <th className="applications-th">Направление</th>
+                        <th className="applications-th">Статус</th>
+                        <th className="applications-th">Дата создания</th>
+                        <th className="applications-th">Действия</th>
+                      </tr>
+                    </thead>
+                    <tbody className="applications-tbody">
+                      {applications.map((app) => (
+                        <tr key={app.id} className="applications-table-row">
+                          <td className="applications-td">#{app.id}</td>
+                          <td className="applications-td-title">
+                            <span className="text-sm font-medium text-gray-900">{app.title}</span>
+                          </td>
+                          <td className="applications-td">{app.direction_name || '—'}</td>
+                          <td className="applications-td">
+                            <Badge variant={getStatusVariant(app.status_name)} size="sm">
+                              {app.status_name || '—'}
+                            </Badge>
+                          </td>
+                          <td className="applications-td">
+                            {app.created_at ? new Date(app.created_at).toLocaleDateString('ru-RU') : '—'}
+                          </td>
+                          <td className="applications-td-text">
+                            <Link to={`/applications/${app.id}`} className="applications-action-link">
+                              Просмотр
+                            </Link>
+                            {canDelete(app.status_name) ? (
+                              <button onClick={() => app.id && handleDelete(app.id, app.status_name)} className="applications-action-button-delete">
+                                Удалить
+                              </button>
+                            ) : (
+                              <span className="text-gray-400 cursor-not-allowed" title="Удаление доступно только для черновиков и отклонённых заявок">
+                                Удалить
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Пагинация */}
+                <div className="pagination-container">
+                  <div className="pagination-info">Показано {applications.length} из {totalItems} заявок</div>
+                  <div className="pagination-buttons">
+                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="pagination-button">← Назад</button>
+                    <span className="px-3 py-1 text-gray-700">Страница {page} из {totalPages}</span>
+                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="pagination-button">Вперед →</button>
+                  </div>
                 </div>
               </div>
             </>
           )}
-        </div>
+
+          {/* Вкладка заявок для администратора */}
+          {user?.role === 'admin' && (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <div></div>
+                <Link to="/applications/new" className="btn-header">+ Новая заявка</Link>
+              </div>
+
+              <AdminApplicationsList
+                applications={adminApplications}
+                experts={experts}
+                statuses={statuses}
+                onExpertsAssigned={() => loadAdminData()}
+                onStatusChanged={() => loadAdminData()}
+              />
+            </>
+          )}
+        </>
+      )}
     </UserPanelLayout>
   );
 }

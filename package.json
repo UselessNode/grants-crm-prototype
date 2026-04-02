@@ -7,6 +7,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "concurrently \"cd frontend && npm run dev\" \"cd backend && npm run dev\"",
+    "dev:clean": "cross-env NODE_NO_WARNINGS=1 concurrently \"cd frontend && npm run dev\" \"cd backend && npm run dev\"",
     "build": "cd frontend && npm run build && cd ../backend && npm run build",
     "start": "node dist/backend/app.js",
     "db:reset": "node scripts/reset-db.js",
@@ -24,6 +25,7 @@
   ],
   "devDependencies": {
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "husky": "^9.0.11"
   },
   "dependencies": {}

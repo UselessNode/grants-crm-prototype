@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { User } from '../../services/adminService';
+import type { User } from '../../../services/adminService';
+import './EditUserModal.css';
 
 type EditUserModalProps = {
   isOpen: boolean;
@@ -44,94 +45,87 @@ export default function EditUserModal({ isOpen, onClose, user, onSave }: EditUse
   if (!isOpen || !user) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-800">Редактирование пользователя</h2>
+    <div className="EditUserModal">
+      <div className="EditUserModal__overlay" onClick={onClose} />
+      <div className="EditUserModal__content">
+        <div className="EditUserModal__header">
+          <h2 className="EditUserModal__title">Редактирование пользователя</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="EditUserModal__close"
+          >
+            ✕
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="px-6 py-4 space-y-4">
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-800 text-sm">
-                {error}
-              </div>
-            )}
+        <form onSubmit={handleSubmit} className="EditUserModal__form">
+          {error && (
+            <div className="EditUserModal__error">{error}</div>
+          )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Фамилия
-              </label>
+          <div className="EditUserModal__grid">
+            <div className="EditUserModal__field">
+              <label className="EditUserModal__label">Фамилия</label>
               <input
                 type="text"
                 value={surname}
                 onChange={(e) => setSurname(e.target.value)}
-                className="input w-full"
+                className="EditUserModal__input"
                 placeholder="Фамилия"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Имя
+            <div className="EditUserModal__field">
+              <label className="EditUserModal__label">
+                Имя <span className="required-mark">*</span>
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="input w-full"
+                className="EditUserModal__input"
                 placeholder="Имя"
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Отчество
-              </label>
+            <div className="EditUserModal__field">
+              <label className="EditUserModal__label">Отчество</label>
               <input
                 type="text"
                 value={patronymic}
                 onChange={(e) => setPatronymic(e.target.value)}
-                className="input w-full"
+                className="EditUserModal__input"
                 placeholder="Отчество"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Роль
-              </label>
+            <div className="EditUserModal__field">
+              <label className="EditUserModal__label">Роль</label>
               <select
                 value={roleId}
                 onChange={(e) => setRoleId(Number(e.target.value))}
-                className="field-select w-full"
+                className="EditUserModal__select"
               >
                 <option value={1}>Пользователь</option>
                 <option value={2}>Администратор</option>
               </select>
             </div>
-
-            <div className="text-sm text-gray-500">
-              <p>Email: <span className="text-gray-900">{user.email}</span></p>
-              {user.created_at && (
-                <p>Дата регистрации: <span className="text-gray-900">{new Date(user.created_at).toLocaleDateString('ru-RU')}</span></p>
-              )}
-            </div>
           </div>
 
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+          <div className="EditUserModal__actions">
             <button
               type="button"
               onClick={onClose}
-              className="btn btn-cancel"
+              className="btn-cancel"
               disabled={loading}
             >
               Отмена
             </button>
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn-primary"
               disabled={loading}
             >
               {loading ? 'Сохранение...' : 'Сохранить'}

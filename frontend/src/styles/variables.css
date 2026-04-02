@@ -61,6 +61,26 @@
   --status-rejected-bg: #fee2e2;
   --status-rejected-text: #b91c1c;
 
+  /* Бейджи (общие) */
+  --badge-default-bg: #f3f4f6;
+  --badge-default-text: #374151;
+  --badge-success-bg: #dcfce7;
+  --badge-success-text: #166534;
+  --badge-warning-bg: #fef3c7;
+  --badge-warning-text: #92400e;
+  --badge-error-bg: #fee2e2;
+  --badge-error-text: #b91c1c;
+  --badge-info-bg: #dbeafe;
+  --badge-info-text: #1e40af;
+
+  /* Бейджи для типов документов */
+  --badge-document-bg: #e0e7ff;
+  --badge-document-text: #3730a3;
+  --badge-regulation-bg: #dbeafe;
+  --badge-regulation-text: #1e40af;
+  --badge-form-bg: #fef3c7;
+  --badge-form-text: #92400e;
+
   /* ========================================
      ТИПОГРАФИКА
      ======================================== */

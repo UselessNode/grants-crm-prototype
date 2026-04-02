@@ -109,6 +109,7 @@ export interface DobroResponsible {
   relation_to_team?: string | null;
   contact_info?: string | null;
   social_media_links?: string | null;
+  dobro_link?: string | null; // Ссылка на профиль на DOBRO.RU
 }
 
 export interface Expert {
@@ -436,9 +437,9 @@ export class ApplicationModel {
       if (dobro_responsible && dobro_responsible.length > 0) {
         for (const dobro of dobro_responsible) {
           await client.query(`
-            INSERT INTO dobro_responsible (application_id, surname, name, patronymic, relation_to_team, contact_info, social_media_links)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-          `, [applicationId, dobro.surname, dobro.name, dobro.patronymic || null, dobro.relation_to_team || null, dobro.contact_info || null, dobro.social_media_links || null]);
+            INSERT INTO dobro_responsible (application_id, surname, name, patronymic, relation_to_team, contact_info, social_media_links, dobro_link)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `, [applicationId, dobro.surname, dobro.name, dobro.patronymic || null, dobro.relation_to_team || null, dobro.contact_info || null, dobro.social_media_links || null, dobro.dobro_link || null]);
         }
       }
 
@@ -559,9 +560,9 @@ export class ApplicationModel {
         await client.query('DELETE FROM dobro_responsible WHERE application_id = $1', [id]);
         for (const dobro of data.dobro_responsible) {
           await client.query(`
-            INSERT INTO dobro_responsible (application_id, surname, name, patronymic, relation_to_team, contact_info, social_media_links)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-          `, [id, dobro.surname, dobro.name, dobro.patronymic || null, dobro.relation_to_team || null, dobro.contact_info || null, dobro.social_media_links || null]);
+            INSERT INTO dobro_responsible (application_id, surname, name, patronymic, relation_to_team, contact_info, social_media_links, dobro_link)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `, [id, dobro.surname, dobro.name, dobro.patronymic || null, dobro.relation_to_team || null, dobro.contact_info || null, dobro.social_media_links || null, dobro.dobro_link || null]);
         }
       }
 

@@ -120,6 +120,17 @@ export function DobroResponsibleSection({
               placeholder="VK, Telegram..."
             />
           </div>
+          <div>
+            <label className="field-label">Ссылка на DOBRO.RU *</label>
+            <input
+              type="url"
+              value={dobroData.dobro_link || ''}
+              onChange={(e) => onChange(0, 'dobro_link', e.target.value)}
+              className={`field-input ${errors['dobro_dobro_link'] ? 'field-input-error' : ''}`}
+              placeholder="https://dobro.ru/user/123456"
+            />
+            {errors['dobro_dobro_link'] && <p className="field-error">{errors['dobro_dobro_link']}</p>}
+          </div>
         </div>
       </div>
 

@@ -138,7 +138,7 @@ export const adminService = {
    */
   async changeStatus(applicationId: number, data: ChangeStatusData) {
     const response = await api.post<{ success: boolean; data: Application }>(
-      `/applications/${applicationId}/change-status`,
+      `/admin/applications/${applicationId}/change-status`,
       data
     );
     return response.data;

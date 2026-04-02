@@ -2,6 +2,7 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Frontend для CRM системы грантов",
   "scripts": {
     "dev": "vite",

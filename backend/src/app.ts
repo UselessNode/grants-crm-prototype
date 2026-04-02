@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
 import dotenv from 'dotenv';
 
 // Загрузка переменных окружения
@@ -13,7 +12,19 @@ const app = express();
 // Middleware
 app.use(helmet()); // Защита заголовков
 app.use(cors()); // Разрешение CORS
-app.use(morgan('dev')); // Логирование запросов
+
+// Логирование только ошибок (4xx и 5xx)
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const status = res.statusCode;
+    if (status >= 400) {
+      const duration = Date.now() - start;
+      console.error(`[ERROR] ${req.method} ${req.url} ${status} - ${duration}ms`);
+    }
+  });
+  next();
+});
 
 // Установка кодировки UTF-8 для всех ответов
 app.use((req, res, next) => {

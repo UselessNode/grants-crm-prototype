@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { Expert } from '../../types';
+import type { Expert } from '../../../types';
+import './EditExpertModal.css';
 
 type EditExpertModalProps = {
   isOpen: boolean;
@@ -8,7 +9,7 @@ type EditExpertModalProps = {
   onSave: (data: { surname: string; name: string; patronymic: string | null; extra_info: string | null }) => Promise<void>;
 };
 
-export default function EditExpertModal({ isOpen, onClose, expert, onSave }: EditExpertModalProps) {
+export function EditExpertModal({ isOpen, onClose, expert, onSave }: EditExpertModalProps) {
   const [surname, setSurname] = useState('');
   const [name, setName] = useState('');
   const [patronymic, setPatronymic] = useState('');
@@ -44,93 +45,89 @@ export default function EditExpertModal({ isOpen, onClose, expert, onSave }: Edi
   if (!isOpen || !expert) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-800">Редактирование эксперта</h2>
+    <div className="EditExpertModal">
+      <div className="EditExpertModal__overlay" onClick={onClose} />
+      <div className="EditExpertModal__content">
+        <div className="EditExpertModal__header">
+          <h2 className="EditExpertModal__title">Редактирование эксперта</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="EditExpertModal__close"
+          >
+            ✕
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="px-6 py-4 space-y-4">
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-800 text-sm">
-                {error}
-              </div>
-            )}
+        <form onSubmit={handleSubmit} className="EditExpertModal__form">
+          {error && (
+            <div className="EditExpertModal__error">{error}</div>
+          )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Фамилия <span className="text-red-500">*</span>
+          <div className="EditExpertModal__grid">
+            <div className="EditExpertModal__field">
+              <label className="EditExpertModal__label">
+                Фамилия <span className="required-mark">*</span>
               </label>
               <input
                 type="text"
                 value={surname}
                 onChange={(e) => setSurname(e.target.value)}
-                className="input w-full"
+                className="EditExpertModal__input"
                 placeholder="Фамилия"
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Имя <span className="text-red-500">*</span>
+            <div className="EditExpertModal__field">
+              <label className="EditExpertModal__label">
+                Имя <span className="required-mark">*</span>
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="input w-full"
+                className="EditExpertModal__input"
                 placeholder="Имя"
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Отчество
-              </label>
+            <div className="EditExpertModal__field">
+              <label className="EditExpertModal__label">Отчество</label>
               <input
                 type="text"
                 value={patronymic}
                 onChange={(e) => setPatronymic(e.target.value)}
-                className="input w-full"
+                className="EditExpertModal__input"
                 placeholder="Отчество"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Дополнительная информация
-              </label>
+            <div className="EditExpertModal__field EditExpertModal__field--full">
+              <label className="EditExpertModal__label">Дополнительная информация</label>
               <textarea
                 value={extraInfo}
                 onChange={(e) => setExtraInfo(e.target.value)}
-                className="field-textarea w-full"
+                className="EditExpertModal__textarea"
                 placeholder="Должность, учёная степень, специализация и т.д."
                 rows={4}
               />
             </div>
-
-            <div className="text-sm text-gray-500">
-              {expert.created_at && (
-                <p>Дата добавления: <span className="text-gray-900">{new Date(expert.created_at).toLocaleDateString('ru-RU')}</span></p>
-              )}
-            </div>
           </div>
 
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+          <div className="EditExpertModal__actions">
             <button
               type="button"
               onClick={onClose}
-              className="btn btn-cancel"
+              className="btn-cancel"
               disabled={loading}
             >
               Отмена
             </button>
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn-primary"
               disabled={loading}
             >
               {loading ? 'Сохранение...' : 'Сохранить'}
@@ -141,3 +138,5 @@ export default function EditExpertModal({ isOpen, onClose, expert, onSave }: Edi
     </div>
   );
 }
+
+export default EditExpertModal;

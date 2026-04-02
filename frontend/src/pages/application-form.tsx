@@ -46,7 +46,7 @@ export function ApplicationForm() {
 
   if (loading) {
     return (
-      <UserPanelLayout>
+      <UserPanelLayout showLogout={false}>
         <div className="flex items-center justify-center py-12">
           <div className="text-gray-500">Загрузка...</div>
         </div>
@@ -55,7 +55,7 @@ export function ApplicationForm() {
   }
 
   return (
-    <UserPanelLayout>
+    <UserPanelLayout showLogout={false}>
       <form onSubmit={handleSubmit} className="space-y-6">
 
           {/* Секция 1: Основная информация */}
@@ -73,8 +73,8 @@ export function ApplicationForm() {
           <TeamMembersSection
             team_members={formData.team_members}
             errors={errors}
-            onChange={(index: number, field: keyof typeof emptyTeamMember, value: string) =>
-              handleArrayChange('team_members', index, field, value)
+            onChange={(index: number, field: keyof typeof emptyTeamMember, value: string | boolean | null) =>
+              handleArrayChange('team_members', index, field, value as any)
             }
             onAdd={() => addArrayItem('team_members', emptyTeamMember)}
             onRemove={(index: number) => removeArrayItem('team_members', index)}

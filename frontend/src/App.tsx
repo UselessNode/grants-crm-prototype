@@ -4,18 +4,31 @@ import { ApplicationsList } from './pages/applications-list';
 import { ApplicationForm } from './pages/application-form';
 import { ApplicationView } from './pages/application-view';
 import { AdminPanel } from './pages/admin-panel';
+import { AdminUsers } from './pages/admin-users';
+import { AdminExperts } from './pages/admin-experts';
+import { AdminDirectories } from './pages/admin-directories';
 import { UiShowcase } from './pages/ui-showcase';
 import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { Profile } from './pages/profile';
 import { Documents } from './pages/documents';
+import { NotFoundPage } from './pages/not-found';
 import { PrivateRoute } from './components/common/private-route';
 import { useAuthStore } from './store/auth-store';
 
 function HomeRedirect() {
   const { user } = useAuthStore();
-  const redirectTo = user?.role === 'admin' ? '/admin' : '/applications';
-  return <Navigate to={redirectTo} replace />;
+  // Все пользователи идут на страницу заявок, администратор видит там вкладки админ-панели
+  return <Navigate to="/applications" replace />;
+}
+
+// Компонент для защиты профиля от администраторов
+function ProfileWrapper() {
+  const { user } = useAuthStore();
+  if (user?.role === 'admin') {
+    return <Navigate to="/applications" replace />;
+  }
+  return <Profile />;
 }
 
 export function App() {
@@ -81,7 +94,7 @@ export function App() {
           path="/profile"
           element={
             <PrivateRoute>
-              <Profile />
+              <ProfileWrapper />
             </PrivateRoute>
           }
         />
@@ -95,7 +108,7 @@ export function App() {
           }
         />
 
-        {/* Админ-панель (доступ только для admin) */}
+        {/* Админские маршруты */}
         <Route
           path="/admin"
           element={
@@ -103,6 +116,36 @@ export function App() {
               <AdminPanel />
             </PrivateRoute>
           }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <PrivateRoute>
+              <AdminUsers />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/experts"
+          element={
+            <PrivateRoute>
+              <AdminExperts />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin/directories"
+          element={
+            <PrivateRoute>
+              <AdminDirectories />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Страница 404 — должна быть последней */}
+        <Route
+          path="*"
+          element={<NotFoundPage />}
         />
       </Routes>
     </BrowserRouter>

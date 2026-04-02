@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '../../store/auth-store';
 import logoWatermelon from '../../assets/images/Melon.png';
 
 export interface LogoProps {
   variant?: 'auth' | 'page';
 }
-
 
 const logoText = "Арбузный грант";
 
@@ -15,9 +15,15 @@ const logoText = "Арбузный грант";
  * - page: для основных страниц с хедером
  */
 export default function Logo({ variant = 'auth' }: LogoProps) {
+  const { user } = useAuthStore();
+
   if (variant === 'page') {
+    // Администраторы переходят в админ-панель, обычные пользователи — на заявки
+    // const destination = user?.role === 'admin' ? '/admin' : '/applications';
+    const destination = '/applications';
+
     return (
-      <Link to="/admin" className="page-logo-wrapper">
+      <Link to={destination} className="page-logo-wrapper">
         <img src={logoWatermelon} alt={logoText} className="page-logo" />
         <span className="page-logo-text">{logoText}</span>
       </Link>

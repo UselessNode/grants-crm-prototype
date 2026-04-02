@@ -42,6 +42,8 @@ export interface TeamMember {
   tasks_in_project?: string | null;
   contact_info?: string | null;
   social_media_links?: string | null;
+  consent_file?: string | null; // Путь к файлу согласия (для прототипа)
+  is_minor?: boolean; // Совершеннолетний или нет (для выбора образца)
 }
 
 export interface ProjectCoordinator {
@@ -66,6 +68,7 @@ export interface DobroResponsible {
   relation_to_team?: string | null;
   contact_info?: string | null;
   social_media_links?: string | null;
+  dobro_link?: string | null; // Ссылка на профиль на DOBRO.RU
 }
 
 export interface Expert {
@@ -168,4 +171,23 @@ export interface DirectionsResponse {
 export interface StatusesResponse {
   success: boolean;
   data: Status[];
+}
+
+export interface BadgeOption {
+  id: string | number;
+  label: string;
+  variant?:
+    | 'default'
+    | 'success'
+    | 'warning'
+    | 'error'
+    | 'info'
+    | 'document'
+    | 'regulation'
+    | 'form'
+    | 'status-draft'
+    | 'status-submitted'
+    | 'status-review'
+    | 'status-approved'
+    | 'status-rejected';
 }

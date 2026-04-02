@@ -4,11 +4,7 @@ import { adminService } from '../services/adminService';
 import { useAuthStore } from '../store/auth-store';
 import type { User } from '../services/adminService';
 import type { Application, Expert, Status } from '../types';
-import ApplicationsList from '../components/admin-panel/applications-list';
-import AddExpertModal from '../components/admin-panel/add-expert-modal';
-import EditUserModal from '../components/admin-panel/edit-user-modal';
-import EditExpertModal from '../components/admin-panel/edit-expert-modal';
-import { AdminUsersTable } from '../components/admin-panel/admin-users-table';
+import { ApplicationsList, AddExpertModal, EditUserModal, EditExpertModal, AdminUsersTable, AdminDirectories, AdminPanelTabs } from '../components/admin-panel';
 
 interface ExpertWithStats extends Expert {
   applicationsCount?: number;
@@ -161,12 +157,12 @@ export function AdminPanel() {
     <div className="min-h-screen bg-gray-50">
       {/* Заголовок */}
       <header className="bg-white shadow">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-6 py-3">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-800">Админ-панель</h1>
+            <h1 className="text-xl font-bold text-gray-800">Админ-панель</h1>
             <Link
               to="/applications"
-              className="text-blue-600 hover:text-blue-700 hover:underline"
+              className="text-blue-600 hover:text-blue-700 hover:underline text-sm"
             >
               ← К заявкам
             </Link>
@@ -175,30 +171,10 @@ export function AdminPanel() {
       </header>
 
       {/* Вкладки */}
-      <nav className="bg-white border-b">
-        <div className="container mx-auto px-6">
-          <div className="flex space-x-4 overflow-x-auto">
-            {[
-              { id: 'users', label: 'Пользователи' },
-              { id: 'applications', label: 'Заявки' },
-              { id: 'experts', label: 'Эксперты' },
-              { id: 'directories', label: 'Справочники' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`py-4 px-2 border-b-2 font-medium transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </nav>
+      <AdminPanelTabs
+        activeTab={activeTab === 'experts' ? 'dashboard' : activeTab}
+        setActiveTab={(tab) => setActiveTab(tab as typeof activeTab)}
+      />
 
       {/* Контент */}
       <main className="container mx-auto px-6 py-6">
@@ -228,7 +204,7 @@ export function AdminPanel() {
               isOpen={!!editingUser}
               onClose={() => setEditingUser(null)}
               user={editingUser}
-              onSave={async (data) => {
+              onSave={async (data: { surname: string | null; name: string | null; patronymic: string | null; role_id: number }) => {
                 if (!editingUser) return;
                 setLoading(true);
                 try {
@@ -301,37 +277,7 @@ export function AdminPanel() {
 
         {/* Справочники */}
         {activeTab === 'directories' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Направления */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Направления</h2>
-              <ul className="space-y-2">
-                {directions.map(d => (
-                  <li key={d.id} className="p-3 bg-gray-50 rounded">
-                    <div className="font-medium text-gray-900">{d.name}</div>
-                    {d.description && (
-                      <div className="text-sm text-gray-500 mt-1">{d.description}</div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Конкурсы */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Конкурсы (тендеры)</h2>
-              <ul className="space-y-2">
-                {tenders.map(t => (
-                  <li key={t.id} className="p-3 bg-gray-50 rounded">
-                    <div className="font-medium text-gray-900">{t.name}</div>
-                    {t.description && (
-                      <div className="text-sm text-gray-500 mt-1">{t.description}</div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <AdminDirectories directions={directions} tenders={tenders} />
         )}
 
         {/* Эксперты */}
@@ -417,7 +363,7 @@ export function AdminPanel() {
               isOpen={!!editingExpert}
               onClose={() => setEditingExpert(null)}
               expert={editingExpert}
-              onSave={async (data) => {
+              onSave={async (data: { surname: string; name: string; patronymic: string | null; extra_info: string | null }) => {
                 if (!editingExpert || editingExpert.id === undefined) return;
                 setLoading(true);
                 try {

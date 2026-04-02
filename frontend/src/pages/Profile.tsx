@@ -104,7 +104,7 @@ export function Profile() {
   };
 
   return (
-    <UserPanelLayout>
+    <UserPanelLayout showTabs={true} useMainNavigation={true}>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Основная информация */}
         <div className="bg-white rounded-lg shadow p-6">
@@ -200,18 +200,6 @@ export function Profile() {
             <div>
               <span className="text-sm text-gray-500">Email</span>
               <p className="text-gray-900">{user?.email}</p>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500">Роль</span>
-              <p className="text-gray-900">
-                {user?.role === 'admin' ? (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                    Администратор
-                  </span>
-                ) : (
-                  'Пользователь'
-                )}
-              </p>
             </div>
             <div>
               <span className="text-sm text-gray-500">Полное имя</span>

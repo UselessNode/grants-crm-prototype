@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { adminService } from '../../services/adminService';
+import { adminService } from '../../../services/adminService';
 import './AddExpertModal.css';
 
 interface AddExpertModalProps {
@@ -61,76 +61,76 @@ export function AddExpertModal({
   if (!isOpen) return null;
 
   return (
-    <div className="add-expert-modal">
-      <div className="add-expert-modal__overlay" onClick={onClose} />
-      <div className="add-expert-modal__content">
-        <div className="add-expert-modal__header">
-          <h2 className="add-expert-modal__title">Добавить эксперта</h2>
+    <div className="AddExpertModal">
+      <div className="AddExpertModal__overlay" onClick={onClose} />
+      <div className="AddExpertModal__content">
+        <div className="AddExpertModal__header">
+          <h2 className="AddExpertModal__title">Добавить эксперта</h2>
           <button
             type="button"
             onClick={onClose}
-            className="add-expert-modal__close"
+            className="AddExpertModal__close"
           >
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="add-expert-modal__form">
+        <form onSubmit={handleSubmit} className="AddExpertModal__form">
           {error && (
-            <div className="add-expert-modal__error">{error}</div>
+            <div className="AddExpertModal__error">{error}</div>
           )}
 
-          <div className="add-expert-modal__grid">
-            <div className="add-expert-modal__field">
-              <label className="add-expert-modal__label">
+          <div className="AddExpertModal__grid">
+            <div className="AddExpertModal__field">
+              <label className="AddExpertModal__label">
                 Фамилия <span className="required-mark">*</span>
               </label>
               <input
                 type="text"
                 value={formData.surname}
                 onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
-                className="add-expert-modal__input"
+                className="AddExpertModal__input"
                 placeholder="Иванов"
               />
             </div>
 
-            <div className="add-expert-modal__field">
-              <label className="add-expert-modal__label">
+            <div className="AddExpertModal__field">
+              <label className="AddExpertModal__label">
                 Имя <span className="required-mark">*</span>
               </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="add-expert-modal__input"
+                className="AddExpertModal__input"
                 placeholder="Иван"
               />
             </div>
 
-            <div className="add-expert-modal__field">
-              <label className="add-expert-modal__label">Отчество</label>
+            <div className="AddExpertModal__field">
+              <label className="AddExpertModal__label">Отчество</label>
               <input
                 type="text"
                 value={formData.patronymic}
                 onChange={(e) => setFormData({ ...formData, patronymic: e.target.value })}
-                className="add-expert-modal__input"
+                className="AddExpertModal__input"
                 placeholder="Иванович"
               />
             </div>
 
-            <div className="add-expert-modal__field add-expert-modal__field--full">
-              <label className="add-expert-modal__label">Дополнительная информация</label>
+            <div className="AddExpertModal__field AddExpertModal__field--full">
+              <label className="AddExpertModal__label">Дополнительная информация</label>
               <textarea
                 value={formData.extra_info}
                 onChange={(e) => setFormData({ ...formData, extra_info: e.target.value })}
-                className="add-expert-modal__textarea"
+                className="AddExpertModal__textarea"
                 rows={3}
                 placeholder="Комментарий, специализация, контакты..."
               />
             </div>
           </div>
 
-          <div className="add-expert-modal__actions">
+          <div className="AddExpertModal__actions">
             <button
               type="button"
               onClick={onClose}

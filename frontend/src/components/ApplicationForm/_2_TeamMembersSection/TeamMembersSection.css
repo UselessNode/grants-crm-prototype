@@ -8,6 +8,18 @@
   /* Контейнер секции */
 }
 
+.TeamMembersSection__header {
+  @apply mb-6;
+}
+
+.TeamMembersSection__info {
+  @apply flex items-start gap-2 p-3 bg-blue-50 rounded-lg mb-3;
+}
+
+.TeamMembersSection__samples {
+  @apply flex items-center gap-3 p-3 bg-gray-50 rounded-lg;
+}
+
 .TeamMembersSection__item {
   @apply bg-gray-50 rounded-lg border border-gray-200 p-4 mb-4
          transition-all duration-200;
@@ -23,4 +35,21 @@
 
 .TeamMembersSection__mt {
   @apply mt-3;
+}
+
+/* Блок согласия */
+.TeamMembersSection__consent {
+  @apply bg-white rounded-lg border border-gray-200 p-4;
+}
+
+.TeamMembersSection__consent-header {
+  @apply flex justify-between items-start mb-3;
+}
+
+.TeamMembersSection__consent-upload {
+  @apply space-y-2;
+}
+
+.TeamMembersSection__consent-file {
+  @apply flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200;
 }

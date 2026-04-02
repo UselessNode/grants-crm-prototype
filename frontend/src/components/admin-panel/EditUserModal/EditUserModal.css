@@ -1,0 +1,67 @@
+/* ========================================
+   EditUserModal
+   Модальное окно редактирования пользователя
+   ======================================== */
+
+.EditUserModal {
+  @apply fixed inset-0 z-50 flex items-center justify-center;
+}
+
+.EditUserModal__overlay {
+  @apply absolute inset-0 bg-black bg-opacity-50;
+}
+
+.EditUserModal__content {
+  @apply relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 p-6 z-10;
+}
+
+.EditUserModal__header {
+  @apply flex items-center justify-between mb-6 pb-4 border-b border-gray-200;
+}
+
+.EditUserModal__title {
+  @apply text-xl font-semibold text-gray-900;
+}
+
+.EditUserModal__close {
+  @apply text-gray-400 hover:text-gray-600 transition-colors;
+}
+
+.EditUserModal__form {
+  @apply space-y-4;
+}
+
+.EditUserModal__error {
+  @apply text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3;
+}
+
+.EditUserModal__grid {
+  @apply grid grid-cols-1 gap-4;
+}
+
+.EditUserModal__field {
+  @apply flex flex-col gap-1;
+}
+
+.EditUserModal__label {
+  @apply text-sm font-medium text-gray-700;
+}
+
+.EditUserModal__input {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+         focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent;
+}
+
+.EditUserModal__select {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+         focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+         appearance-none bg-white pr-8;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.25em 1.25em;
+}
+
+.EditUserModal__actions {
+  @apply flex justify-end gap-3 pt-4 border-t border-gray-200;
+}

@@ -7,6 +7,7 @@ import type { Application, Status } from '../types';
 import { UserPanelLayout } from '../components/UserPanel/user-panel-layout';
 import ExpertAssignment from '../components/ApplicationForm/expert-assignment';
 import { Icon } from '../components/common/icon';
+import { Badge, type BadgeProps } from '../components/ui/badge';
 import './application-view.css';
 
 export function ApplicationView() {
@@ -17,7 +18,6 @@ export function ApplicationView() {
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusChanging, setStatusChanging] = useState(false);
-  const [isEditingStatus, setIsEditingStatus] = useState(false);
 
   useEffect(() => {
     const loadApplication = async () => {
@@ -80,7 +80,6 @@ export function ApplicationView() {
 
     const newStatus = statuses.find(s => s.id === newStatusId);
     if (!confirm(`Вы уверены, что хотите изменить статус заявки на "${newStatus?.name}"?`)) {
-      setIsEditingStatus(false);
       return;
     }
 
@@ -90,25 +89,23 @@ export function ApplicationView() {
       alert('Статус успешно изменён!');
       const data = await applicationService.getApplication(parseInt(id!));
       setApplication(data.data);
-      setIsEditingStatus(false);
     } catch (error) {
       console.error('Ошибка изменения статуса:', error);
       alert('Ошибка при изменении статуса');
-      setIsEditingStatus(false);
     } finally {
       setStatusChanging(false);
     }
   };
 
-  const getStatusColor = (statusName?: string) => {
-    const colors: Record<string, string> = {
-      'Черновик': 'bg-gray-100 text-gray-800',
-      'Подана': 'bg-blue-100 text-blue-800',
-      'На рассмотрении': 'bg-yellow-100 text-yellow-800',
-      'Одобрена': 'bg-green-100 text-green-800',
-      'Отклонена': 'bg-red-100 text-red-800',
+  const getStatusVariant = (statusName?: string): BadgeProps['variant'] => {
+    const variants: Record<string, BadgeProps['variant']> = {
+      'Черновик': 'status-draft',
+      'Подана': 'status-submitted',
+      'На рассмотрении': 'status-review',
+      'Одобрена': 'status-approved',
+      'Отклонена': 'status-rejected',
     };
-    return colors[statusName || ''] || 'bg-gray-100 text-gray-800';
+    return variants[statusName || ''] || 'default';
   };
 
   // Проверка, можно ли редактировать заявку
@@ -148,7 +145,7 @@ export function ApplicationView() {
   }
 
   return (
-    <UserPanelLayout>
+    <UserPanelLayout showLogout={false}>
       <div className="flex gap-6">
         {/* Основной контент */}
         <div className="flex-1">
@@ -202,49 +199,22 @@ export function ApplicationView() {
               </div>
               {user?.role === 'admin' ? (
                 <div className="flex items-center gap-2">
-                  {!isEditingStatus ? (
-                    <>
-                      <span className={`px-3 py-1 text-sm rounded-full ${getStatusColor(application.status_name)}`}>
-                        {application.status_name || '—'}
-                      </span>
-                      <button
-                        onClick={() => setIsEditingStatus(true)}
-                        className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        title="Изменить статус"
-                      >
-                        <Icon name="edit" size={14} />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={application.status_id || ''}
-                        onChange={(e) => handleStatusChange(parseInt(e.target.value))}
-                        disabled={statusChanging}
-                        className="filter-select text-sm font-medium"
-                        style={{ minWidth: '180px' }}
-                        autoFocus
-                      >
-                        {statuses.map((status) => (
-                          <option key={status.id} value={status.id}>
-                            {status.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => setIsEditingStatus(false)}
-                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                        title="Отменить"
-                      >
-                        <Icon name="close" size={14} />
-                      </button>
-                    </div>
-                  )}
+                  <Badge
+                    mode="expandable"
+                    size="lg"
+                    variant={getStatusVariant(application.status_name)}
+                    options={statuses.map(s => ({ id: s.id, label: s.name, variant: getStatusVariant(s.name) }))}
+                    value={application.status_id ?? undefined}
+                    colorizeOptions
+                    onSelect={(option) => {
+                      handleStatusChange(option.id as number);
+                    }}
+                  />
                 </div>
               ) : (
-                <span className={`px-3 py-1 text-sm rounded-full ${getStatusColor(application.status_name)}`}>
+                <Badge variant={getStatusVariant(application.status_name)}>
                   {application.status_name || '—'}
-                </span>
+                </Badge>
               )}
             </div>
 

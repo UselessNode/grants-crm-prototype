@@ -1,0 +1,206 @@
+/* ========================================
+   ApplicationsList
+   Список заявок администратора
+   ======================================== */
+
+.ApplicationsList {
+  @apply space-y-4;
+}
+
+/* Панель управления */
+.ApplicationsList__controls {
+  @apply space-y-2;
+}
+
+/* Фильтры */
+.ApplicationsList__filters {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-2;
+}
+
+.ApplicationsList__searchRow {
+  @apply mb-2;
+}
+
+/*
+.ApplicationsList__searchField {
+  @apply max-w-sm;
+}*/
+
+.ApplicationsList__filtersRow {
+  @apply flex flex-wrap items-center gap-2;
+}
+
+.ApplicationsList__filtersGrid {
+  @apply flex flex-wrap gap-2 flex-1;
+}
+
+.ApplicationsList__field {
+  @apply flex flex-col gap-0.5 min-w-[150px];
+}
+
+.ApplicationsList__label {
+  @apply text-[10px] font-medium text-gray-500 uppercase tracking-wide;
+}
+
+.ApplicationsList__input,
+.ApplicationsList__select {
+  @apply w-full px-2 py-1 border border-gray-200 rounded text-xs
+         focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500;
+}
+
+.ApplicationsList__select {
+  @apply appearance-none cursor-pointer bg-white pr-5;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.25rem center;
+  background-size: 0.875em 0.875em;
+}
+
+.ApplicationsList__selectSm {
+  @apply text-xs py-1.5;
+}
+
+.ApplicationsList__count {
+  @apply text-xs text-gray-600 whitespace-nowrap;
+}
+
+/* Массовые действия */
+.ApplicationsList__bulkActions {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-3
+         flex flex-wrap items-center gap-3;
+}
+
+.ApplicationsList__checkbox {
+  @apply flex items-center gap-2 text-xs text-gray-700 cursor-pointer;
+}
+
+.ApplicationsList__assign {
+  @apply flex flex-wrap items-center gap-2 ml-auto;
+}
+
+.ApplicationsList__assignLabel {
+  @apply text-xs font-medium text-gray-600 whitespace-nowrap;
+}
+
+.ApplicationsList__expertsAssign {
+  @apply flex items-center gap-2;
+}
+
+/* Карточки заявок */
+.ApplicationsList__cards {
+  @apply flex flex-col gap-3;
+}
+
+.ApplicationsList__card {
+  @apply bg-white rounded-lg border border-gray-200 p-4
+         flex items-start gap-4
+         hover:shadow-md hover:border-indigo-200
+         transition-all duration-200;
+}
+
+.ApplicationsList__cardSelect {
+  @apply flex items-center pt-1;
+}
+
+.ApplicationsList__cardMain {
+  @apply flex-1 min-w-0;
+}
+
+.ApplicationsList__cardHeader {
+  @apply flex items-center gap-2 mb-2;
+}
+
+.ApplicationsList__cardId {
+  @apply text-xs text-gray-400 font-mono;
+}
+
+.ApplicationsList__cardTitle {
+  @apply text-base font-medium text-gray-900 hover:text-indigo-600 hover:underline;
+}
+
+.ApplicationsList__cardMeta {
+  @apply flex flex-wrap gap-x-4 gap-y-1 text-xs;
+}
+
+.ApplicationsList__cardMetaItem {
+  @apply flex items-center gap-1;
+}
+
+.ApplicationsList__cardMetaLabel {
+  @apply text-gray-500;
+}
+
+.ApplicationsList__cardMetaValue {
+  @apply text-gray-700;
+}
+
+.ApplicationsList__cardExperts {
+  @apply mt-3 flex flex-col gap-1.5;
+}
+
+.ApplicationsList__expertsLabel {
+  @apply text-xs text-gray-500 font-medium;
+}
+
+.ApplicationsList__expertsList {
+  @apply flex flex-wrap gap-2;
+}
+
+.ExpertTag {
+  @apply inline-flex items-center justify-center px-3 py-1 rounded text-xs font-medium
+         bg-indigo-50 text-indigo-700 border border-indigo-100;
+  width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ExpertTag--empty {
+  @apply bg-gray-100 text-gray-400 border border-gray-200 border-dashed;
+}
+
+.ApplicationsList__cardStatusChange {
+  @apply mt-3;
+}
+
+.ApplicationsList__cardActions {
+  @apply flex flex-col items-center gap-1;
+}
+
+.ApplicationsList__actionBtn {
+  @apply p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors;
+}
+
+.ApplicationsList__empty {
+  @apply text-center text-gray-500 py-12;
+}
+
+@media (max-width: 640px) {
+  .ApplicationsList__filtersGrid {
+    @apply flex-col;
+  }
+
+  .ApplicationsList__field {
+    @apply min-w-full;
+  }
+
+  .ApplicationsList__card {
+    @apply flex-col items-stretch;
+  }
+
+  .ApplicationsList__cardExperts {
+    @apply flex-row items-center flex-wrap;
+  }
+
+  .ApplicationsList__cardActions {
+    @apply justify-end;
+  }
+
+  .ApplicationsList__assign {
+    @apply flex-wrap;
+  }
+
+  .ApplicationsList__selectSm {
+    @apply w-full;
+  }
+}

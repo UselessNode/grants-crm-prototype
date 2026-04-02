@@ -1,0 +1,32 @@
+/* ========================================
+   AdminDirectories
+   Справочники администратора
+   ======================================== */
+
+.AdminDirectories {
+  @apply grid grid-cols-1 lg:grid-cols-2 gap-6;
+}
+
+.AdminDirectories__card {
+  @apply bg-white rounded-lg shadow p-6;
+}
+
+.AdminDirectories__title {
+  @apply text-lg font-semibold text-gray-800 mb-4;
+}
+
+.AdminDirectories__list {
+  @apply space-y-2;
+}
+
+.AdminDirectories__item {
+  @apply p-3 bg-gray-50 rounded;
+}
+
+.AdminDirectories__itemName {
+  @apply font-medium text-gray-900;
+}
+
+.AdminDirectories__itemDescription {
+  @apply text-sm text-gray-500 mt-1;
+}
