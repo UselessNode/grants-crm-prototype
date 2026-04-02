@@ -70,7 +70,7 @@ export function ProjectPlanSection({
               />
             </div>
             <div className="ProjectPlanSection__half-width">
-              <label className="field-label">Дата начала</label>
+              <label className="field-label">Дата начала <span className="required-mark">*</span></label>
               <DateInput
                 value={plan.start_date || ''}
                 onChange={(newValue) => onChange(idx, 'start_date', newValue)}
@@ -78,7 +78,7 @@ export function ProjectPlanSection({
               />
             </div>
             <div className="ProjectPlanSection__half-width">
-              <label className="field-label">Дата окончания</label>
+              <label className="field-label">Дата окончания <span className="required-mark">*</span></label>
               <DateInput
                 value={plan.end_date || ''}
                 onChange={(newValue) => onChange(idx, 'end_date', newValue)}
@@ -86,7 +86,7 @@ export function ProjectPlanSection({
               />
             </div>
             <div className="ProjectPlanSection__full-width">
-              <label className="field-label">Результат мероприятия</label>
+              <label className="field-label">Результат мероприятия <span className="required-mark">*</span></label>
               <input
                 type="text"
                 value={plan.results || ''}
@@ -96,7 +96,7 @@ export function ProjectPlanSection({
               />
             </div>
             <div className="ProjectPlanSection__full-width">
-              <label className="field-label">Форма фиксации</label>
+              <label className="field-label">Форма фиксации <span className="required-mark">*</span></label>
               <input
                 type="text"
                 value={plan.fixation_form || ''}

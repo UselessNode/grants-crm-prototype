@@ -8,6 +8,10 @@
   /* Контейнер секции */
 }
 
+.ProjectBudgetSection__info {
+  @apply flex items-start gap-2 p-3 bg-blue-50 rounded-lg mb-3;
+}
+
 .ProjectBudgetSection .section-title {
   @apply mb-6;
 }

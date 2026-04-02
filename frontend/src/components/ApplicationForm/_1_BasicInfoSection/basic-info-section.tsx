@@ -45,7 +45,7 @@ export function BasicInfoSection({
 
         <div>
           <label className="field-label-lg">
-            Конкурс
+            Конкурс <span className="required-mark">*</span>
           </label>
           <select
             name="tender_id"

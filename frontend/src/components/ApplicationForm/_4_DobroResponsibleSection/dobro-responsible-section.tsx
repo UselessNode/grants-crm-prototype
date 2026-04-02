@@ -121,7 +121,7 @@ export function DobroResponsibleSection({
             />
           </div>
           <div>
-            <label className="field-label">Ссылка на DOBRO.RU *</label>
+            <label className="field-label">Ссылка на DOBRO.RU</label>
             <input
               type="url"
               value={dobroData.dobro_link || ''}

@@ -14,7 +14,7 @@ export function ProjectResultsSection({
       </h2>
       <div>
         <label className="field-label-lg">
-          Что изменилось по итогу проекта
+          Что изменилось по итогу проекта <span className="required-mark">*</span>
         </label>
         <textarea
           name="results_description"

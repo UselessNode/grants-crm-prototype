@@ -7,3 +7,5 @@ export { ProjectPlanSection } from './_6_ProjectPlanSection/project-plan-section
 export { ProjectResultsSection } from './_7_ProjectResultsSection/project-results-section';
 export { ProjectBudgetSection } from './_8_ProjectBudgetSection/project-budget-section';
 export { AdditionalMaterialsSection } from './_9_AdditionalMaterialsSection/additional-materials-section';
+export { TableOfContents } from './TableOfContents';
+export type { SectionError } from './TableOfContents';

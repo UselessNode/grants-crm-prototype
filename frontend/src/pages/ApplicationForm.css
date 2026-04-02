@@ -1,0 +1,60 @@
+/* ========================================
+   ApplicationForm Layout
+   ======================================== */
+
+.ApplicationForm__layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+.ApplicationForm__main {
+  min-width: 0;
+}
+
+.ApplicationForm__sidebar {
+  position: relative;
+}
+
+/* Адаптив */
+@media (max-width: 1024px) {
+  .ApplicationForm__layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .ApplicationForm__sidebar {
+    order: -1;
+  }
+
+  .TableOfContents {
+    position: relative;
+    top: 0;
+    max-height: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .ApplicationForm__layout {
+    padding: 16px 0;
+  }
+
+  .TableOfContents__list {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .TableOfContents__link {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  .TableOfContents__number {
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+  }
+}

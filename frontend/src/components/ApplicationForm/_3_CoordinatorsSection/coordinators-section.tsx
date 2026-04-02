@@ -62,7 +62,7 @@ export function CoordinatorsSection({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="field-label">Фамилия *</label>
+            <label className="field-label">Фамилия <span className="required-mark">*</span></label>
             <input
               type="text"
               value={coordData.surname}
@@ -73,7 +73,7 @@ export function CoordinatorsSection({
             {errors['coordinator_surname'] && <p className="field-error">{errors['coordinator_surname']}</p>}
           </div>
           <div>
-            <label className="field-label">Имя *</label>
+            <label className="field-label">Имя <span className="required-mark">*</span></label>
             <input
               type="text"
               value={coordData.name}
@@ -148,7 +148,7 @@ export function CoordinatorsSection({
 
       {/* Описание опыта работы команды */}
       <div className="mt-6">
-        <label className="field-label-lg">Описание опыта работы команды *</label>
+        <label className="field-label-lg">Описание опыта работы команды</label>
         <textarea
           name="implementation_experience"
           value={implementation_experience}

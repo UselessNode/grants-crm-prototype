@@ -211,7 +211,7 @@ export function TeamMembersSection({
             <div className="TeamMembersSection__consent-header">
               <label className="field-label-lg">
                 <Icon name="document" size={16} className="inline mr-1" />
-                Согласие на обработку персональных данных
+                Согласие на обработку персональных данных <span className="required-mark">*</span>
               </label>
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-2 text-sm">
