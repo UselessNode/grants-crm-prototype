@@ -1,0 +1,77 @@
+/* ========================================
+   SHOWCASE USER HEADER
+   Стили для хедера UI Showcase
+   ======================================== */
+
+.showcase-header {
+  @apply bg-white shadow-sm sticky top-0 z-10 transition-colors duration-200;
+}
+
+/* Красная шапка для администратора */
+.showcase-header--admin {
+  @apply bg-red-600;
+}
+
+.showcase-header--admin .page-logo-text {
+  @apply text-white;
+}
+
+.showcase-header--admin .showcase-user-name {
+  @apply text-white;
+}
+
+.showcase-header--admin .showcase-user-email {
+  @apply text-red-100;
+}
+
+.showcase-header--admin .showcase-user-avatar {
+  @apply bg-red-700 text-white;
+}
+
+.showcase-header-content {
+  @apply max-w-5xl mx-auto px-4 py-4 flex justify-between items-center gap-4;
+}
+
+/* Хедер с информацией о пользователе */
+.showcase-user-header {
+  @apply flex items-center gap-3;
+}
+
+.showcase-user-avatar {
+  @apply w-8 h-8 rounded-full bg-primary-600 text-white
+         flex items-center justify-center text-sm font-semibold;
+}
+
+.showcase-user-name {
+  @apply text-sm font-medium text-gray-700;
+}
+
+.showcase-user-email {
+  @apply text-xs text-gray-500;
+}
+
+/* Кнопка выхода в шапке */
+.showcase-header__logout-btn {
+  @apply flex items-center gap-2 px-3 py-2 rounded-lg
+         text-sm font-medium text-gray-600 hover:text-gray-900
+         hover:bg-gray-100 transition-colors border border-gray-200;
+}
+
+.showcase-header__logout-btn--admin {
+  @apply text-white border-red-500 hover:bg-red-700 hover:text-white;
+}
+
+/* Выпадающее меню пользователя */
+.showcase-user-menu {
+  @apply absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg
+         border border-gray-200 overflow-hidden;
+}
+
+.showcase-user-menu-btn {
+  @apply w-full text-left px-4 py-2 text-sm text-gray-700
+         hover:bg-gray-100 transition-colors duration-150;
+}
+
+.showcase-user-menu-divider {
+  @apply border-t border-gray-200 my-1;
+}
