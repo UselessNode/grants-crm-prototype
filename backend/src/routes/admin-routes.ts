@@ -24,9 +24,15 @@ router.get('/admin/applications', AdminController.getApplications);
 
 // Направления
 router.get('/admin/directions', AdminController.getDirections);
+router.post('/admin/directions', AdminController.createDirection);
+router.put('/admin/directions/:id', AdminController.updateDirection);
+router.delete('/admin/directions/:id', AdminController.deleteDirection);
 
 // Тендеры (конкурсы)
 router.get('/admin/tenders', AdminController.getTenders);
+router.post('/admin/tenders', AdminController.createTender);
+router.put('/admin/tenders/:id', AdminController.updateTender);
+router.delete('/admin/tenders/:id', AdminController.deleteTender);
 
 // Эксперты
 router.get('/admin/experts', AdminController.getExperts);

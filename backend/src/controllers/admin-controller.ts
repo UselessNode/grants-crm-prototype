@@ -14,14 +14,6 @@ export class AdminController {
    */
   static async stats(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       // Получаем общую статистику
       const [usersCount, applicationsCount] = await Promise.all([
         UserModel.findAll({ page: 1, limit: 1 }),
@@ -51,14 +43,6 @@ export class AdminController {
    */
   static async getUsers(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { page, limit } = req.query;
 
       const result = await UserModel.findAll({
@@ -86,14 +70,6 @@ export class AdminController {
    */
   static async getApplications(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { page, limit, search, direction_id, status_id } = req.query;
 
       const result = await ApplicationModel.findAll({
@@ -125,14 +101,6 @@ export class AdminController {
    */
   static async getDirections(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const directions = await ApplicationModel.getDirections();
 
       res.json({
@@ -155,14 +123,6 @@ export class AdminController {
    */
   static async getTenders(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const tenders = await ApplicationModel.getTenders();
 
       res.json({
@@ -180,19 +140,231 @@ export class AdminController {
   }
 
   /**
+   * Создать направление
+   * POST /api/admin/directions
+   */
+  static async createDirection(req: AuthRequest, res: Response) {
+    try {
+      const { name, description } = req.body;
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ success: false, message: 'Название направления обязательно' });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const result = await client.query(`
+          INSERT INTO directions (name, description)
+          VALUES ($1, $2)
+          RETURNING *
+        `, [name, description || null]);
+        await client.query('COMMIT');
+
+        res.json({ success: true, data: result.rows[0] });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error creating direction:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при создании направления', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+    }
+  }
+
+  /**
+   * Обновить направление
+   * PUT /api/admin/directions/:id
+   */
+  static async updateDirection(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const { name, description } = req.body;
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const result = await client.query(`
+          UPDATE directions
+          SET name = $1, description = $2, updated_at = CURRENT_TIMESTAMP
+          WHERE id = $3
+          RETURNING *
+        `, [name || null, description || null, parseInt(id)]);
+
+        if (result.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ success: false, message: 'Направление не найдено' });
+        }
+
+        await client.query('COMMIT');
+        res.json({ success: true, data: result.rows[0] });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error updating direction:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при обновлении направления', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+    }
+  }
+
+  /**
+   * Удалить направление
+   * DELETE /api/admin/directions/:id
+   */
+  static async deleteDirection(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // Проверяем связанные заявки
+        const check = await client.query('SELECT COUNT(*) FROM applications WHERE direction_id = $1', [parseInt(id)]);
+        const count = parseInt(check.rows[0].count);
+        if (count > 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ success: false, message: `Нельзя удалить направление: использовано в ${count} заявке(ах)` });
+        }
+
+        const result = await client.query('DELETE FROM directions WHERE id = $1 RETURNING *', [parseInt(id)]);
+        if (result.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ success: false, message: 'Направление не найдено' });
+        }
+
+        await client.query('COMMIT');
+        res.json({ success: true });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error deleting direction:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при удалении направления', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+    }
+  }
+
+  /**
+   * Создать тендер (конкурс)
+   * POST /api/admin/tenders
+   */
+  static async createTender(req: AuthRequest, res: Response) {
+    try {
+      const { name, description } = req.body;
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ success: false, message: 'Название тендера обязательно' });
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const result = await client.query(`
+          INSERT INTO tenders (name, description)
+          VALUES ($1, $2)
+          RETURNING *
+        `, [name, description || null]);
+        await client.query('COMMIT');
+
+        res.json({ success: true, data: result.rows[0] });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error creating tender:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при создании тендера', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+    }
+  }
+
+  /**
+   * Обновить тендер
+   * PUT /api/admin/tenders/:id
+   */
+  static async updateTender(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const { name, description } = req.body;
+
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const result = await client.query(`
+          UPDATE tenders
+          SET name = $1, description = $2, updated_at = CURRENT_TIMESTAMP
+          WHERE id = $3
+          RETURNING *
+        `, [name || null, description || null, parseInt(id)]);
+
+        if (result.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ success: false, message: 'Тендер не найден' });
+        }
+
+        await client.query('COMMIT');
+        res.json({ success: true, data: result.rows[0] });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error updating tender:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при обновлении тендера', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+    }
+  }
+
+  /**
+   * Удалить тендер
+   * DELETE /api/admin/tenders/:id
+   */
+  static async deleteTender(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // Проверяем связанные заявки
+        const check = await client.query('SELECT COUNT(*) FROM applications WHERE tender_id = $1', [parseInt(id)]);
+        const count = parseInt(check.rows[0].count);
+        if (count > 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ success: false, message: `Нельзя удалить тендер: использовано в ${count} заявке(ах)` });
+        }
+
+        const result = await client.query('DELETE FROM tenders WHERE id = $1 RETURNING *', [parseInt(id)]);
+        if (result.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({ success: false, message: 'Тендер не найден' });
+        }
+
+        await client.query('COMMIT');
+        res.json({ success: true });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('Error deleting tender:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при удалении тендера', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+    }
+  }
+
+  /**
    * Получить всех экспертов
    * GET /api/admin/experts
    */
   static async getExperts(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const experts = await ApplicationModel.getExperts();
 
       res.json({
@@ -215,14 +387,6 @@ export class AdminController {
    */
   static async assignExperts(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
       const { expert1Id, expert2Id } = req.body;
 
@@ -259,14 +423,6 @@ export class AdminController {
    */
   static async changeStatus(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
       const { status_id } = req.body;
 
@@ -310,14 +466,6 @@ export class AdminController {
    */
   static async getVerdicts(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
       const application = await ApplicationModel.findById(parseInt(id));
 
@@ -348,14 +496,6 @@ export class AdminController {
    */
   static async addExpert(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { surname, name, patronymic, extra_info } = req.body;
 
       if (!surname || !name) {
@@ -404,14 +544,6 @@ export class AdminController {
    */
   static async updateUser(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
       const { surname, name, patronymic, role_id } = req.body;
 
@@ -468,19 +600,11 @@ export class AdminController {
    */
   static async deleteUser(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
       const userId = parseInt(id);
 
       // Нельзя удалить самого себя
-      if (req.user.userId === userId) {
+      if (req.user && req.user.userId === userId) {
         return res.status(400).json({
           success: false,
           message: 'Нельзя удалить самого себя',
@@ -541,14 +665,6 @@ export class AdminController {
    */
   static async updateExpert(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
       const { surname, name, patronymic, extra_info } = req.body;
 
@@ -612,14 +728,6 @@ export class AdminController {
    */
   static async deleteExpert(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
       const expertId = parseInt(id);
 
