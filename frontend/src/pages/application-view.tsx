@@ -29,7 +29,7 @@ const getErrorMessage = (error: unknown): string => {
 };
 
 // Форматирование даты
-const formatDate = (dateString?: string) => {
+const formatDate = (dateString?: string | null) => {
   if (!dateString) return '—';
   return new Date(dateString).toLocaleDateString('ru-RU', {
     day: 'numeric',
@@ -68,10 +68,12 @@ function getCoordinatorPerson(app: Application | null): TeamMember | undefined {
 
 function getDobroPerson(app: Application | null): TeamMember | undefined {
   if (!app) return undefined;
-  const maybe = (app as any).dobro_responsible || app.dobro_responsible;
+  const maybe = (app as any).dobro_responsible ?? app.dobro_responsible;
   if (!maybe) return undefined;
   if (Array.isArray(maybe)) {
+    if (maybe.length === 0) return undefined;
     const dr = maybe[0] as any;
+    if (!dr) return undefined;
     if (dr.team_member) return dr.team_member as TeamMember;
     if (app.team_members && dr.team_member_id) {
       return app.team_members.find(m => m.id === dr.team_member_id);
@@ -123,7 +125,8 @@ export function ApplicationView() {
       toast.error('Ошибка', 'Не найден контент для экспорта');
       return;
     }
-    await downloadPdf(element, `Заявка-${application.id}.pdf`, {
+    const filename = `Заявка-${application?.id ?? ''}.pdf`;
+    await downloadPdf(element, filename, {
       orientation: 'portrait',
       format: 'a4',
       printStyles: `
@@ -357,7 +360,7 @@ export function ApplicationView() {
               {application.tender && (
                 <div className="application-meta-item">
                   <span className="application-meta-label">Конкурс</span>
-                  <span className="application-meta-value">{application.tender.title}</span>
+                  <span className="application-meta-value">{application.tender.name}</span>
                 </div>
               )}
               {application.direction && (
@@ -550,11 +553,11 @@ export function ApplicationView() {
                   </thead>
                   <tbody>
                     {application.project_budget.map((item, index) => {
-                      const hasUnit = item.unit_cost !== null && item.unit_cost !== undefined && item.unit_cost !== '';
-                      const hasQty = item.quantity !== null && item.quantity !== undefined && item.quantity !== '';
-                      const hasTotal = item.total_cost !== null && item.total_cost !== undefined && item.total_cost !== '';
-                      const hasOwn = item.own_funds !== null && item.own_funds !== undefined && item.own_funds !== '';
-                      const hasGrant = item.grant_funds !== null && item.grant_funds !== undefined && item.grant_funds !== '';
+                      const hasUnit = (item as any).unit_cost != null;
+                      const hasQty = (item as any).quantity != null;
+                      const hasTotal = (item as any).total_cost != null;
+                      const hasOwn = (item as any).own_funds != null;
+                      const hasGrant = (item as any).grant_funds != null;
 
                       return (
                         <tr key={item.id || index}>

@@ -5,6 +5,8 @@ import { useAuthStore } from '../store/auth-store';
 import type { User } from '../services/adminService';
 import type { Application, Expert, Status, Document } from '../types';
 import { ApplicationsList, AddExpertModal, EditUserModal, EditExpertModal, AdminUsersTable, AdminDirectories, AdminPanelTabs, AdminDocumentsTable, AddDocumentModal } from '../components/admin-panel';
+import { downloadDocument } from '../utils/documentHelpers';
+import Icon from '../components/common/icon';
 
 interface ExpertWithStats extends Expert {
   applicationsCount?: number;
@@ -454,9 +456,7 @@ export function AdminPanel() {
                   onClick={() => setIsAddDocumentModalOpen(true)}
                   className="btn-add-icon"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
+                  <Icon name="add" size={16}/>
                   Добавить документ
                 </button>
               </div>
@@ -466,15 +466,7 @@ export function AdminPanel() {
                 onDelete={(doc: Document) => setDeletingDocument(doc)}
                 onDownload={async (doc: Document) => {
                   try {
-                    const blob = await adminService.downloadDocument(doc.id);
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = doc.file_name;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
+                    await downloadDocument(doc);
                   } catch (err) {
                     setError('Ошибка при скачивании документа');
                     console.error(err);

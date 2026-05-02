@@ -31,6 +31,9 @@ export interface Application {
   expert1?: Expert | null;
   expert2?: Expert | null;
   expert_verdicts?: ExpertVerdict[];
+  // Опционально заполненные связанные сущности (из JOIN или отдельного запроса)
+  tender?: Tender;
+  direction?: Direction;
 }
 
 export interface TeamMember {
@@ -39,36 +42,34 @@ export interface TeamMember {
   surname: string;
   name: string;
   patronymic?: string | null;
+  position?: string | null;
   tasks_in_project?: string | null;
   contact_info?: string | null;
   social_media_links?: string | null;
   consent_file?: string | null; // Путь к файлу согласия (для прототипа)
+  consent_files?: string[]; // Массив имён загруженных файлов
   is_minor?: boolean; // Совершеннолетний или нет (для выбора образца)
 }
 
 export interface ProjectCoordinator {
   id?: number;
   application_id?: number | null;
-  surname: string;
-  name: string;
-  patronymic?: string | null;
+  team_member_id: number;
   relation_to_team?: string | null;
-  contact_info?: string | null;
-  social_media_links?: string | null;
   education?: string | null;
   work_experience?: string | null;
+  // Данные из team_members (заполняются при JOIN)
+  team_member?: TeamMember;
 }
 
 export interface DobroResponsible {
   id?: number;
   application_id?: number | null;
-  surname: string;
-  name: string;
-  patronymic?: string | null;
+  team_member_id: number;
   relation_to_team?: string | null;
-  contact_info?: string | null;
-  social_media_links?: string | null;
-  dobro_link?: string | null; // Ссылка на профиль на DOBRO.RU
+  dobro_link?: string | null;
+  // Данные из team_members (заполняются при JOIN)
+  team_member?: TeamMember;
 }
 
 export interface Expert {
@@ -120,6 +121,7 @@ export interface AdditionalMaterial {
   id?: number;
   application_id?: number | null;
   file_path: string;
+  file_url?: string;
   file_name: string;
   file_type?: string | null;
   file_size?: number | null;

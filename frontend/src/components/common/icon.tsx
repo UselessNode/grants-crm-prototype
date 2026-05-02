@@ -25,6 +25,7 @@ import MenuIcon from '../../assets/icons/menu.svg?react';
 import CheckIcon from '../../assets/icons/check.svg?react';
 import LoadingIcon from '../../assets/icons/loading.svg?react';
 import DownloadIcon from '../../assets/icons/download.svg?react';
+import AddIcon from '../../assets/icons/add.svg?react';
 
 /**
  * Типы поддерживаемых иконок
@@ -55,7 +56,8 @@ export type IconName =
   | 'menu'
   | 'check'
   | 'loading'
-  | 'download';
+  | 'download'
+  | 'add';
 
 /**
  * Пропсы для компонента Icon
@@ -64,6 +66,7 @@ export interface IconProps extends SVGProps<SVGSVGElement> {
   name: IconName;
   size?: number | string;
   className?: string;
+  title?: string;
 }
 
 /**
@@ -96,13 +99,20 @@ const iconMap: Record<IconName, React.ComponentType<SVGProps<SVGSVGElement>>> = 
   'check': CheckIcon,
   'loading': LoadingIcon,
   'download': DownloadIcon,
+  'add': AddIcon,
 };
 
 /**
  * Централизованный компонент для отображения иконок
  * Использует SVG файлы из папки assets/icons
  */
-export function Icon({ name, size = 24, className = '', ...props }: IconProps) {
+export function Icon({
+  name,
+  size = 24,
+  title,
+  className = '',
+  ...props
+}: IconProps) {
   const sizeValue = typeof size === 'number' ? size : parseInt(size as string) || 24;
   const IconComponent = iconMap[name] || iconMap.info;
 
@@ -111,6 +121,7 @@ export function Icon({ name, size = 24, className = '', ...props }: IconProps) {
       width={sizeValue}
       height={sizeValue}
       className={`icon icon-${name} ${className}`}
+      aria-label={title || name}
       {...props}
     />
   );

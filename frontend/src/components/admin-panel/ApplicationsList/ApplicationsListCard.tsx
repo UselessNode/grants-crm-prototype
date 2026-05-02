@@ -3,7 +3,7 @@ import { Badge } from '../../ui/badge';
 import type { Application, Expert, Status } from '../../../types';
 
 interface ApplicationsListCardProps {
-  app: Application & { owner_email?: string; owner_name?: string; owner_id?: number };
+  app: Application & { owner_email?: string; owner_name?: string; owner_id?: number | null };
   experts: Expert[];
   statuses: Status[];
   selectedIds: number[];
