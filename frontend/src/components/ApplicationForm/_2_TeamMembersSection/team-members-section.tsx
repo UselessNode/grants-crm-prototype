@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../../../context/toast-context';
 import type { TeamMember, Document } from '../../../types';
 import { adminService } from '../../../services/adminService';
 import './TeamMembersSection.css';
@@ -7,7 +8,7 @@ import { Icon } from '../../common/icon';
 interface TeamMembersSectionProps {
   team_members: TeamMember[];
   errors: Record<string, string>;
-  onChange: (index: number, field: keyof TeamMember, value: string | boolean | null) => void;
+  onChange: (index: number, field: keyof TeamMember, value: string | boolean | null | string[]) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
 }
@@ -19,6 +20,7 @@ export function TeamMembersSection({
   onAdd,
   onRemove,
 }: TeamMembersSectionProps) {
+  const toast = useToast();
   const [consentTemplates, setConsentTemplates] = useState<{
     adult: Document | null;
     minor: Document | null;
@@ -47,11 +49,28 @@ export function TeamMembersSection({
     }
   };
 
-  const handleFileChange = (index: number, file: File | null) => {
-    if (file) {
-      // Для прототипа сохраняем только имя файла
-      onChange(index, 'consent_file', file.name);
+  const handleFileChange = (index: number, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const currentFiles = team_members[index].consent_files || [];
+    const newFiles = Array.from(files);
+
+    // Ограничение: максимум 5 файлов
+    const availableSlots = 5 - currentFiles.length;
+    if (availableSlots <= 0) {
+      toast.warning('Внимание', 'Максимум 5 файлов на участника');
+      return;
     }
+
+    const filesToAdd = newFiles.slice(0, availableSlots);
+    const updatedFiles = [...currentFiles, ...filesToAdd.map(f => f.name)];
+    onChange(index, 'consent_files', updatedFiles);
+  };
+
+  const handleRemoveFile = (index: number, fileIndex: number) => {
+    const currentFiles = team_members[index].consent_files || [];
+    const updatedFiles = currentFiles.filter((_, i) => i !== fileIndex);
+    onChange(index, 'consent_files', updatedFiles);
   };
 
   const handleDownloadTemplate = async (type: 'adult' | 'minor') => {
@@ -229,8 +248,13 @@ export function TeamMembersSection({
             <div className="TeamMembersSection__consent-upload">
               <input
                 type="file"
+                multiple
                 accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => handleFileChange(idx, e.target.files?.[0] || null)}
+                onChange={(e) => handleFileChange(idx, e.target.files)}
+                onClick={(e) => {
+                  // Сбрасываем value, чтобы при отмене не было проблем
+                  (e.target as HTMLInputElement).value = '';
+                }}
                 className="block w-full text-sm text-gray-500
                          file:mr-4 file:py-2 file:px-4
                          file:rounded-lg file:border-0
@@ -239,19 +263,23 @@ export function TeamMembersSection({
                          hover:file:bg-blue-100"
               />
               <p className="text-xs text-gray-500 mt-2">
-                Форматы: PDF, JPG, PNG. Максимальный размер: 5 МБ
+                Форматы: PDF, JPG, PNG. Максимум 5 файлов, до 5 МБ каждый
               </p>
-              {member.consent_file && (
-                <div className="TeamMembersSection__consent-file">
-                  <Icon name="check" size={16} className="text-green-600" />
-                  <span className="text-sm text-gray-700">{member.consent_file}</span>
-                  <button
-                    type="button"
-                    onClick={() => onChange(idx, 'consent_file', null)}
-                    className="text-red-600 hover:text-red-700 text-sm font-medium ml-auto"
-                  >
-                    Удалить
-                  </button>
+              {team_members[idx].consent_files && team_members[idx].consent_files.length > 0 && (
+                <div className="TeamMembersSection__consent-files">
+                  {team_members[idx].consent_files.map((fileName, fileIdx) => (
+                    <div key={fileIdx} className="TeamMembersSection__consent-file">
+                      <Icon name="check" size={16} className="text-green-600" />
+                      <span className="text-sm text-gray-700 truncate flex-1">{fileName}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(idx, fileIdx)}
+                        className="text-red-600 hover:text-red-700 text-sm font-medium ml-auto"
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

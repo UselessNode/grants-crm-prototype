@@ -1,148 +1,118 @@
-// DobroResponsibleSection.tsx
-import type { DobroResponsible } from '../../../types';
+import type { TeamMember, DobroResponsible } from '../../../types';
 import './DobroResponsibleSection.css';
 
 interface DobroResponsibleSectionProps {
-  dobro_responsible: DobroResponsible[];
+  teamMembers: TeamMember[];
+  dobroResponsible: DobroResponsible | null;
   errors: Record<string, string>;
-  onChange: (index: number, field: keyof DobroResponsible, value: string) => void;
-  onAdd: () => void;
-  onRemove: (index: number) => void;
+  onDobroChange: (dobro: DobroResponsible | null) => void;
 }
 
 export function DobroResponsibleSection({
-  dobro_responsible,
+  teamMembers,
+  dobroResponsible,
   errors,
-  onChange,
-  onAdd,
-  onRemove,
+  onDobroChange,
 }: DobroResponsibleSectionProps) {
-  const dobroData = dobro_responsible.length > 0 ? dobro_responsible[0] : null;
-
-  if (!dobroData) {
-    return (
-      <div className="section-card DobroResponsibleSection">
-        <h2 className="section-title">
-          4. Ответственный по работе с порталом "DOBRO.RU"
-        </h2>
-        <p className="text-gray-500 text-sm mb-4">
-          Добавьте информацию об ответственном за работу с порталом DOBRO.RU.
-        </p>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="btn-add"
-        >
-          + Добавить ответственного
-        </button>
-      </div>
-    );
-  }
+  const selectedMember = dobroResponsible?.team_member_id
+    ? teamMembers.find(m => {
+        // Для положительных ID ищем по реальному ID
+        if (dobroResponsible!.team_member_id! > 0) {
+          return m.id === dobroResponsible!.team_member_id;
+        }
+        // Для отрицательных ID (временных) ищем по индексу
+        const memberIndex = -dobroResponsible!.team_member_id! - 1;
+        const membersWithId = teamMembers.filter(m => m.id || true); // Все участники
+        return membersWithId[memberIndex] === m;
+      })
+    : null;
 
   return (
     <div className="section-card DobroResponsibleSection">
       <h2 className="section-title">
         4. Ответственный по работе с порталом "DOBRO.RU"
       </h2>
-      <div className="section-card-item">
-        <div className="flex justify-between items-center mb-3">
-          <span className="item-label">Ответственный</span>
-          {dobro_responsible.length > 1 && (
-            <button
-              type="button"
-              onClick={() => onRemove(0)}
-              className="btn-remove"
-            >
-              Удалить
-            </button>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="field-label">Фамилия *</label>
-            <input
-              type="text"
-              value={dobroData.surname}
-              onChange={(e) => onChange(0, 'surname', e.target.value)}
-              className={`field-input ${errors['dobro_surname'] ? 'field-input-error' : ''}`}
-              placeholder="Иванов"
-            />
-            {errors['dobro_surname'] && <p className="field-error">{errors['dobro_surname']}</p>}
-          </div>
-          <div>
-            <label className="field-label">Имя *</label>
-            <input
-              type="text"
-              value={dobroData.name}
-              onChange={(e) => onChange(0, 'name', e.target.value)}
-              className={`field-input ${errors['dobro_name'] ? 'field-input-error' : ''}`}
-              placeholder="Иван"
-            />
-            {errors['dobro_name'] && <p className="field-error">{errors['dobro_name']}</p>}
-          </div>
-          <div>
-            <label className="field-label">Отчество</label>
-            <input
-              type="text"
-              value={dobroData.patronymic || ''}
-              onChange={(e) => onChange(0, 'patronymic', e.target.value)}
-              className="field-input"
-              placeholder="Иванович"
-            />
-          </div>
-          <div>
-            <label className="field-label">Отношение к команде</label>
-            <input
-              type="text"
-              value={dobroData.relation_to_team || ''}
-              onChange={(e) => onChange(0, 'relation_to_team', e.target.value)}
-              className="field-input"
-              placeholder="Руководитель, координатор..."
-            />
-          </div>
-          <div>
-            <label className="field-label">Контактные данные</label>
-            <input
-              type="text"
-              value={dobroData.contact_info || ''}
-              onChange={(e) => onChange(0, 'contact_info', e.target.value)}
-              className="field-input"
-              placeholder="Телефон, email"
-            />
-          </div>
-          <div>
-            <label className="field-label">Соц. сети</label>
-            <input
-              type="text"
-              value={dobroData.social_media_links || ''}
-              onChange={(e) => onChange(0, 'social_media_links', e.target.value)}
-              className="field-input"
-              placeholder="VK, Telegram..."
-            />
-          </div>
-          <div>
-            <label className="field-label">Ссылка на DOBRO.RU</label>
-            <input
-              type="url"
-              value={dobroData.dobro_link || ''}
-              onChange={(e) => onChange(0, 'dobro_link', e.target.value)}
-              className={`field-input ${errors['dobro_dobro_link'] ? 'field-input-error' : ''}`}
-              placeholder="https://dobro.ru/user/123456"
-            />
-            {errors['dobro_dobro_link'] && <p className="field-error">{errors['dobro_dobro_link']}</p>}
-          </div>
-        </div>
-      </div>
+      <p className="text-gray-500 text-sm mb-4">
+        Выберите ответственного из числа участников команды.
+      </p>
 
-      {dobro_responsible.length === 0 && (
-        <button
-          type="button"
-          onClick={onAdd}
-          className="btn-add mt-4"
-        >
-          + Добавить ответственного
-        </button>
-      )}
+      <div className="section-card-item">
+        <div>
+          <label className="field-label">Участник</label>
+          <select
+            value={dobroResponsible?.team_member_id || ''}
+            onChange={(e) => {
+              const memberId = e.target.value ? parseInt(e.target.value) : null;
+              if (memberId) {
+                onDobroChange({
+                  team_member_id: memberId,
+                  relation_to_team: dobroResponsible?.relation_to_team || '',
+                  dobro_link: dobroResponsible?.dobro_link || '',
+                });
+              } else {
+                onDobroChange(null);
+              }
+            }}
+            className="field-input"
+          >
+            <option value="">— Выберите участника —</option>
+            {teamMembers.filter(m => m.id || true).map((member, idx) => {
+              // Для участников без ID используем отрицательный индекс как временный идентификатор
+              const tempId = member.id ? member.id : -(idx + 1);
+              return (
+                <option key={tempId} value={tempId}>
+                  {member.surname} {member.name} {member.patronymic || ''}
+                  {!member.id}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        {selectedMember && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">Контакты:</span> {selectedMember.contact_info || 'не указаны'}
+            </p>
+            {selectedMember.social_media_links && (
+              <p className="text-sm text-gray-600 mt-1">
+                <span className="font-medium">Соц. сети:</span> {selectedMember.social_media_links}
+              </p>
+            )}
+          </div>
+        )}
+
+        {selectedMember && (
+          <>
+            <div className="mt-4">
+              <label className="field-label">Отношение к команде</label>
+              <input
+                type="text"
+                value={dobroResponsible?.relation_to_team || ''}
+                onChange={(e) => onDobroChange({
+                  ...dobroResponsible!,
+                  relation_to_team: e.target.value,
+                })}
+                className="field-input"
+                placeholder="Руководитель, координатор..."
+              />
+            </div>
+            <div className="mt-4">
+              <label className="field-label">Ссылка на DOBRO.RU</label>
+              <input
+                type="url"
+                value={dobroResponsible?.dobro_link || ''}
+                onChange={(e) => onDobroChange({
+                  ...dobroResponsible!,
+                  dobro_link: e.target.value,
+                })}
+                className="field-input"
+                placeholder="https://dobro.ru/user/123456"
+              />
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

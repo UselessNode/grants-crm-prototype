@@ -3,6 +3,57 @@
    Минималистичное оглавление формы
    ======================================== */
 
+/* Кнопка-переключатель (видна всегда на мобильных) */
+.TableOfContents__toggle-btn {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.TableOfContents__toggle-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.TableOfContents__toggle-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.TableOfContents__toggle-text {
+  font-weight: 500;
+}
+
+.TableOfContents__toggle-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  background-color: #dc2626;
+  border-radius: 9px;
+}
+
+/* Overlay */
+.TableOfContents__overlay {
+  display: none;
+}
+
+/* Основной контейнер */
 .TableOfContents {
   position: sticky;
   top: 20px;
@@ -12,17 +63,37 @@
   padding: 16px;
   max-height: calc(100vh - 40px);
   overflow-y: auto;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 .TableOfContents__header {
   margin-bottom: 12px;
   padding-bottom: 12px;
   border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .TableOfContents__title {
   font-size: 14px;
   font-weight: 600;
+  color: #374151;
+}
+
+.TableOfContents__close-btn {
+  display: none;
+  padding: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+}
+
+.TableOfContents__close-btn:hover {
+  background-color: #f3f4f6;
   color: #374151;
 }
 
@@ -114,12 +185,8 @@
 }
 
 @keyframes pulse-error {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 /* Scrollbar */
@@ -141,27 +208,54 @@
   background: #9ca3af;
 }
 
-/* Адаптив для маленьких экранов */
-@media (max-width: 768px) {
+/* ========================================
+   Адаптив: мобильный режим (плавающий сайдбар)
+   ======================================== */
+@media (max-width: 1024px) {
+  /* Показываем кнопку-бургер */
+  .TableOfContents__toggle-btn {
+    display: inline-flex;
+  }
+
+  /* Скрываем сайдбар по умолчанию */
   .TableOfContents {
-    position: relative;
+    position: fixed;
     top: 0;
-    max-height: none;
+    right: 0;
+    bottom: 0;
+    width: 280px;
+    max-height: 100vh;
+    border-radius: 0;
+    border: none;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    transform: translateX(100%);
+    z-index: 1000;
+    padding: 20px 16px;
+    overflow-y: auto;
   }
 
-  .TableOfContents__list {
-    flex-wrap: wrap;
-    gap: 6px;
+  /* Открытый сайдбар */
+  .TableOfContents--open {
+    transform: translateX(0);
   }
 
-  .TableOfContents__link {
-    font-size: 12px;
-    padding: 6px 8px;
+  /* Overlay */
+  .TableOfContents__overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    animation: fadeIn 0.2s ease;
   }
 
-  .TableOfContents__number {
-    width: 18px;
-    height: 18px;
-    font-size: 11px;
+  /* Кнопка закрытия */
+  .TableOfContents__close-btn {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 }

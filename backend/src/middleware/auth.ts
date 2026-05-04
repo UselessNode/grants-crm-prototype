@@ -67,6 +67,12 @@ export async function authMiddleware(
 
     next();
   } catch (error) {
+    if (error === 'Сессия истекла') {
+      return res.status(401).json({
+        success: false,
+        message: 'Сессия истекла',
+      });
+    }
     console.error('Auth middleware error:', error);
     return res.status(500).json({
       success: false,

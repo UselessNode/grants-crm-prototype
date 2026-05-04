@@ -2,6 +2,19 @@ import { Request, Response } from 'express';
 import { DocumentModel, type Document, type DocumentCategory } from '../models/document';
 import { AuthRequest } from '../middleware/auth';
 import pool from '../config/database';
+import path from 'path';
+import fs from 'fs';
+
+// Базовая папка для загрузки файлов
+const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads', 'documents');
+const TEMPLATES_DIR = path.join(__dirname, '..', '..', 'uploads', 'templates');
+
+// Убедимся что папки существуют
+[UPLOADS_DIR, TEMPLATES_DIR].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
 /**
  * Контроллер для управления документами
@@ -60,19 +73,31 @@ export class DocumentController {
         });
       }
 
+      // Определяем путь к файлу
+      if (!document.file_path) {
+        return res.status(404).json({
+          success: false,
+          message: 'Путь к файлу не указан',
+        });
+      }
+
+      const filePath = document.is_template
+        ? path.join(TEMPLATES_DIR, document.file_path)
+        : path.join(UPLOADS_DIR, document.file_path);
+
+      // Проверяем существование файла
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({
+          success: false,
+          message: 'Файл не найден на сервере',
+        });
+      }
+
       // Увеличиваем счётчик скачиваний
       await DocumentModel.incrementDownloadCount(parseInt(id));
 
-      // Устанавливаем заголовки для скачивания
-      res.setHeader('Content-Type', document.file_type);
-      res.setHeader('Content-Length', document.file_size);
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${encodeURIComponent(document.file_name)}"`
-      );
-
       // Отправляем файл
-      res.send(document.file_data);
+      res.download(filePath, document.file_name);
     } catch (error) {
       console.error('Error downloading document:', error);
       res.status(500).json({
@@ -120,16 +145,6 @@ export class DocumentController {
   static async createDocument(req: AuthRequest, res: Response) {
     const client = await pool.connect();
     try {
-      // Проверка прав администратора
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
-      await client.query('BEGIN');
-
       const {
         title,
         description,
@@ -166,17 +181,30 @@ export class DocumentController {
         });
       }
 
+      // Генерируем уникальное имя файла
+      const timestamp = Date.now();
+      const ext = path.extname(req.file.originalname);
+      const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}${ext}`;
+
+      // Определяем папку (шаблон или обычный документ)
+      const isTemplate = is_template === 'true' || false;
+      const targetDir = isTemplate ? TEMPLATES_DIR : UPLOADS_DIR;
+      const filePath = path.join(targetDir, fileName);
+
+      // Сохраняем файл на диск
+      fs.writeFileSync(filePath, req.file.buffer);
+
       const document = await DocumentModel.create({
         title,
         description: description || null,
         category_id: category_id ? parseInt(category_id) : null,
-        file_data: req.file.buffer,
+        file_path: fileName,
         file_name: req.file.originalname,
         file_type: req.file.mimetype,
         file_size: req.file.size,
-        is_template: is_template === 'true' || false,
+        is_template: isTemplate,
         template_type: template_type || null,
-        created_by: req.user.userId,
+        created_by: req.user?.userId,
       });
 
       await client.query('COMMIT');
@@ -206,14 +234,6 @@ export class DocumentController {
   static async updateDocument(req: AuthRequest, res: Response) {
     const client = await pool.connect();
     try {
-      // Проверка прав администратора
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
       const { title, description, category_id, is_template, template_type } = req.body;
 
@@ -262,14 +282,6 @@ export class DocumentController {
   static async updateDocumentFile(req: AuthRequest, res: Response) {
     const client = await pool.connect();
     try {
-      // Проверка прав администратора
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
 
       // Проверка наличия файла
@@ -292,20 +304,43 @@ export class DocumentController {
         });
       }
 
-      const document = await DocumentModel.updateFile(parseInt(id), {
-        file_data: req.file.buffer,
-        file_name: req.file.originalname,
-        file_type: req.file.mimetype,
-        file_size: req.file.size,
-      });
+      // Получаем текущий документ для удаления старого файла
+      const currentDoc = await DocumentModel.findById(parseInt(id));
 
-      if (!document) {
+      if (!currentDoc) {
         await client.query('ROLLBACK');
         return res.status(404).json({
           success: false,
           message: 'Документ не найден',
         });
       }
+
+      // Генерируем уникальное имя файла
+      const timestamp = Date.now();
+      const ext = path.extname(req.file.originalname);
+      const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}${ext}`;
+
+      // Определяем папку
+      const targetDir = currentDoc.is_template ? TEMPLATES_DIR : UPLOADS_DIR;
+      const filePath = path.join(targetDir, fileName);
+
+      // Сохраняем новый файл
+      fs.writeFileSync(filePath, req.file.buffer);
+
+      // Удаляем старый файл
+      if (currentDoc.file_path) {
+        const oldPath = path.join(targetDir, currentDoc.file_path);
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+        }
+      }
+
+      const document = await DocumentModel.updateFile(parseInt(id), {
+        file_path: fileName,
+        file_name: req.file.originalname,
+        file_type: req.file.mimetype,
+        file_size: req.file.size,
+      });
 
       await client.query('COMMIT');
 
@@ -334,18 +369,31 @@ export class DocumentController {
   static async deleteDocument(req: AuthRequest, res: Response) {
     const client = await pool.connect();
     try {
-      // Проверка прав администратора
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
 
       await client.query('BEGIN');
 
+      // Получаем документ для удаления файла
+      const doc = await DocumentModel.findById(parseInt(id));
+
+      if (!doc) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({
+          success: false,
+          message: 'Документ не найден',
+        });
+      }
+
+      // Удаляем файл с диска
+      if (doc.file_path) {
+        const targetDir = doc.is_template ? TEMPLATES_DIR : UPLOADS_DIR;
+        const filePath = path.join(targetDir, doc.file_path);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+
+      // Удаляем запись из БД
       const deleted = await DocumentModel.delete(parseInt(id));
 
       if (!deleted) {
@@ -404,14 +452,6 @@ export class DocumentController {
   static async createCategory(req: AuthRequest, res: Response) {
     const client = await pool.connect();
     try {
-      // Проверка прав администратора
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { name, description, sort_order } = req.body;
 
       if (!name) {
@@ -456,14 +496,6 @@ export class DocumentController {
   static async updateCategory(req: AuthRequest, res: Response) {
     const client = await pool.connect();
     try {
-      // Проверка прав администратора
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
       const { name, description, sort_order } = req.body;
 
@@ -510,14 +542,6 @@ export class DocumentController {
   static async deleteCategory(req: AuthRequest, res: Response) {
     const client = await pool.connect();
     try {
-      // Проверка прав администратора
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { id } = req.params;
 
       await client.query('BEGIN');

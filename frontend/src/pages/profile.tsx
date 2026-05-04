@@ -39,9 +39,6 @@ export function Profile() {
     setSaving(true);
 
     try {
-      // TODO: Вызов API для обновления профиля
-      // await api.put('/users/profile', formData);
-
       // Обновляем локальное состояние
       updateUser({
         surname: formData.surname,
@@ -106,14 +103,21 @@ export function Profile() {
   return (
     <UserPanelLayout showTabs={true} useMainNavigation={true}>
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Основная информация */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-6">
+        {/* Подзаголовок */}
+        <div className="mb-2">
+          <p className="text-gray-600 text-sm">
+            В этом разделе размещена информация о <span className="font-bold text-gray-800">вашем</span> профиле.
+          </p>
+        </div>
+
+        {/* Карточка: Личная информация */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">Личная информация</h2>
             {!isEditing && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1"
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center gap-1.5 transition-colors"
               >
                 <Icon name="edit" size={16} />
                 Редактировать
@@ -121,165 +125,167 @@ export function Profile() {
             )}
           </div>
 
-          <form onSubmit={handleSaveProfile}>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Фамилия
-                </label>
-                <input
-                  type="text"
-                  name="surname"
-                  value={formData.surname}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+          <div className="p-6">
+            <form onSubmit={handleSaveProfile}>
+              {/* Email (нередактируемый) */}
+              <div className="mb-5 pb-3 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-500">Email</span>
+                <div className="mt-1 p-2 bg-gray-50 rounded-lg text-gray-900 text-sm">
+                  {user?.email}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Имя
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Отчество
-                </label>
-                <input
-                  type="text"
-                  name="patronymic"
-                  value={formData.patronymic}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
 
-            {isEditing && (
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 inline-flex items-center gap-2"
-                >
-                  <Icon name="check" size={18} />
-                  Сохранить
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setFormData({
-                      surname: user?.surname || '',
-                      name: user?.name || '',
-                      patronymic: user?.patronymic || '',
-                    });
-                  }}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                >
-                  Отмена
-                </button>
+              {/* Поля ФИО */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Фамилия
+                  </label>
+                  <input
+                    type="text"
+                    name="surname"
+                    value={formData.surname}
+                    onChange={handleInputChange}
+                    disabled={!isEditing}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Имя
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    disabled={!isEditing}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Отчество
+                  </label>
+                  <input
+                    type="text"
+                    name="patronymic"
+                    value={formData.patronymic}
+                    onChange={handleInputChange}
+                    disabled={!isEditing}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  />
+                </div>
               </div>
-            )}
-          </form>
-        </div>
 
-        {/* Информация об аккаунте */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Информация об аккаунте</h2>
-          <div className="space-y-3">
-            <div>
-              <span className="text-sm text-gray-500">Email</span>
-              <p className="text-gray-900">{user?.email}</p>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500">Полное имя</span>
-              <p className="text-gray-900">{getFullName()}</p>
-            </div>
+              {isEditing && (
+                <div className="flex gap-3 mt-7">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed inline-flex items-center gap-2 text-sm font-medium transition-colors"
+                  >
+                    <Icon name="check" size={18} />
+                    Сохранить
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setFormData({
+                        surname: user?.surname || '',
+                        name: user?.name || '',
+                        patronymic: user?.patronymic || '',
+                      });
+                    }}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 hover:text-gray-900 transition-colors text-sm font-medium"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              )}
+            </form>
           </div>
         </div>
 
-        {/* Смена пароля */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Смена пароля</h2>
-          <form onSubmit={handleChangePassword} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Текущий пароль
-              </label>
-              <input
-                type="password"
-                name="currentPassword"
-                value={passwordData.currentPassword}
-                onChange={handlePasswordChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Карточка: Смена пароля */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">Смена пароля</h2>
+          </div>
+          <div className="p-6">
+            <form onSubmit={handleChangePassword} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Новый пароль
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Текущий пароль
                 </label>
                 <input
                   type="password"
-                  name="newPassword"
-                  value={passwordData.newPassword}
+                  name="currentPassword"
+                  value={passwordData.currentPassword}
                   onChange={handlePasswordChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   required
-                  minLength={6}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Подтверждение пароля
-                </label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={passwordData.confirmPassword}
-                  onChange={handlePasswordChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                  minLength={6}
-                />
-              </div>
-            </div>
 
-            {error && (
-              <div className="p-3 bg-red-50 text-red-800 rounded-lg text-sm">
-                {error}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Новый пароль
+                  </label>
+                  <input
+                    type="password"
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Подтверждение пароля
+                  </label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    required
+                    minLength={6}
+                  />
+                </div>
               </div>
-            )}
-            {success && (
-              <div className="p-3 bg-green-50 text-green-800 rounded-lg text-sm">
-                {success}
-              </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 inline-flex items-center gap-2"
-            >
-              <Icon name="check" size={18} />
-              Изменить пароль
-            </button>
-          </form>
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="p-3 bg-green-50 border border-green-100 rounded-lg text-green-700 text-sm">
+                  {success}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed inline-flex items-center gap-2 text-sm font-medium transition-colors"
+              >
+                <Icon name="lock" size={18} />
+                Изменить пароль
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </UserPanelLayout>
-  );
+  )
 }
 
 export default Profile;

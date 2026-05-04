@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ApplicationController } from '../controllers/application-controller';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, adminMiddleware } from '../middleware/auth';
 
 const router = Router();
 
@@ -13,7 +13,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // Получить список ролей (только для администраторов)
-router.get('/roles', ApplicationController.getRoles);
+router.get('/roles', adminMiddleware, ApplicationController.getRoles);
 
 // Получить список заявок (с пагинацией, поиском и фильтрацией)
 router.get('/applications', ApplicationController.index);
@@ -49,6 +49,6 @@ router.put('/applications/:id/status', ApplicationController.changeStatus);
 router.post('/applications/:id/verdict', ApplicationController.addVerdict);
 
 // Получить заявки, назначенные эксперту
-router.get('/expert/:id/applications', ApplicationController.getExpertApplications);
+router.get('/expert/:id/applications', adminMiddleware, ApplicationController.getExpertApplications);
 
 export default router;

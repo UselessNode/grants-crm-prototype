@@ -1,149 +1,153 @@
-import type { ProjectCoordinator } from '../../../types';
+import type { TeamMember, ProjectCoordinator } from '../../../types';
 import './CoordinatorsSection.css';
 
 interface CoordinatorsSectionProps {
-  coordinators: ProjectCoordinator[];
+  teamMembers: TeamMember[];
+  coordinator: ProjectCoordinator | null;
   implementation_experience: string;
   errors: Record<string, string>;
-  onChange: (index: number, field: keyof ProjectCoordinator, value: string) => void;
+  showError?: boolean; // Показывать ли ошибку валидации
+  onCoordinatorChange: (coordinator: ProjectCoordinator | null) => void;
   onExperienceChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  onAdd: () => void;
-  onRemove: (index: number) => void;
 }
 
 export function CoordinatorsSection({
-  coordinators,
+  teamMembers,
+  coordinator,
   implementation_experience,
   errors,
-  onChange,
+  showError = true,
+  onCoordinatorChange,
   onExperienceChange,
-  onAdd,
-  onRemove,
 }: CoordinatorsSectionProps) {
-  const coordData = coordinators.length > 0 ? coordinators[0] : null;
+  // Фильтруем только совершеннолетних участников
+  // Примечание: согласие можно загрузить позже, но координатор должен быть совершеннолетним
+  const eligibleMembers = teamMembers.filter(m => !m.is_minor);
 
-  if (!coordData) {
-    return (
-      <div className="section-card">
-        <h2 className="section-title">
-          3. Координатор проекта
-        </h2>
-        <p className="text-gray-500 text-sm mb-4">
-          Добавьте информацию о координаторе проекта.
-        </p>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="btn-add"
-        >
-          + Добавить координатора
-        </button>
-      </div>
-    );
-  }
+  const selectedMember = coordinator?.team_member_id
+    ? teamMembers.find(m => {
+        // Для положительных ID ищем по реальному ID
+        if (coordinator!.team_member_id! > 0) {
+          return m.id === coordinator!.team_member_id;
+        }
+        // Для отрицательных ID (временных) ищем по индексу
+        const memberIndex = -coordinator!.team_member_id! - 1;
+        const eligibleList = teamMembers.filter(m => !m.is_minor);
+        return eligibleList[memberIndex] === m;
+      })
+    : null;
 
   return (
     <div className="section-card">
       <h2 className="section-title">
         3. Координатор проекта
       </h2>
+      <p className="text-gray-500 text-sm mb-4">
+        Выберите координатора из числа совершеннолетних участников команды.
+      </p>
+
       <div className="section-card-item">
-        <div className="flex justify-between items-center mb-3">
-          <span className="item-label">Координатор</span>
-          {coordinators.length > 1 && (
-            <button
-              type="button"
-              onClick={() => onRemove(0)}
-              className="btn-remove"
-            >
-              Удалить
-            </button>
-          )}
+        <div>
+          <label className="field-label">
+            Участник <span className="required-mark">*</span>
+          </label>
+          <select
+            value={coordinator?.team_member_id || ''}
+            onChange={(e) => {
+              const memberId = e.target.value ? parseInt(e.target.value) : null;
+              if (memberId) {
+                onCoordinatorChange({
+                  team_member_id: memberId,
+                  relation_to_team: coordinator?.relation_to_team || '',
+                  education: coordinator?.education || '',
+                  work_experience: coordinator?.work_experience || '',
+                });
+              } else {
+                onCoordinatorChange(null);
+              }
+            }}
+            className={`field-input ${showError && errors['coordinator_0'] ? 'field-input-error' : ''}`}
+            data-error="coordinator_0"
+          >
+            <option value="">— Выберите участника —</option>
+            {eligibleMembers.map((member, idx) => {
+              // Для участников без ID используем отрицательный индекс как временный идентификатор
+              const tempId = member.id ? member.id : -(idx + 1);
+              return (
+                <option key={tempId} value={tempId}>
+                  {member.surname} {member.name} {member.patronymic || ''}
+                  {!member.id}
+                </option>
+              );
+            })}
+          </select>
+          {showError && errors['coordinator_0'] && <p className="field-error">{errors['coordinator_0']}</p>}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="field-label">Фамилия <span className="required-mark">*</span></label>
-            <input
-              type="text"
-              value={coordData.surname}
-              onChange={(e) => onChange(0, 'surname', e.target.value)}
-              className={`field-input ${errors['coordinator_surname'] ? 'field-input-error' : ''}`}
-              placeholder="Иванов"
-            />
-            {errors['coordinator_surname'] && <p className="field-error">{errors['coordinator_surname']}</p>}
+
+        {selectedMember && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">Контакты:</span> {selectedMember.contact_info || 'не указаны'}
+            </p>
+            {selectedMember.social_media_links && (
+              <p className="text-sm text-gray-600 mt-1">
+                <span className="font-medium">Соц. сети:</span> {selectedMember.social_media_links}
+              </p>
+            )}
+            {(!selectedMember.consent_files || selectedMember.consent_files.length === 0) && (
+              <p className="text-sm text-yellow-700 mt-2 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span>У участника ещё не загружено согласие на обработку персональных данных</span>
+              </p>
+            )}
           </div>
-          <div>
-            <label className="field-label">Имя <span className="required-mark">*</span></label>
-            <input
-              type="text"
-              value={coordData.name}
-              onChange={(e) => onChange(0, 'name', e.target.value)}
-              className={`field-input ${errors['coordinator_name'] ? 'field-input-error' : ''}`}
-              placeholder="Иван"
-            />
-            {errors['coordinator_name'] && <p className="field-error">{errors['coordinator_name']}</p>}
-          </div>
-          <div>
-            <label className="field-label">Отчество</label>
-            <input
-              type="text"
-              value={coordData.patronymic || ''}
-              onChange={(e) => onChange(0, 'patronymic', e.target.value)}
-              className="field-input"
-              placeholder="Иванович"
-            />
-          </div>
-          <div>
-            <label className="field-label">Отношение к команде</label>
-            <input
-              type="text"
-              value={coordData.relation_to_team || ''}
-              onChange={(e) => onChange(0, 'relation_to_team', e.target.value)}
-              className="field-input"
-              placeholder="Руководитель, наставник..."
-            />
-          </div>
-          <div>
-            <label className="field-label">Контактные данные</label>
-            <input
-              type="text"
-              value={coordData.contact_info || ''}
-              onChange={(e) => onChange(0, 'contact_info', e.target.value)}
-              className="field-input"
-              placeholder="Телефон, email"
-            />
-          </div>
-          <div>
-            <label className="field-label">Соц. сети</label>
-            <input
-              type="text"
-              value={coordData.social_media_links || ''}
-              onChange={(e) => onChange(0, 'social_media_links', e.target.value)}
-              className="field-input"
-              placeholder="VK, Telegram..."
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="field-label">Образование</label>
-            <input
-              type="text"
-              value={coordData.education || ''}
-              onChange={(e) => onChange(0, 'education', e.target.value)}
-              className="field-input"
-              placeholder="ВУЗ, специальность"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="field-label">Опыт работы</label>
-            <textarea
-              value={coordData.work_experience || ''}
-              onChange={(e) => onChange(0, 'work_experience', e.target.value)}
-              className="field-input-lg"
-              placeholder="Описание опыта работы"
-              rows={3}
-            />
-          </div>
-        </div>
+        )}
+
+        {selectedMember && (
+          <>
+            <div className="mt-4">
+              <label className="field-label">Отношение к команде</label>
+              <input
+                type="text"
+                value={coordinator?.relation_to_team || ''}
+                onChange={(e) => onCoordinatorChange({
+                  ...coordinator!,
+                  relation_to_team: e.target.value,
+                })}
+                className="field-input"
+                placeholder="Руководитель, наставник..."
+              />
+            </div>
+            <div className="mt-4">
+              <label className="field-label">Образование</label>
+              <input
+                type="text"
+                value={coordinator?.education || ''}
+                onChange={(e) => onCoordinatorChange({
+                  ...coordinator!,
+                  education: e.target.value,
+                })}
+                className="field-input"
+                placeholder="ВУЗ, специальность"
+              />
+            </div>
+            <div className="mt-4">
+              <label className="field-label">Опыт работы</label>
+              <textarea
+                value={coordinator?.work_experience || ''}
+                onChange={(e) => onCoordinatorChange({
+                  ...coordinator!,
+                  work_experience: e.target.value,
+                })}
+                className="field-input-lg"
+                placeholder="Описание опыта работы"
+                rows={3}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Описание опыта работы команды */}
@@ -161,16 +165,6 @@ export function CoordinatorsSection({
           <p className="field-error-lg">{errors['implementation_experience']}</p>
         )}
       </div>
-
-      {coordinators.length === 0 && (
-        <button
-          type="button"
-          onClick={onAdd}
-          className="btn-add mt-4"
-        >
-          + Добавить координатора
-        </button>
-      )}
     </div>
   );
 }

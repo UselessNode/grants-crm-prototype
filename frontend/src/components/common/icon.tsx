@@ -26,6 +26,7 @@ import CheckIcon from '../../assets/icons/check.svg?react';
 import LoadingIcon from '../../assets/icons/loading.svg?react';
 import DownloadIcon from '../../assets/icons/download.svg?react';
 import AddIcon from '../../assets/icons/add.svg?react';
+import ViewIcon from '../../assets/icons/eye.svg?react';
 
 /**
  * Типы поддерживаемых иконок
@@ -100,6 +101,7 @@ const iconMap: Record<IconName, React.ComponentType<SVGProps<SVGSVGElement>>> = 
   'loading': LoadingIcon,
   'download': DownloadIcon,
   'add': AddIcon,
+  'view': ViewIcon,
 };
 
 /**

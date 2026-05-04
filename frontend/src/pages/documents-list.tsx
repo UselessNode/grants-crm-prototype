@@ -2,7 +2,32 @@ import { useState, useEffect } from 'react';
 import { UserPanelLayout } from '../components/UserPanel/user-panel-layout';
 import { Icon } from '../components/common/icon';
 import { adminService } from '../services/adminService';
+import { formatFileSize, downloadDocument } from '../utils/documentHelpers';
 import type { Document, DocumentCategory } from '../types';
+
+// ========== Функция генерации цвета по названию категории ==========
+// Возвращает два цвета: для фона (светлый) и для иконки (тёмный насыщенный)
+const getCategoryColors = (categoryName?: string) => {
+  // Дефолтные цвета, если категория не указана
+  if (!categoryName) {
+    return { bg: '#f3f4f6', text: '#6b7280' }; // серый
+  }
+
+  // Простой хеш строки (Bernstein)
+  let hash = 0;
+  for (let i = 0; i < categoryName.length; i++) {
+    hash = (hash * 33) ^ categoryName.charCodeAt(i);
+  }
+  const hue = Math.abs(hash % 360); // оттенок от 0 до 359
+
+  // Фон: светлый (насыщенность 20%, яркость 92%)
+  const bg = `hsl(${hue}, 70%, 92%)`;
+  // Иконка: насыщенный, средней яркости (60%)
+  const text = `hsl(${hue}, 80%, 40%)`;
+
+  return { bg, text };
+};
+// ================================================================
 
 export function Documents() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -38,37 +63,21 @@ export function Documents() {
 
   const handleDownload = async (doc: Document) => {
     try {
-      const blob = await adminService.downloadDocument(doc.id);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = doc.file_name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      await downloadDocument(doc);
     } catch (err) {
       setError('Ошибка при скачивании документа');
       console.error(err);
     }
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Б';
-    const k = 1024;
-    const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-  };
-
   return (
     <UserPanelLayout showTabs={true} useMainNavigation={true}>
       <div className="max-w-6xl mx-auto">
-        {/* Заголовок */}
+        {/* Подзаголовок */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Документы</h1>
           <p className="text-gray-600">
-            В этом разделе размещены все необходимые документы для участия в грантовой программе
+            В этом разделе размещены все необходимые документы для участия в грантовой программе.
+            Рекомендуем ознакомиться с положением о гранте и методическими рекомендациями перед заполнением заявки.
           </p>
         </div>
 
@@ -137,63 +146,59 @@ export function Documents() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {documents.map(doc => (
-                  <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                          <Icon name="document" size={20} className="text-red-600" />
+                {documents.map(doc => {
+                  // Получаем цвета для текущего документа
+                  const { bg, text } = getCategoryColors(doc.category_name);
+
+                  return (
+                    <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          {/* Иконка с динамическим цветом */}
+                          <div
+                            className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                            style={{ backgroundColor: bg }}
+                          >
+                            <Icon name="document" size={20} style={{ color: text }} />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{doc.title}</div>
+                            <div className="text-xs text-gray-500">{doc.file_name}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{doc.title}</div>
-                          <div className="text-xs text-gray-500">{doc.file_name}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {doc.category_name ? (
-                        <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full">
-                          {doc.category_name}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {formatFileSize(doc.file_size)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {doc.created_at ? new Date(doc.created_at).toLocaleDateString('ru-RU') : '—'}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleDownload(doc)}
-                        className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1"
-                      >
-                        <Icon name="download" size={16} />
-                        Скачать
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4">
+                        {doc.category_name ? (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full"
+                            style={{ backgroundColor: bg, color: text }}>
+                            {doc.category_name}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {formatFileSize(doc.file_size)}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {doc.created_at ? new Date(doc.created_at).toLocaleDateString('ru-RU') : '—'}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => handleDownload(doc)}
+                          className="btn"
+                        >
+                          <Icon name="download" size={16} />
+                          Скачать
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
-
-        {/* Информация */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <div className="flex items-start gap-3">
-            <Icon name="info" size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">Документы для участников</p>
-              <p>
-                В этом разделе размещены все необходимые документы для участия в грантовой программе.
-                Рекомендуем ознакомиться с положением о гранте и методическими рекомендациями перед заполнением заявки.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </UserPanelLayout>
   );

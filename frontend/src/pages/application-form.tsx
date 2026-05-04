@@ -15,7 +15,7 @@ import {
   TableOfContents,
   type SectionError,
 } from '../components/ApplicationForm';
-import type { ProjectCoordinator, DobroResponsible, ProjectPlan, ProjectBudget } from '../types';
+import type { ProjectPlan, ProjectBudget, TeamMember } from '../types';
 import { UserPanelLayout } from '../components/UserPanel/user-panel-layout';
 import { Icon } from '../components/common/icon';
 import './ApplicationForm.css';
@@ -48,10 +48,10 @@ export function ApplicationForm() {
     addArrayItem,
     removeArrayItem,
     handleBudgetChange,
+    handleCoordinatorChange,
+    handleDobroChange,
     handleSubmit,
     emptyTeamMember,
-    emptyCoordinator,
-    emptyDobroResponsible,
     emptyPlan,
     emptyBudget,
   } = useApplicationForm();
@@ -74,13 +74,13 @@ export function ApplicationForm() {
     },
     {
       sectionId: 'section-3',
-      hasError: !!(errors.coordinator_surname || errors.coordinator_name || errors.implementation_experience),
-      errorCount: [errors.coordinator_surname, errors.coordinator_name, errors.implementation_experience].filter(Boolean).length,
+      hasError: Object.keys(errors).some(key => key.startsWith('coordinator_')) || !!errors.implementation_experience,
+      errorCount: Object.keys(errors).filter(key => key.startsWith('coordinator_') || key === 'implementation_experience').length,
     },
     {
       sectionId: 'section-4',
-      hasError: !!(errors.dobro_surname || errors.dobro_name || errors.dobro_dobro_link),
-      errorCount: [errors.dobro_surname, errors.dobro_name, errors.dobro_dobro_link].filter(Boolean).length,
+      hasError: Object.keys(errors).some(key => key.startsWith('dobro_')),
+      errorCount: Object.keys(errors).filter(key => key.startsWith('dobro_')).length,
     },
     {
       sectionId: 'section-5',
@@ -89,8 +89,8 @@ export function ApplicationForm() {
     },
     {
       sectionId: 'section-6',
-      hasError: false, // Валидация плана проекта
-      errorCount: 0,
+      hasError: Object.keys(errors).some(key => key.startsWith('project_plan_')),
+      errorCount: Object.keys(errors).filter(key => key.startsWith('project_plan_')).length,
     },
     {
       sectionId: 'section-7',
@@ -176,7 +176,7 @@ export function ApplicationForm() {
               <TeamMembersSection
                 team_members={formData.team_members}
                 errors={errors}
-                onChange={(index: number, field: keyof typeof emptyTeamMember, value: string | boolean | null) =>
+                onChange={(index: number, field: keyof TeamMember, value: string | boolean | null | string[]) =>
                   handleArrayChange('team_members', index, field, value as any)
                 }
                 onAdd={() => addArrayItem('team_members', emptyTeamMember)}
@@ -187,28 +187,23 @@ export function ApplicationForm() {
             {/* Секция 3: Координатор проекта */}
             <div id="section-3">
               <CoordinatorsSection
-                coordinators={formData.coordinators}
+                teamMembers={formData.team_members}
+                coordinator={formData.coordinator}
                 implementation_experience={formData.implementation_experience}
                 errors={errors}
-                onChange={(index: number, field: keyof ProjectCoordinator, value: string) =>
-                  handleArrayChange('coordinators', index, field, value)
-                }
+                showError={false} // Не показываем ошибку до отправки формы
+                onCoordinatorChange={handleCoordinatorChange}
                 onExperienceChange={handleChange}
-                onAdd={() => addArrayItem('coordinators', emptyCoordinator)}
-                onRemove={(index: number) => removeArrayItem('coordinators', index)}
               />
             </div>
 
             {/* Секция 4: Ответственный DOBRO.RU */}
             <div id="section-4">
               <DobroResponsibleSection
-                dobro_responsible={formData.dobro_responsible}
+                teamMembers={formData.team_members}
+                dobroResponsible={formData.dobro_responsible}
                 errors={errors}
-                onChange={(index: number, field: keyof DobroResponsible, value: string) =>
-                  handleArrayChange('dobro_responsible', index, field, value)
-                }
-                onAdd={() => addArrayItem('dobro_responsible', emptyDobroResponsible)}
-                onRemove={(index: number) => removeArrayItem('dobro_responsible', index)}
+                onDobroChange={handleDobroChange}
               />
             </div>
 
@@ -228,6 +223,7 @@ export function ApplicationForm() {
             <div id="section-6">
               <ProjectPlanSection
                 project_plans={formData.project_plans}
+                errors={errors}
                 onChange={(index: number, field: keyof ProjectPlan, value: string) =>
                   handleArrayChange('project_plans', index, field, value)
                 }
@@ -240,6 +236,7 @@ export function ApplicationForm() {
             <div id="section-7">
               <ProjectResultsSection
                 results_description={formData.results_description}
+                errors={errors}
                 onChange={handleChange}
               />
             </div>
@@ -276,6 +273,16 @@ export function ApplicationForm() {
                 Отмена
               </Link>
             </div>
+
+            {/* Ошибка сохранения */}
+            {errors._submit && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+                <div className="flex items-start gap-2">
+                  <Icon name="warning" size={16}/>
+                  <span>{errors._submit}</span>
+                </div>
+              </div>
+            )}
           </form>
         </div>
 

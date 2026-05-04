@@ -1,9 +1,10 @@
-// ApplicationsList.tsx
+// frontend/src/pages/applications-list.tsx
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { applicationService } from '../services/applicationService';
 import { adminService } from '../services/adminService';
 import { useAuthStore } from '../store/auth-store';
+import { useToast } from '../context/toast-context';
 import { Badge, type BadgeProps } from '../components/ui/badge';
 import type { Application, Direction, Status, Expert } from '../types';
 import { Icon } from '../components/common/icon';
@@ -13,6 +14,7 @@ import { ApplicationsList as AdminApplicationsList } from '../components/admin-p
 export function ApplicationsList() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const toast = useToast();
   const [applications, setApplications] = useState<Application[]>([]);
   const [directions, setDirections] = useState<Direction[]>([]);
   const [statuses, setStatuses] = useState<Status[]>([]);
@@ -34,7 +36,7 @@ export function ApplicationsList() {
   const [adminLoading, setAdminLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Загрузка обычных заявок (для пользователей и вкладки заявок у админа)
+  // Загрузка списка заявок
   const loadData = async () => {
     setLoading(true);
     try {
@@ -119,7 +121,7 @@ export function ApplicationsList() {
   const handleDelete = async (id: number, statusName?: string) => {
     // Проверяем, можно ли удалить заявку по статусу
     if (statusName !== 'Черновик' && statusName !== 'Отклонена') {
-      alert('Нельзя удалить заявку в текущем статусе');
+      toast.warning('Внимание', 'Нельзя удалить заявку в текущем статусе');
       return;
     }
 
@@ -127,16 +129,18 @@ export function ApplicationsList() {
 
     try {
       await applicationService.deleteApplication(id);
+      toast.success('Успешно', 'Заявка удалена');
       loadData();
     } catch (error) {
       console.error('Ошибка удаления:', error);
-      alert('Ошибка при удалении заявки');
+      toast.error('Ошибка', 'Ошибка при удалении заявки');
     }
   };
 
   // Изменение статуса заявки (для админа)
   const handleStatusChange = async (applicationId: number, newStatusId: number) => {
     const newStatus = statuses.find(s => s.id === newStatusId);
+    // TODO: Replace confirm() with a non-blocking modal confirmation
     if (!confirm(`Вы уверены, что хотите изменить статус заявки на "${newStatus?.name}"?`)) {
       loadData(); // Возвращаем старый статус при отмене
       return;
@@ -148,7 +152,7 @@ export function ApplicationsList() {
       loadData();
     } catch (error) {
       console.error('Ошибка изменения статуса:', error);
-      alert('Ошибка при изменении статуса');
+      toast.error('Ошибка', 'Ошибка при изменении статуса');
       loadData();
     } finally {
       setStatusChangingId(null);
@@ -190,6 +194,14 @@ export function ApplicationsList() {
       )}
 
       {/* Контент */}
+
+      {/* Подзаголовок */}
+      <div className="mb-6">
+        <p className="text-gray-600">
+          В этом разделе размещены все <span className="font-bold">ваши</span> заявки для участия в грантовой программе.
+        </p>
+      </div>
+
       {adminLoading || loading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -199,11 +211,6 @@ export function ApplicationsList() {
           {/* Вкладка заявок для обычного пользователя */}
           {user?.role !== 'admin' && (
             <>
-              <div className="flex justify-between items-center mb-6">
-                <div></div>
-                <Link to="/applications/new" className="btn-header">+ Новая заявка</Link>
-              </div>
-
               {/* Таблица заявок пользователя */}
               <div className="applications-table-container">
                 <div className="overflow-x-auto">
@@ -236,7 +243,7 @@ export function ApplicationsList() {
                           </td>
                           <td className="applications-td-text">
                             <Link to={`/applications/${app.id}`} className="applications-action-link">
-                              Просмотр
+                              <Icon name="view" size={16} />Просмотр
                             </Link>
                             {canDelete(app.status_name) ? (
                               <button onClick={() => app.id && handleDelete(app.id, app.status_name)} className="applications-action-button-delete">
@@ -270,11 +277,6 @@ export function ApplicationsList() {
           {/* Вкладка заявок для администратора */}
           {user?.role === 'admin' && (
             <>
-              <div className="flex justify-between items-center mb-6">
-                <div></div>
-                <Link to="/applications/new" className="btn-header">+ Новая заявка</Link>
-              </div>
-
               <AdminApplicationsList
                 applications={adminApplications}
                 experts={experts}

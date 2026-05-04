@@ -3,6 +3,7 @@ import { Button } from '../../ui/button';
 import { Table, type TableColumn } from '../../ui/table';
 import { Icon } from '../../common/icon';
 import type { Document } from '../../../types';
+import { formatFileSize } from '../../../utils/documentHelpers';
 
 type AdminDocumentsTableProps = {
   documents: Document[];
@@ -17,14 +18,6 @@ export function AdminDocumentsTable({
   onDelete,
   onDownload,
 }: AdminDocumentsTableProps) {
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Б';
-    const k = 1024;
-    const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-  };
-
   const columns: TableColumn<Document>[] = [
     {
       field: 'id',

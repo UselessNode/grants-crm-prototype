@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { ToggleButton } from '../components/ui/toggle-button';
 import { Table, TableEmptyState, TableDivider, TableAddRow } from '../components/ui/table';
 import { Badge } from '../components/ui/badge';
-import UserHeader from '../components/layout/user-header';
+import { ShowcaseUserHeader } from '../components/showcase/user-header';
+import '../components/showcase/ui-showcase.css';
 
 export function UiShowcase() {
   const [inputValue, setInputValue] = useState('');
@@ -39,7 +40,7 @@ export function UiShowcase() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <UserHeader />
+      <ShowcaseUserHeader />
 
       <main className="max-w-6xl mx-auto py-8 px-4">
         {/* Заголовок с кнопкой */}

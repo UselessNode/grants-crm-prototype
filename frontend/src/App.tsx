@@ -11,10 +11,11 @@ import { UiShowcase } from './pages/ui-showcase';
 import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { Profile } from './pages/profile';
-import { Documents } from './pages/documents';
+import { Documents } from './pages/documents-list';
 import { NotFoundPage } from './pages/not-found';
 import { PrivateRoute } from './components/common/private-route';
 import { useAuthStore } from './store/auth-store';
+import { ToastProvider } from './context/toast-context';
 
 function HomeRedirect() {
   const { user } = useAuthStore();
@@ -33,8 +34,9 @@ function ProfileWrapper() {
 
 export function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
         {/* Публичные маршруты */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -149,6 +151,7 @@ export function App() {
         />
       </Routes>
     </BrowserRouter>
+  </ToastProvider>
   );
 }
 

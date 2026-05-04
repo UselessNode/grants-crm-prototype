@@ -66,3 +66,8 @@
 .AdditionalMaterialsSection__file-input {
   @apply hidden;
 }
+
+/* Новые файлы (ожидают сохранения) */
+.AdditionalMaterialsSection__item--pending {
+  @apply bg-blue-50 border-blue-200;
+}

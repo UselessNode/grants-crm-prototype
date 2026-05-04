@@ -15,8 +15,9 @@ export function AdminApplicationsTable({ applications }: AdminApplicationsTableP
             <th className="AdminApplicationsTable__th">ID</th>
             <th className="AdminApplicationsTable__th">Название</th>
             <th className="AdminApplicationsTable__th">Владелец</th>
+            <th className="AdminApplicationsTable__th">Конкурс</th>
             <th className="AdminApplicationsTable__th">Статус</th>
-            <th className="AdminApplicationsTable__th">Дата создания</th>
+            <th className="AdminApplicationsTable__th">Дата</th>
             <th className="AdminApplicationsTable__th">Действия</th>
           </tr>
         </thead>
@@ -27,6 +28,9 @@ export function AdminApplicationsTable({ applications }: AdminApplicationsTableP
               <td className="AdminApplicationsTable__td AdminApplicationsTable__tdPrimary">{app.title}</td>
               <td className="AdminApplicationsTable__td AdminApplicationsTable__tdSecondary">
                 {app.owner_name || app.owner_email || `ID: ${app.owner_id || '—'}`}
+              </td>
+              <td className="AdminApplicationsTable__td AdminApplicationsTable__tdSecondary">
+                {app.tender_name || '—'}
               </td>
               <td className="AdminApplicationsTable__td">
                 <span className="AdminApplicationsTable__status">
@@ -39,7 +43,7 @@ export function AdminApplicationsTable({ applications }: AdminApplicationsTableP
               <td className="AdminApplicationsTable__td">
                 <Link
                   to={`/applications/${app.id}`}
-                  className="AdminApplicationsTable__link"
+                  className="AdminApplicationsTable__link btn"
                 >
                   Просмотр
                 </Link>

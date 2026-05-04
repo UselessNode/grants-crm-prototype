@@ -85,31 +85,30 @@ export interface TeamMember {
   tasks_in_project?: string | null;
   contact_info?: string | null;
   social_media_links?: string | null;
+  consent_file?: string | null;
+  is_minor?: boolean;
+  consent_files?: string[];
 }
 
 export interface ProjectCoordinator {
   id?: number;
   application_id?: number | null;
-  surname: string;
-  name: string;
-  patronymic?: string | null;
+  team_member_id: number;
   relation_to_team?: string | null;
-  contact_info?: string | null;
-  social_media_links?: string | null;
   education?: string | null;
   work_experience?: string | null;
+  // Данные из team_members (заполняются при JOIN)
+  team_member?: TeamMember;
 }
 
 export interface DobroResponsible {
   id?: number;
   application_id?: number | null;
-  surname: string;
-  name: string;
-  patronymic?: string | null;
+  team_member_id: number;
   relation_to_team?: string | null;
-  contact_info?: string | null;
-  social_media_links?: string | null;
-  dobro_link?: string | null; // Ссылка на профиль на DOBRO.RU
+  dobro_link?: string | null;
+  // Данные из team_members (заполняются при JOIN)
+  team_member?: TeamMember;
 }
 
 export interface Expert {
@@ -234,11 +233,13 @@ export class ApplicationModel {
           a.*,
           d.name as direction_name,
           s.name as status_name,
+          t.name as tender_name,
           u.email as owner_email,
           COALESCE(CONCAT(u.surname, ' ', u.name)) as owner_name
         FROM applications a
         LEFT JOIN directions d ON a.direction_id = d.id
         LEFT JOIN application_statuses s ON a.status_id = s.id
+        LEFT JOIN tenders t ON a.tender_id = t.id
         LEFT JOIN users u ON a.owner_id = u.id
         ${whereClause}
         ORDER BY a.created_at DESC
@@ -308,8 +309,18 @@ export class ApplicationModel {
       // Получаем связанные данные параллельно
       const [teamMembers, coordinators, dobro, plans, budget, materials, verdicts] = await Promise.all([
         pool.query('SELECT * FROM team_members WHERE application_id = $1', [id]),
-        pool.query('SELECT * FROM project_coordinators WHERE application_id = $1', [id]),
-        pool.query('SELECT * FROM dobro_responsible WHERE application_id = $1', [id]),
+        pool.query(`
+          SELECT c.*, tm.surname, tm.name, tm.patronymic, tm.contact_info, tm.social_media_links, tm.consent_file, tm.consent_files, tm.is_minor
+          FROM project_coordinators c
+          LEFT JOIN team_members tm ON c.team_member_id = tm.id
+          WHERE c.application_id = $1
+        `, [id]),
+        pool.query(`
+          SELECT d.*, tm.surname, tm.name, tm.patronymic, tm.contact_info, tm.social_media_links, tm.consent_file, tm.consent_files, tm.is_minor
+          FROM dobro_responsible d
+          LEFT JOIN team_members tm ON d.team_member_id = tm.id
+          WHERE d.application_id = $1
+        `, [id]),
         pool.query('SELECT * FROM project_plans WHERE application_id = $1', [id]),
         pool.query('SELECT * FROM project_budget WHERE application_id = $1', [id]),
         pool.query('SELECT * FROM additional_materials WHERE application_id = $1', [id]),
@@ -347,14 +358,46 @@ export class ApplicationModel {
         },
       }));
 
+      // Формируем координаторов с вложенным team_member
+      const coordinatorsWithMember = coordinators.rows.map((c) => ({
+        ...c,
+        team_member: c.surname ? {
+          id: c.team_member_id,
+          surname: c.surname,
+          name: c.name,
+          patronymic: c.patronymic,
+          contact_info: c.contact_info,
+          social_media_links: c.social_media_links,
+          consent_file: c.consent_file,
+          consent_files: c.consent_files,
+          is_minor: c.is_minor,
+        } : null,
+      }));
+
+      // Формируем ответственных DOBRO с вложенным team_member
+      const dobroWithMember = dobro.rows.map((d) => ({
+        ...d,
+        team_member: d.surname ? {
+          id: d.team_member_id,
+          surname: d.surname,
+          name: d.name,
+          patronymic: d.patronymic,
+          contact_info: d.contact_info,
+          social_media_links: d.social_media_links,
+          consent_file: d.consent_file,
+          consent_files: d.consent_files,
+          is_minor: d.is_minor,
+        } : null,
+      }));
+
       return {
         ...application,
         expert1,
         expert2,
         expert_verdicts: verdictsWithExpert,
         team_members: teamMembers.rows,
-        project_coordinators: coordinators.rows,
-        dobro_responsible: dobro.rows,
+        project_coordinators: coordinatorsWithMember,
+        dobro_responsible: dobroWithMember,
         project_plans: plans.rows,
         project_budget: budget.rows,
         additional_materials: materials.rows,
@@ -415,31 +458,54 @@ export class ApplicationModel {
       const application = appResult.rows[0];
       const applicationId = application.id;
 
-      // Вставляем связанные данные
+      // Вставляем team_members и получаем их реальные ID
+      const insertedMemberIds: number[] = [];
       if (team_members && team_members.length > 0) {
         for (const member of team_members) {
-          await client.query(`
-            INSERT INTO team_members (application_id, surname, name, patronymic, tasks_in_project, contact_info, social_media_links)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-          `, [applicationId, member.surname, member.name, member.patronymic || null, member.tasks_in_project || null, member.contact_info || null, member.social_media_links || null]);
+          const result = await client.query(`
+            INSERT INTO team_members (application_id, surname, name, patronymic, tasks_in_project, contact_info, social_media_links, consent_file, is_minor, consent_files)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id
+          `, [applicationId, member.surname, member.name, member.patronymic || null, member.tasks_in_project || null, member.contact_info || null, member.social_media_links || null, member.consent_file || null, member.is_minor || false, member.consent_files || []]);
+          insertedMemberIds.push(result.rows[0].id);
         }
       }
 
+      // Вспомогательная функция для сопоставления временных ID с реальными
+      const resolveMemberId = (tempId: number): number | null => {
+        if (tempId > 0) {
+          // Реальный ID (для редактирования существующей заявки)
+          return tempId;
+        }
+        // Временный ID (отрицательный): сопоставляем по индексу
+        const memberIndex = -tempId - 1;
+        if (memberIndex >= 0 && memberIndex < insertedMemberIds.length) {
+          return insertedMemberIds[memberIndex];
+        }
+        return null;
+      };
+
       if (coordinators && coordinators.length > 0) {
         for (const coord of coordinators) {
+          if (!coord.team_member_id) continue;
+          const realMemberId = resolveMemberId(coord.team_member_id);
+          if (!realMemberId) continue;
           await client.query(`
-            INSERT INTO project_coordinators (application_id, surname, name, patronymic, relation_to_team, contact_info, social_media_links, education, work_experience)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          `, [applicationId, coord.surname, coord.name, coord.patronymic || null, coord.relation_to_team || null, coord.contact_info || null, coord.social_media_links || null, coord.education || null, coord.work_experience || null]);
+            INSERT INTO project_coordinators (application_id, team_member_id, relation_to_team, education, work_experience)
+            VALUES ($1, $2, $3, $4, $5)
+          `, [applicationId, realMemberId, coord.relation_to_team || null, coord.education || null, coord.work_experience || null]);
         }
       }
 
       if (dobro_responsible && dobro_responsible.length > 0) {
         for (const dobro of dobro_responsible) {
+          if (!dobro.team_member_id) continue;
+          const realMemberId = resolveMemberId(dobro.team_member_id);
+          if (!realMemberId) continue;
           await client.query(`
-            INSERT INTO dobro_responsible (application_id, surname, name, patronymic, relation_to_team, contact_info, social_media_links, dobro_link)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          `, [applicationId, dobro.surname, dobro.name, dobro.patronymic || null, dobro.relation_to_team || null, dobro.contact_info || null, dobro.social_media_links || null, dobro.dobro_link || null]);
+            INSERT INTO dobro_responsible (application_id, team_member_id, relation_to_team, dobro_link)
+            VALUES ($1, $2, $3, $4)
+          `, [applicationId, realMemberId, dobro.relation_to_team || null, dobro.dobro_link || null]);
         }
       }
 
@@ -538,31 +604,107 @@ export class ApplicationModel {
       // Обновляем связанные данные (полная замена)
       if (data.team_members !== undefined) {
         await client.query('DELETE FROM team_members WHERE application_id = $1', [id]);
+        const insertedMemberIds: number[] = [];
         for (const member of data.team_members) {
-          await client.query(`
-            INSERT INTO team_members (application_id, surname, name, patronymic, tasks_in_project, contact_info, social_media_links)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-          `, [id, member.surname, member.name, member.patronymic || null, member.tasks_in_project || null, member.contact_info || null, member.social_media_links || null]);
+          const result = await client.query(`
+            INSERT INTO team_members (application_id, surname, name, patronymic, tasks_in_project, contact_info, social_media_links, consent_file, is_minor, consent_files)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id
+          `, [id, member.surname, member.name, member.patronymic || null, member.tasks_in_project || null, member.contact_info || null, member.social_media_links || null, member.consent_file || null, member.is_minor || false, member.consent_files || []]);
+          insertedMemberIds.push(result.rows[0].id);
         }
-      }
 
-      if (data.coordinators !== undefined) {
-        await client.query('DELETE FROM project_coordinators WHERE application_id = $1', [id]);
-        for (const coord of data.coordinators) {
-          await client.query(`
-            INSERT INTO project_coordinators (application_id, surname, name, patronymic, relation_to_team, contact_info, social_media_links, education, work_experience)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          `, [id, coord.surname, coord.name, coord.patronymic || null, coord.relation_to_team || null, coord.contact_info || null, coord.social_media_links || null, coord.education || null, coord.work_experience || null]);
+        // Вспомогательная функция для сопоставления ID координатора/dobro с реальными ID участников
+        // При обновлении team_members удаляются и создаются заново с новыми ID,
+        // поэтому нужно сопоставить старый ID с новым по позиции в массиве
+        const resolveMemberId = (tempId: number): number | null => {
+          if (tempId > 0) {
+            // Ищем индекс участника в исходном массиве по его ID
+            const originalIndex = data.team_members!.findIndex(m => (m as any).id === tempId);
+            if (originalIndex >= 0 && originalIndex < insertedMemberIds.length) {
+              // Возвращаем НОВЫЙ ID, который был вставлен на этой позиции
+              return insertedMemberIds[originalIndex];
+            }
+            // Если участник с таким ID не найден в массиве — это ошибка данных
+            console.warn(`[resolveMemberId] Участник team_member_id=${tempId} не найден в team_members (индекс не определён)`);
+            return null;
+          }
+          // Для отрицательных ID (временных) ищем по индексу
+          const memberIndex = -tempId - 1;
+          if (memberIndex >= 0 && memberIndex < insertedMemberIds.length) {
+            return insertedMemberIds[memberIndex];
+          }
+          return null;
+        };
+
+        if (data.coordinators !== undefined) {
+          await client.query('DELETE FROM project_coordinators WHERE application_id = $1', [id]);
+          for (const coord of data.coordinators) {
+            if (!coord.team_member_id) continue;
+            const realMemberId = resolveMemberId(coord.team_member_id);
+            if (!realMemberId) continue;
+            await client.query(`
+              INSERT INTO project_coordinators (application_id, team_member_id, relation_to_team, education, work_experience)
+              VALUES ($1, $2, $3, $4, $5)
+            `, [id, realMemberId, coord.relation_to_team || null, coord.education || null, coord.work_experience || null]);
+          }
         }
-      }
 
-      if (data.dobro_responsible !== undefined) {
-        await client.query('DELETE FROM dobro_responsible WHERE application_id = $1', [id]);
-        for (const dobro of data.dobro_responsible) {
-          await client.query(`
-            INSERT INTO dobro_responsible (application_id, surname, name, patronymic, relation_to_team, contact_info, social_media_links, dobro_link)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          `, [id, dobro.surname, dobro.name, dobro.patronymic || null, dobro.relation_to_team || null, dobro.contact_info || null, dobro.social_media_links || null, dobro.dobro_link || null]);
+        if (data.dobro_responsible !== undefined) {
+          await client.query('DELETE FROM dobro_responsible WHERE application_id = $1', [id]);
+          for (const dobro of data.dobro_responsible) {
+            if (!dobro.team_member_id) continue;
+            const realMemberId = resolveMemberId(dobro.team_member_id);
+            if (!realMemberId) continue;
+            await client.query(`
+              INSERT INTO dobro_responsible (application_id, team_member_id, relation_to_team, dobro_link)
+              VALUES ($1, $2, $3, $4)
+            `, [id, realMemberId, dobro.relation_to_team || null, dobro.dobro_link || null]);
+          }
+        }
+      } else {
+        // Если team_members не обновляются, но обновляются координаторы/dobro
+        // Получаем все текущие team_members для этой заявки, чтобы валидировать team_member_id
+        const existingMembersResult = await client.query(
+          'SELECT id FROM team_members WHERE application_id = $1',
+          [id]
+        );
+        const validMemberIds = new Set(existingMembersResult.rows.map((row) => row.id));
+
+        if (data.coordinators !== undefined) {
+          await client.query('DELETE FROM project_coordinators WHERE application_id = $1', [id]);
+          for (const coord of data.coordinators) {
+            if (!coord.team_member_id) continue;
+            // Проверяем, что team_member_id существует в текущих участниках заявки
+            if (!validMemberIds.has(coord.team_member_id)) {
+              console.warn(
+                `[update] Координатор: team_member_id=${coord.team_member_id} не найден в team_members для заявки ${id}`
+              );
+              continue;
+            }
+            await client.query(`
+              INSERT INTO project_coordinators (application_id, team_member_id, relation_to_team, education, work_experience)
+              VALUES ($1, $2, $3, $4, $5)
+            `, [id, coord.team_member_id, coord.relation_to_team || null, coord.education || null, coord.work_experience || null]);
+          }
+        }
+
+        if (data.dobro_responsible !== undefined) {
+          await client.query('DELETE FROM dobro_responsible WHERE application_id = $1', [id]);
+          for (const dobro of data.dobro_responsible) {
+            if (!dobro.team_member_id) continue;
+            // Проверяем, что team_member_id существует в текущих участниках заявки
+            if (!validMemberIds.has(dobro.team_member_id)) {
+              console.warn(
+                `[update] Ответственный DOBRO: team_member_id=${dobro.team_member_id} не найден в team_members для заявки ${id}`
+              );
+              continue;
+            }
+            await client.query(`
+              INSERT INTO dobro_responsible (application_id, team_member_id, relation_to_team, dobro_link)
+              VALUES ($1, $2, $3, $4)
+            `, [id, dobro.team_member_id, dobro.relation_to_team || null, dobro.dobro_link || null]);
+          }
         }
       }
 

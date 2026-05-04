@@ -9,7 +9,7 @@ export interface Document {
   description?: string | null;
   category_id?: number | null;
   category_name?: string | null;
-  file_data?: Buffer; // Бинарные данные (не всегда нужны)
+  file_path?: string; // Путь к файлу на сервере
   file_name: string;
   file_type: string;
   file_size: number;
@@ -90,6 +90,7 @@ export class DocumentModel {
         d.description,
         d.category_id,
         dc.name as category_name,
+        d.file_path,
         d.file_name,
         d.file_type,
         d.file_size,
@@ -130,7 +131,7 @@ export class DocumentModel {
         d.description,
         d.category_id,
         dc.name as category_name,
-        d.file_data,
+        d.file_path,
         d.file_name,
         d.file_type,
         d.file_size,
@@ -188,7 +189,7 @@ export class DocumentModel {
     title: string;
     description?: string | null;
     category_id?: number | null;
-    file_data: Buffer;
+    file_path: string;
     file_name: string;
     file_type: string;
     file_size: number;
@@ -199,7 +200,7 @@ export class DocumentModel {
     const result = await pool.query(
       `
       INSERT INTO documents (
-        title, description, category_id, file_data, file_name, file_type,
+        title, description, category_id, file_path, file_name, file_type,
         file_size, is_template, template_type, created_by
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -209,7 +210,7 @@ export class DocumentModel {
         data.title,
         data.description || null,
         data.category_id || null,
-        data.file_data,
+        data.file_path,
         data.file_name,
         data.file_type,
         data.file_size,
@@ -290,7 +291,7 @@ export class DocumentModel {
   static async updateFile(
     id: number,
     data: {
-      file_data: Buffer;
+      file_path: string;
       file_name: string;
       file_type: string;
       file_size: number;
@@ -300,7 +301,7 @@ export class DocumentModel {
       `
       UPDATE documents
       SET
-        file_data = $1,
+        file_path = $1,
         file_name = $2,
         file_type = $3,
         file_size = $4,
@@ -308,7 +309,7 @@ export class DocumentModel {
       WHERE id = $5
       RETURNING *
     `,
-      [data.file_data, data.file_name, data.file_type, data.file_size, id]
+      [data.file_path, data.file_name, data.file_type, data.file_size, id]
     );
 
     return result.rows[0] || null;

@@ -31,6 +31,7 @@ DO $$ BEGIN
 		"description" TEXT,
 		"category_id" INTEGER,
 		"file_data" BYTEA NOT NULL, -- Бинарные данные файла
+		"file_path" VARCHAR(255) NOT NULL, -- Путь к файлу
 		"file_name" VARCHAR(255) NOT NULL, -- Оригинальное имя файла
 		"file_type" VARCHAR(100) NOT NULL, -- MIME тип файла
 		"file_size" INTEGER NOT NULL, -- Размер в байтах
@@ -85,9 +86,7 @@ INSERT INTO "document_categories" ("id", "name", "description", "sort_order")
 VALUES
   (1, 'Положения', 'Положения о грантах и конкурсах', 1),
   (2, 'Методички', 'Методические рекомендации и пособия', 2),
-  (3, 'Формы', 'Формы документов и шаблоны', 3),
-  (4, 'Документы', 'Прочие документы', 4),
-  (5, 'Образцы согласий', 'Образцы согласий на обработку персональных данных', 5)
+  (3, 'Документы', 'Прочие документы', 3)
 ON CONFLICT ("id") DO NOTHING;
 
 -- Сброс счетчика последовательности

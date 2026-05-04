@@ -130,10 +130,58 @@ export const adminService = {
   },
 
   /**
+   * Создать направление
+   */
+  async createDirection(data: { name: string; description?: string | null }) {
+    const response = await api.post<{ success: boolean; data: Direction }>('/admin/directions', data);
+    return response.data;
+  },
+
+  /**
+   * Обновить направление
+   */
+  async updateDirection(id: number, data: { name?: string; description?: string | null }) {
+    const response = await api.put<{ success: boolean; data: Direction }>(`/admin/directions/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * Удалить направление
+   */
+  async deleteDirection(id: number) {
+    const response = await api.delete<{ success: boolean }>(`/admin/directions/${id}`);
+    return response.data;
+  },
+
+  /**
    * Получить все тендеры (конкурсы)
    */
   async getTenders() {
     const response = await api.get<{ success: boolean; data: Tender[] }>('/admin/tenders');
+    return response.data;
+  },
+
+  /**
+   * Создать тендер (конкурс)
+   */
+  async createTender(data: { name: string; description?: string | null }) {
+    const response = await api.post<{ success: boolean; data: Tender }>('/admin/tenders', data);
+    return response.data;
+  },
+
+  /**
+   * Обновить тендер
+   */
+  async updateTender(id: number, data: { name?: string; description?: string | null }) {
+    const response = await api.put<{ success: boolean; data: Tender }>(`/admin/tenders/${id}`, data);
+    return response.data;
+  },
+
+  /**
+   * Удалить тендер
+   */
+  async deleteTender(id: number) {
+    const response = await api.delete<{ success: boolean }>(`/admin/tenders/${id}`);
     return response.data;
   },
 

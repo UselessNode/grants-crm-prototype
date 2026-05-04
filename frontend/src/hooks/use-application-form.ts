@@ -1,12 +1,27 @@
 // use-application-form.ts
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { applicationService } from '../services/applicationService';
+import { useToast } from '../context/toast-context';
 import type {
   Application, Direction, Status, Tender,
   TeamMember, ProjectCoordinator, DobroResponsible,
   ProjectPlan, ProjectBudget, AdditionalMaterial
 } from '../types';
+
+// Вспомогательная функция для извлечения сообщения об ошибке
+const getErrorMessage = (error: unknown): string => {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const axiosError = error as { response?: { data?: { message?: string } } };
+    if (axiosError.response?.data?.message) {
+      return axiosError.response.data.message;
+    }
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    return (error as { message: string }).message;
+  }
+  return 'Неизвестная ошибка';
+};
 
 export interface FormData {
   title: string;
@@ -14,9 +29,9 @@ export interface FormData {
   direction_id: string;
   status_id: string;
   team_members: TeamMember[];
-  coordinators: ProjectCoordinator[];
+  coordinator: ProjectCoordinator | null;
   implementation_experience: string;
-  dobro_responsible: DobroResponsible[];
+  dobro_responsible: DobroResponsible | null;
   idea_description: string;
   importance_to_team: string;
   project_goal: string;
@@ -36,27 +51,6 @@ const emptyTeamMember: TeamMember = {
   social_media_links: '',
   consent_file: null,
   is_minor: false,
-};
-
-const emptyCoordinator: ProjectCoordinator = {
-  surname: '',
-  name: '',
-  patronymic: '',
-  relation_to_team: '',
-  contact_info: '',
-  social_media_links: '',
-  education: '',
-  work_experience: '',
-};
-
-const emptyDobroResponsible: DobroResponsible = {
-  surname: '',
-  name: '',
-  patronymic: '',
-  relation_to_team: '',
-  contact_info: '',
-  social_media_links: '',
-  dobro_link: '',
 };
 
 const emptyPlan: ProjectPlan = {
@@ -85,9 +79,9 @@ const initialFormData: FormData = {
   direction_id: '',
   status_id: '1', // По умолчанию Черновик
   team_members: [{ ...emptyTeamMember }],
-  coordinators: [{ ...emptyCoordinator }],
+  coordinator: null,
   implementation_experience: '',
-  dobro_responsible: [{ ...emptyDobroResponsible }],
+  dobro_responsible: null,
   idea_description: '',
   importance_to_team: '',
   project_goal: '',
@@ -114,26 +108,26 @@ export interface UseApplicationFormReturn {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => void;
   handleArrayChange: <T,>(
-    arrayName: keyof Pick<FormData, 'team_members' | 'coordinators' | 'dobro_responsible' | 'project_plans' | 'project_budget'>,
+    arrayName: keyof Pick<FormData, 'team_members' | 'project_plans' | 'project_budget'>,
     index: number,
     field: keyof T,
     value: unknown
   ) => void;
   addArrayItem: (
-    arrayName: keyof Pick<FormData, 'team_members' | 'coordinators' | 'dobro_responsible' | 'project_plans' | 'project_budget'>,
-    emptyItem: TeamMember | ProjectCoordinator | DobroResponsible | ProjectPlan | ProjectBudget
+    arrayName: keyof Pick<FormData, 'team_members' | 'project_plans' | 'project_budget'>,
+    emptyItem: TeamMember | ProjectPlan | ProjectBudget
   ) => void;
   removeArrayItem: (
-    arrayName: keyof Pick<FormData, 'team_members' | 'coordinators' | 'dobro_responsible' | 'project_plans' | 'project_budget'>,
+    arrayName: keyof Pick<FormData, 'team_members' | 'project_plans' | 'project_budget'>,
     index: number
   ) => void;
   calculateBudgetTotal: (item: ProjectBudget) => number;
   handleBudgetChange: (index: number, field: keyof ProjectBudget, value: string | number) => void;
-  validate: () => boolean;
+  handleCoordinatorChange: (coordinator: ProjectCoordinator | null) => void;
+  handleDobroChange: (dobro: DobroResponsible | null) => void;
+  validate: () => { valid: boolean; errorCount: number; errorKeys: string[] };
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   emptyTeamMember: TeamMember;
-  emptyCoordinator: ProjectCoordinator;
-  emptyDobroResponsible: DobroResponsible;
   emptyPlan: ProjectPlan;
   emptyBudget: ProjectBudget;
 }
@@ -142,6 +136,7 @@ export function useApplicationForm(): UseApplicationFormReturn {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEdit = !!id;
+  const toast = useToast();
 
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [directions, setDirections] = useState<Direction[]>([]);
@@ -150,6 +145,42 @@ export function useApplicationForm(): UseApplicationFormReturn {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState(false); // Отслеживаем, была ли попытка отправки
+
+  // Вспомогательная функция для преобразования даты в формат YYYY-MM-DD
+  const formatDateForInput = (dateValue: string | Date | null | undefined): string => {
+    if (!dateValue) return '';
+
+    // Если это строка, проверяем формат
+    if (typeof dateValue === 'string') {
+      // Если уже в формате YYYY-MM-DD, возвращаем как есть
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        return dateValue;
+      }
+      // Если ISO формат (с временем), преобразуем в YYYY-MM-DD
+      if (dateValue.includes('T')) {
+        const date = new Date(dateValue);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString().split('T')[0];
+        }
+      }
+      // Пробуем создать дату из строки
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+      return dateValue;
+    }
+
+    // Если это объект Date
+    if (dateValue instanceof Date) {
+      if (!isNaN(dateValue.getTime())) {
+        return dateValue.toISOString().split('T')[0];
+      }
+    }
+
+    return '';
+  };
 
   // Загрузка данных для редактирования
   useEffect(() => {
@@ -182,21 +213,28 @@ export function useApplicationForm(): UseApplicationFormReturn {
             direction_id: app.direction_id?.toString() || '',
             status_id: app.status_id?.toString() || '1',
             team_members: app.team_members && app.team_members.length > 0 ? app.team_members : [{ ...emptyTeamMember }],
-            coordinators: app.project_coordinators && app.project_coordinators.length > 0 ? app.project_coordinators : [{ ...emptyCoordinator }],
+            coordinator: app.project_coordinators && app.project_coordinators.length > 0 ? app.project_coordinators[0] : null,
             implementation_experience: app.implementation_experience || '',
-            dobro_responsible: app.dobro_responsible && app.dobro_responsible.length > 0 ? app.dobro_responsible : [{ ...emptyDobroResponsible }],
+            dobro_responsible: app.dobro_responsible && app.dobro_responsible.length > 0 ? app.dobro_responsible[0] : null,
             idea_description: app.idea_description || '',
             importance_to_team: app.importance_to_team || '',
             project_goal: app.project_goal || '',
             project_tasks: app.project_tasks || '',
-            project_plans: app.project_plans && app.project_plans.length > 0 ? app.project_plans : [{ ...emptyPlan }],
+            project_plans: app.project_plans && app.project_plans.length > 0
+              ? app.project_plans.map(plan => ({
+                  ...plan,
+                  start_date: formatDateForInput(plan.start_date),
+                  end_date: formatDateForInput(plan.end_date),
+                }))
+              : [{ ...emptyPlan }],
             results_description: app.results_description || '',
             project_budget: app.project_budget && app.project_budget.length > 0 ? app.project_budget : [{ ...emptyBudget }],
             additional_materials: app.additional_materials || [],
           });
         } catch (error) {
           console.error('Ошибка загрузки заявки:', error);
-          alert('Ошибка при загрузке заявки');
+          const message = getErrorMessage(error);
+          toast.error('Ошибка загрузки', `Не удалось загрузить заявку: ${message}`);
           navigate('/applications');
         } finally {
           setLoading(false);
@@ -206,7 +244,7 @@ export function useApplicationForm(): UseApplicationFormReturn {
     } else {
       setLoading(false);
     }
-  }, [id, isEdit, navigate]);
+  }, [id, isEdit, navigate, toast]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -219,37 +257,45 @@ export function useApplicationForm(): UseApplicationFormReturn {
   };
 
   const handleArrayChange = <T,>(
-    arrayName: keyof Pick<FormData, 'team_members' | 'coordinators' | 'dobro_responsible' | 'project_plans' | 'project_budget'>,
+    arrayName: keyof Pick<FormData, 'team_members' | 'project_plans' | 'project_budget'>,
     index: number,
     field: keyof T,
     value: unknown
   ) => {
     setFormData((prev) => ({
       ...prev,
-      [arrayName]: prev[arrayName].map((item, i) =>
+      [arrayName]: (prev[arrayName] as T[]).map((item, i) =>
         i === index ? { ...item, [field]: value } : item
       ),
     }));
   };
 
   const addArrayItem = (
-    arrayName: keyof Pick<FormData, 'team_members' | 'coordinators' | 'dobro_responsible' | 'project_plans' | 'project_budget'>,
-    emptyItem: TeamMember | ProjectCoordinator | DobroResponsible | ProjectPlan | ProjectBudget
+    arrayName: keyof Pick<FormData, 'team_members' | 'project_plans' | 'project_budget'>,
+    emptyItem: TeamMember | ProjectPlan | ProjectBudget
   ) => {
     setFormData((prev) => ({
       ...prev,
-      [arrayName]: [...prev[arrayName], { ...emptyItem }],
+      [arrayName]: [...(prev[arrayName] as any[]), { ...emptyItem }],
     }));
   };
 
   const removeArrayItem = (
-    arrayName: keyof Pick<FormData, 'team_members' | 'coordinators' | 'dobro_responsible' | 'project_plans' | 'project_budget'>,
+    arrayName: keyof Pick<FormData, 'team_members' | 'project_plans' | 'project_budget'>,
     index: number
   ) => {
     setFormData((prev) => ({
       ...prev,
-      [arrayName]: prev[arrayName].filter((_, i) => i !== index),
+      [arrayName]: (prev[arrayName] as any[]).filter((_, i) => i !== index),
     }));
+  };
+
+  const handleCoordinatorChange = (coordinator: ProjectCoordinator | null) => {
+    setFormData(prev => ({ ...prev, coordinator }));
+  };
+
+  const handleDobroChange = (dobroResponsible: DobroResponsible | null) => {
+    setFormData(prev => ({ ...prev, dobro_responsible: dobroResponsible }));
   };
 
   const calculateBudgetTotal = (item: ProjectBudget) => {
@@ -272,7 +318,7 @@ export function useApplicationForm(): UseApplicationFormReturn {
     });
   };
 
-  const validate = () => {
+  const validate = (): { valid: boolean; errorCount: number; errorKeys: string[] } => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) newErrors.title = 'Название обязательно';
@@ -290,35 +336,92 @@ export function useApplicationForm(): UseApplicationFormReturn {
       }
     });
 
-    formData.coordinators.forEach((coord, idx) => {
-      if (!coord.surname.trim()) {
-        newErrors[`coordinator_${idx}`] = 'Фамилия обязательна';
-      }
-      if (!coord.name.trim()) {
-        newErrors[`coordinator_${idx}_name`] = 'Имя обязательно';
-      }
-    });
+    // Координатор — обязателен (показываем ошибку только после первой попытки отправки)
+    if (touched && (!formData.coordinator || !formData.coordinator.team_member_id)) {
+      newErrors['coordinator_0'] = 'Выберите координатора из списка участников';
+    }
 
-    formData.dobro_responsible.forEach((dobro, idx) => {
-      if (!dobro.surname.trim()) {
-        newErrors[`dobro_${idx}`] = 'Фамилия обязательна';
+    // Ответственный DOBRO — необязателен
+
+    // Валидация плана проекта
+    formData.project_plans.forEach((plan, idx) => {
+      if (!plan.task?.trim()) {
+        newErrors[`project_plan_${idx}_task`] = 'Задача обязательна';
       }
-      if (!dobro.name.trim()) {
-        newErrors[`dobro_${idx}_name`] = 'Имя обязательно';
+      if (!plan.event_name?.trim()) {
+        newErrors[`project_plan_${idx}_event_name`] = 'Название мероприятия обязательно';
+      }
+      if (!plan.event_description?.trim()) {
+        newErrors[`project_plan_${idx}_event_description`] = 'Описание мероприятия обязательно';
+      }
+      if (!plan.start_date?.trim()) {
+        newErrors[`project_plan_${idx}_start_date`] = 'Дата начала обязательна';
+      }
+      if (!plan.end_date?.trim()) {
+        newErrors[`project_plan_${idx}_end_date`] = 'Дата окончания обязательна';
+      }
+      if (!plan.results?.trim()) {
+        newErrors[`project_plan_${idx}_results`] = 'Результат мероприятия обязателен';
+      }
+      if (!plan.fixation_form?.trim()) {
+        newErrors[`project_plan_${idx}_fixation_form`] = 'Форма фиксации обязательна';
       }
     });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const errorKeys = Object.keys(newErrors);
+    const errorCount = errorKeys.length;
+    return { valid: errorCount === 0, errorCount, errorKeys };
   };
+
+  const scrollToError = useCallback((errorKey: string) => {
+    // Пробуем найти по ID (для секций и полей с id)
+    const byId = document.getElementById(errorKey);
+    if (byId) {
+      byId.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    // Пробуем найти по name
+    const byName = document.querySelector(`[name="${errorKey}"]`);
+    if (byName) {
+      byName.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    // Для полей массивов — ищем по data-атрибуту или label
+    const byDataError = document.querySelector(`[data-error="${errorKey}"]`);
+    if (byDataError) {
+      byDataError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setTouched(true); // Помечаем, что была попытка отправки
 
-    if (!validate()) return;
+    const { valid, errorCount, errorKeys } = validate();
+
+    if (!valid) {
+      // Показываем тост с количеством ошибок
+      toast.warning(
+        'Проверьте правильность заполнения формы',
+        `Найдено ошибок: ${errorCount}. Исправьте их и попробуйте снова.`
+      );
+
+      // Скроллим к первой ошибке
+      if (errorKeys.length > 0) {
+        setTimeout(() => scrollToError(errorKeys[0]), 100);
+      }
+      return;
+    }
 
     setSaving(true);
     try {
+      // Лог для отладки FK ошибки
+      if (isEdit) {
+        console.log('[handleSubmit] team_members:', formData.team_members.map(m => ({ id: m.id, surname: m.surname })));
+        console.log('[handleSubmit] coordinator:', formData.coordinator);
+      }
+
       const submitData = {
         title: formData.title,
         tender_id: formData.tender_id ? parseInt(formData.tender_id) : null,
@@ -331,8 +434,8 @@ export function useApplicationForm(): UseApplicationFormReturn {
         implementation_experience: formData.implementation_experience || undefined,
         results_description: formData.results_description || undefined,
         team_members: formData.team_members,
-        coordinators: formData.coordinators,
-        dobro_responsible: formData.dobro_responsible,
+        coordinators: formData.coordinator ? [formData.coordinator] : [],
+        dobro_responsible: formData.dobro_responsible ? [formData.dobro_responsible] : [],
         project_plans: formData.project_plans,
         project_budget: formData.project_budget,
         additional_materials: formData.additional_materials,
@@ -340,16 +443,24 @@ export function useApplicationForm(): UseApplicationFormReturn {
 
       if (isEdit) {
         await applicationService.updateApplication(parseInt(id!), submitData);
-        alert('Заявка успешно обновлена!');
+        toast.success('Заявка обновлена', 'Изменения успешно сохранены');
       } else {
         await applicationService.createApplication(submitData);
-        alert('Заявка успешно создана!');
+        toast.success('Заявка создана', 'Ваша заявка успешно создана');
       }
       navigate('/applications');
     } catch (error: unknown) {
       console.error('Ошибка сохранения:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
-      alert(`Ошибка при сохранении: ${errorMsg}`);
+
+      // Обрабатываем ошибки сервера
+      const message = getErrorMessage(error);
+
+      setErrors(prev => ({
+        ...prev,
+        _submit: message,
+      }));
+
+      toast.error('Ошибка сохранения', `Не удалось сохранить заявку: ${message}`);
     } finally {
       setSaving(false);
     }
@@ -373,11 +484,11 @@ export function useApplicationForm(): UseApplicationFormReturn {
     removeArrayItem,
     calculateBudgetTotal,
     handleBudgetChange,
+    handleCoordinatorChange,
+    handleDobroChange,
     validate,
     handleSubmit,
     emptyTeamMember,
-    emptyCoordinator,
-    emptyDobroResponsible,
     emptyPlan,
     emptyBudget,
   };

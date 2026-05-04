@@ -48,8 +48,11 @@ export function generateToken(user: User): string {
 export function verifyToken(token: string): TokenPayload | null {
   try {
     return jwt.verify(token, JWT_SECRET) as TokenPayload;
-  } catch (error) {
-    return null;
+  } catch (err) {
+    if (err === 'TokenExpiredError') {
+      throw new Error('Сессия истекла')
+    }
+    throw null;
   }
 }
 

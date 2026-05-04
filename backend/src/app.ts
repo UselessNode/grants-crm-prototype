@@ -43,13 +43,13 @@ app.get('/api/health', (req, res) => {
 // Подключение маршрутов
 import authRoutes from './routes/auth-routes';
 import applicationRoutes from './routes/application-routes';
-import adminRoutes from './routes/admin-routes';
 import documentRoutes from './routes/document-routes';
+import adminRoutes from './routes/admin-routes';
 
 app.use('/api', authRoutes);
 app.use('/api', applicationRoutes);
-app.use('/api', adminRoutes);
 app.use('/api', documentRoutes);
+app.use('/api', adminRoutes);
 
 // Обработка 404
 app.use((req, res) => {

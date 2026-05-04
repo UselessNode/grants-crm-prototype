@@ -18,14 +18,17 @@ export default function Logo({ variant = 'auth' }: LogoProps) {
   const { user } = useAuthStore();
 
   if (variant === 'page') {
-    // Администраторы переходят в админ-панель, обычные пользователи — на заявки
-    // const destination = user?.role === 'admin' ? '/admin' : '/applications';
     const destination = '/applications';
 
     return (
       <Link to={destination} className="page-logo-wrapper">
         <img src={logoWatermelon} alt={logoText} className="page-logo" />
         <span className="page-logo-text">{logoText}</span>
+        {user?.role === 'admin' && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-white/20 text-white border border-white/30">
+            Admin
+          </span>
+        )}
       </Link>
     );
   }

@@ -6,9 +6,13 @@
 /**
  * Преобразует значение в число, возвращая 0 для null/undefined
  */
-export const toNumber = (value: number | null | undefined): number => {
-  return value ?? 0;
-};
+ export const toNumber = (value: unknown): number => {
+   if (value === null || value === undefined || value === '') return 0;
+   const num = Number(value);
+   return isNaN(num) ? 0 : num;
+ };
+
+
 
 /**
  * Форматирует число для отображения в поле ввода

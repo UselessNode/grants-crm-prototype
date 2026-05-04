@@ -420,14 +420,6 @@ export class ApplicationController {
    */
   static async getRoles(req: AuthRequest, res: Response) {
     try {
-      // Только администраторы могут получать список ролей
-      if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Требуются права администратора',
-        });
-      }
-
       const { UserModel } = await import('../models/user');
       const roles = await UserModel.getRoles();
 
@@ -536,16 +528,6 @@ export class ApplicationController {
         return res.status(400).json({
           success: false,
           message: 'Некорректный ID эксперта',
-        });
-      }
-
-      // Только администраторы или сам эксперт
-      if (req.user?.role !== 'admin') {
-        // Здесь можно добавить проверку, что запрашивающий является этим экспертом
-        // Но пока оставим доступным для админа
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён',
         });
       }
 

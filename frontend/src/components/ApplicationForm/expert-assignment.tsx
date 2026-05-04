@@ -9,10 +9,6 @@ interface ExpertAssignmentProps {
   onSuccess?: () => void;
 }
 
-/**
- * Компонент назначения экспертов на заявку
- * Используется в админ-панели при просмотре заявки
- */
 export function ExpertAssignment({
   applicationId,
   currentExpert1Id,
@@ -27,12 +23,10 @@ export function ExpertAssignment({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Загрузка списка экспертов
   useEffect(() => {
     loadExperts();
   }, []);
 
-  // Установка текущих экспертов при изменении пропсов
   useEffect(() => {
     if (currentExpert1Id) setExpert1Id(currentExpert1Id);
     if (currentExpert2Id) setExpert2Id(currentExpert2Id);
@@ -52,6 +46,11 @@ export function ExpertAssignment({
   };
 
   const handleSave = async () => {
+    if (expert1Id === expert2Id && expert1Id !== '') {
+      setError('Нельзя назначить одного и того же эксперта дважды');
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -71,6 +70,22 @@ export function ExpertAssignment({
     }
   };
 
+  const handleExpert1Change = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value ? Number(e.target.value) : '';
+    setExpert1Id(value);
+    if (value === expert2Id) {
+      setExpert2Id('');
+    }
+  };
+
+  const handleExpert2Change = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value ? Number(e.target.value) : '';
+    setExpert2Id(value);
+    if (value === expert1Id) {
+      setExpert1Id('');
+    }
+  };
+
   return (
     <div className="expert-assignment-compact">
       {error && (
@@ -82,40 +97,46 @@ export function ExpertAssignment({
       )}
 
       <div className="space-y-3">
-        {/* Первый эксперт */}
         <div>
           <label className="expert-assignment__label">
             Первый эксперт
           </label>
           <select
             value={expert1Id}
-            onChange={(e) => setExpert1Id(e.target.value ? Number(e.target.value) : '')}
+            onChange={handleExpert1Change}
             className="expert-assignment__select"
             disabled={loading}
           >
             <option value="">Не назначен</option>
             {experts.map((expert) => (
-              <option key={expert.id} value={expert.id}>
+              <option
+                key={expert.id}
+                value={expert.id}
+                disabled={expert.id === expert2Id}
+              >
                 {`${expert.surname || ''} ${expert.name || ''}`.trim() || 'Без имени'}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Второй эксперт */}
         <div>
           <label className="expert-assignment__label">
             Второй эксперт
           </label>
           <select
             value={expert2Id}
-            onChange={(e) => setExpert2Id(e.target.value ? Number(e.target.value) : '')}
+            onChange={handleExpert2Change}
             className="expert-assignment__select"
             disabled={loading}
           >
             <option value="">Не назначен</option>
             {experts.map((expert) => (
-              <option key={expert.id} value={expert.id}>
+              <option
+                key={expert.id}
+                value={expert.id}
+                disabled={expert.id === expert1Id}
+              >
                 {`${expert.surname || ''} ${expert.name || ''}`.trim() || 'Без имени'}
               </option>
             ))}
