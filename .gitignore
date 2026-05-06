@@ -89,7 +89,8 @@ temp/
 *.pid
 *.seed
 *.pid.lock
-
+src/frontend/src/components/showcase
+src/frontend/src/components/showcase/*
 # ========================================
 # БАЗЫ ДАННЫХ (локальные)
 # ========================================

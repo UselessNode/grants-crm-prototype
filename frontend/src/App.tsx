@@ -7,7 +7,6 @@ import { AdminPanel } from './pages/admin-panel';
 import { AdminUsers } from './pages/admin-users';
 import { AdminExperts } from './pages/admin-experts';
 import { AdminDirectories } from './pages/admin-directories';
-import { UiShowcase } from './pages/ui-showcase';
 import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { Profile } from './pages/profile';
@@ -101,14 +100,14 @@ export function App() {
           }
         />
 
-        <Route
+        {/*<Route
           path="/ui-showcase"
           element={
             <PrivateRoute>
               <UiShowcase />
             </PrivateRoute>
           }
-        />
+        />*/}
 
         {/* Админские маршруты */}
         <Route
