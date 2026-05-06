@@ -1,3 +1,5 @@
+// WHAT IS THIS?
+
 import { Link } from 'react-router-dom';
 import type { Application } from '../../../types';
 import './AdminApplicationsTable.css';

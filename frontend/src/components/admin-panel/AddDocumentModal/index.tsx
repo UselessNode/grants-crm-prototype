@@ -1,3 +1,5 @@
+// THIS IS CORRECT
+
 import { useState, useEffect } from 'react';
 import { adminService } from '../../../services/adminService';
 import type { Document, DocumentCategory } from '../../../types';

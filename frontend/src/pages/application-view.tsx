@@ -385,77 +385,77 @@ export function ApplicationView() {
 
   return (
     <UserPanelLayout showLogout={false}>
-      {/* Действия */}
-      <div className="application-actions max-w-7xl mx-auto px-4 pt-6">
-        <div className="flex justify-between items-center flex-wrap gap-4">
-          <h2 className="text-2xl font-bold text-gray-900">Просмотр заявки</h2>
-          <div className="flex gap-2 flex-wrap">
-            {canEdit(application.status_name) ? (
-              <Link
-                to={`/applications/${application.id}/edit`}
-                className="btn-header inline-flex items-center gap-2"
-              >
-                <Icon name="edit" size={16} />
-                Редактировать
-              </Link>
-            ) : (
-              <span className="px-3 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed inline-flex items-center gap-2 text-sm">
-                <Icon name="edit" size={16} />
-                Редактировать
-              </span>
-            )}
-            {canSubmit(application.status_name) ? (
-              <button
-                onClick={handleSubmit}
-                className="px-3 py-2 btn-primary inline-flex items-center gap-2 text-sm"
-              >
-                <Icon name="check" size={16} />
-                Подать
-              </button>
-            ) : (
-              <span className="px-3 py-2 text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed inline-flex items-center gap-2 text-sm">
-                <Icon name="check" size={16} />
-                Подать
-              </span>
-            )}
-            {canDelete(application.status_name) ? (
-              <button
-                onClick={handleDelete}
-                className="application-delete-container inline-flex items-center gap-2 no-print text-sm"
-              >
-                <Icon name="trash" size={16} />
-                Удалить заявку
-              </button>
-            ) : (
-              <span
-                className="text-gray-400 cursor-not-allowed inline-flex items-center gap-2 text-sm"
-                title="Удаление доступно только для черновиков и отклонённых заявок"
-              >
-                <Icon name="trash" size={16} />
-                Удалить заявку
-              </span>
-            )}
-            <button
-              onClick={handleExportPdf}
-              className="btn-header inline-flex items-center gap-2 text-sm"
-            >
-              <Icon name="download" size={16} />
-              PDF
-            </button>
+    {/* Действия */}
+    <div className="application-actions max-w-7xl mx-auto px-4 py-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-2xl font-bold text-gray-900">Просмотр заявки</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          {canEdit(application.status_name) ? (
             <Link
-              to="/applications"
-              className="btn-cancel inline-flex items-center gap-2 text-sm"
+              to={`/applications/${application.id}/edit`}
+              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
             >
-              <Icon name="arrow-left" size={16} />
-              Вернуться
+              <Icon name="edit" size={16} />
+              Редактировать
             </Link>
-          </div>
+          ) : (
+            <span className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+              <Icon name="edit" size={16} />
+              Редактировать
+            </span>
+          )}
+          {canSubmit(application.status_name) ? (
+            <button
+              onClick={handleSubmit}
+              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+            >
+              <Icon name="check" size={16} />
+              Подать
+            </button>
+          ) : (
+            <span className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+              <Icon name="check" size={16} />
+              Подать
+            </span>
+          )}
+          {canDelete(application.status_name) ? (
+            <button
+              onClick={handleDelete}
+              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition"
+            >
+              <Icon name="trash" size={16} />
+              Удалить заявку
+            </button>
+          ) : (
+            <span
+              className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed"
+              title="Удаление доступно только для черновиков и отклонённых заявок"
+            >
+              <Icon name="trash" size={16} />
+              Удалить заявку
+            </span>
+          )}
+          <button
+            onClick={handleExportPdf}
+            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+          >
+            <Icon name="download" size={16} />
+            PDF
+          </button>
+          <Link
+            to="/applications"
+            className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+          >
+            <Icon name="arrow-left" size={16} />
+            Вернуться
+          </Link>
         </div>
       </div>
+    </div>
 
       <div className="application-view-layout">
         {/* Левая колонка - основной контент */}
-        <div id="pdf-content" className="application-view-content">
+        <div className="application-view-content">
           {/* Мета-информация (вынесена отдельно над основным контентом) */}
           <div className="application-meta-container">
             <div className="application-meta">
@@ -503,7 +503,7 @@ export function ApplicationView() {
           </div>
 
           {/* Основная карточка с контентом заявки */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div id="pdf-content" className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             {/* Название заявки */}
             <div className="application-section">
               <h3 className="application-section-title">Заявка</h3>

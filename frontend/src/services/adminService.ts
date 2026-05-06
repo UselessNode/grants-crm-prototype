@@ -122,6 +122,14 @@ export const adminService = {
   },
 
   /**
+   * Создать задачу экспорта заявок
+   */
+  async exportApplications(ids: number[]) {
+    const response = await api.post<{ jobId: string }>('/export/applications', { ids });
+    return response.data;
+  },
+
+  /**
    * Получить все направления
    */
   async getDirections() {

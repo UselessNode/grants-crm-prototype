@@ -1,5 +1,9 @@
 import { Button } from '../../ui/button';
 import type { Expert } from '../../../types';
+import { Icon } from '../../common/icon';
+import { useState, useEffect, useRef } from 'react';
+import { adminService } from '../../../services/adminService';
+import api from '../../../services/api';
 
 interface ApplicationsListControlsProps {
   selectedIds: number[];
@@ -27,6 +31,63 @@ export function ApplicationsListControls({
   onAssignExpert2,
   onBulkAssign,
 }: ApplicationsListControlsProps) {
+  const [exporting, setExporting] = useState(false);
+  const [progressCurrent, setProgressCurrent] = useState(0);
+  const [progressTotal, setProgressTotal] = useState(0);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const intervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) window.clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  const startPolling = (id: string) => {
+    intervalRef.current = window.setInterval(async () => {
+      try {
+        const resp = await api.get(`/export/${id}`);
+        const data = resp.data;
+        if (data.progress) {
+          setProgressCurrent(data.progress.current || 0);
+          setProgressTotal(data.progress.total || 0);
+        }
+        if (data.status === 'completed') {
+          // trigger download
+          const baseURL = api.defaults.baseURL?.replace(/\/$/, '') || '';
+          const downloadUrl = `${baseURL}/export/${id}/download`;
+          window.location.href = downloadUrl;
+          setExporting(false);
+          if (intervalRef.current) window.clearInterval(intervalRef.current);
+        }
+        if (data.status === 'failed') {
+          alert('Ошибка генерации: ' + (data.error || 'неизвестная ошибка'));
+          setExporting(false);
+          if (intervalRef.current) window.clearInterval(intervalRef.current);
+        }
+      } catch (err) {
+        console.error('Poll error', err);
+      }
+    }, 2000);
+  };
+
+  const handleExport = async () => {
+    if (selectedIds.length === 0) return;
+    setExporting(true);
+    try {
+      const res = await adminService.exportApplications(selectedIds);
+      const id = res.jobId;
+      setJobId(id);
+      setProgressCurrent(0);
+      setProgressTotal(selectedIds.length);
+      startPolling(id);
+    } catch (err) {
+      console.error('Export start error', err);
+      alert('Ошибка при старте задачи экспорта');
+      setExporting(false);
+    }
+  };
+
   if (selectedIds.length === 0) {
     return null;
   }
@@ -41,6 +102,16 @@ export function ApplicationsListControls({
         />
         Выбрать все ({selectedIds.length})
       </label>
+      <button className="ApplicationsList__exportButton" onClick={handleExport} disabled={exporting}>
+        <Icon name="download" size={16} />
+      </button>
+
+      {exporting && (
+        <div className="ApplicationsList__exportProgress">
+          Генерация... {progressCurrent}/{progressTotal}
+        </div>
+      )}
+
       <div className="ApplicationsList__assign">
         <span className="ApplicationsList__assignLabel">Назначить экспертов:</span>
         <div className="ApplicationsList__expertsAssign">

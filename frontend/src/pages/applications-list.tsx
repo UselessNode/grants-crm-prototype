@@ -1,6 +1,6 @@
 // frontend/src/pages/applications-list.tsx
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useRouteLoaderData } from 'react-router-dom';
 import { applicationService } from '../services/applicationService';
 import { adminService } from '../services/adminService';
 import { useAuthStore } from '../store/auth-store';
@@ -10,6 +10,7 @@ import type { Application, Direction, Status, Expert } from '../types';
 import { Icon } from '../components/common/icon';
 import { UserPanelLayout } from '../components/UserPanel/user-panel-layout';
 import { ApplicationsList as AdminApplicationsList } from '../components/admin-panel';
+import { root } from 'postcss';
 
 export function ApplicationsList() {
   const { user } = useAuthStore();
@@ -197,9 +198,15 @@ export function ApplicationsList() {
 
       {/* Подзаголовок */}
       <div className="mb-6">
-        <p className="text-gray-600">
-          В этом разделе размещены все <span className="font-bold">ваши</span> заявки для участия в грантовой программе.
-        </p>
+        {user?.role === 'admin' ? (
+          <p className="text-gray-600">
+            В этом разделе размещены заявки <span className="font-bold">всех</span> пользователей для участия в грантовой программе.
+          </p>
+        ) : (
+          <p className="text-gray-600">
+            В этом разделе размещены все <span className="font-bold">ваши</span> заявки для участия в грантовой программе.
+          </p>
+        )}
       </div>
 
       {adminLoading || loading ? (
@@ -243,7 +250,7 @@ export function ApplicationsList() {
                           </td>
                           <td className="applications-td-text">
                             <Link to={`/applications/${app.id}`} className="applications-action-link">
-                              <Icon name="view" size={16} />Просмотр
+                              Просмотр
                             </Link>
                             {canDelete(app.status_name) ? (
                               <button onClick={() => app.id && handleDelete(app.id, app.status_name)} className="applications-action-button-delete">

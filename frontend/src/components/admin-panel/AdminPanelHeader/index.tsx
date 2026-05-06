@@ -1,3 +1,4 @@
+// WHAT IS THIS?
 import { Link } from 'react-router-dom';
 
 type AdminPanelHeaderProps = {
@@ -12,7 +13,7 @@ export function AdminPanelHeader({ title }: AdminPanelHeaderProps) {
           <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
           <Link
             to="/applications"
-            className="text-blue-600 hover:text-blue-700 hover:underline"
+            className="text-red-700 hover:text-blue-700 hover:underline"
           >
             ← К заявкам
           </Link>

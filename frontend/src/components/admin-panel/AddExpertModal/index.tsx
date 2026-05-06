@@ -1,6 +1,9 @@
+// THIS IS CORRECT
+
 import { useState } from 'react';
 import { adminService } from '../../../services/adminService';
 import './AddExpertModal.css';
+import Icon from '../../common/icon';
 
 interface AddExpertModalProps {
   isOpen: boolean;
@@ -71,7 +74,7 @@ export function AddExpertModal({
             onClick={onClose}
             className="AddExpertModal__close"
           >
-            ✕
+            <Icon name="close" size={24} />
           </button>
         </div>
 

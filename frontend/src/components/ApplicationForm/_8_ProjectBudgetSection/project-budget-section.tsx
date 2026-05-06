@@ -216,7 +216,8 @@ export function ProjectBudgetSection({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                           </svg>
                           <span>
-                            Стоимость ({Number(itemTotal).toFixed(2)} ₽) превышает финансирование ({Number(itemFunding).toFixed(2)} ₽)
+                            Общая стоимость ресурса ({Number(itemTotal).toFixed(2)} ₽) указана с ошибкой ({Number(itemFunding).toFixed(2)} ₽). Проверьте рассчёты.
+
                           </span>
                         </div>
                       )}

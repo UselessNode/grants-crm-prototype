@@ -107,11 +107,6 @@ export function ApplicationsListCard({
           </span>
         </div>
       </div>
-
-      {/* Действия */}
-      <div className="ApplicationsList__cardActions">
-        {/* OBSOLETE */}
-      </div>
     </div>
   );
 }

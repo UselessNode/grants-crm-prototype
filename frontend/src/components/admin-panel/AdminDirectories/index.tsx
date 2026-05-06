@@ -1,3 +1,5 @@
+// THIS IS CORRECT
+
 import React, { useState, useEffect } from 'react';
 import { adminService } from '../../../services/adminService';
 import './AdminDirectories.css';
