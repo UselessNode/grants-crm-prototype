@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Icon } from 'frontend/src/components/common/icon';
+import Icon from '@frontend/components/common/icon';
 
 import './TableOfContents.css';
 
