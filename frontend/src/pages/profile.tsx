@@ -277,7 +277,6 @@ export function Profile() {
                 disabled={saving}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed inline-flex items-center gap-2 text-sm font-medium transition-colors"
               >
-                <Icon name="lock" size={18} />
                 Изменить пароль
               </button>
             </form>

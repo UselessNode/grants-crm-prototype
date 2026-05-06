@@ -103,13 +103,13 @@ function getConsolidatedExperts(application: Application) {
   }>();
 
   // Добавляем назначенных экспертов
-  if (application.expert1) {
+  if (application.expert1 && application.expert1.id !== undefined) {
     expertsMap.set(application.expert1.id, {
       expert: application.expert1,
       verdict: null,
     });
   }
-  if (application.expert2) {
+  if (application.expert2 && application.expert2.id !== undefined) {
     expertsMap.set(application.expert2.id, {
       expert: application.expert2,
       verdict: null,
@@ -119,7 +119,7 @@ function getConsolidatedExperts(application: Application) {
   // Добавляем вердикты и связываем с экспертами
   if (application.expert_verdicts) {
     application.expert_verdicts.forEach((verdict: ExpertVerdict) => {
-      if (verdict.expert) {
+      if (verdict.expert && verdict.expert.id !== undefined) {
         expertsMap.set(verdict.expert.id, {
           expert: verdict.expert,
           verdict,
@@ -381,7 +381,7 @@ export function ApplicationView() {
   const showExpertsSection =
     user?.role === "admin" ||
     consolidatedExperts.length > 0 ||
-    application.expert_verdicts?.length > 0;
+    application.expert_verdicts!?.length > 0;
 
   return (
     <UserPanelLayout showLogout={false}>

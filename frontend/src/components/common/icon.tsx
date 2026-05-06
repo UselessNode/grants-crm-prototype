@@ -58,7 +58,8 @@ export type IconName =
   | 'check'
   | 'loading'
   | 'download'
-  | 'add';
+  | 'add'
+  | 'view';
 
 /**
  * Пропсы для компонента Icon
