@@ -2,28 +2,22 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  // Базовый путь для GitPages
-  // Устанавливается только при сборке (process.env.BASE_PATH)
-  base: process.env.BASE_PATH || '/',
   plugins: [react(), svgr()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+      '@frontend': path.resolve(__dirname, './src'),
+      'frontend': path.resolve(__dirname, './src'), // Fix for 'frontend/' imports
+      '@shared': path.resolve(__dirname, './src')
+    }
   },
   server: {
     port: 5173,
-    host: '0.0.0.0',
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-    },
+    host: true
   },
+  build: {
+    outDir: 'dist',
+    sourcemap: false
+  }
 });
