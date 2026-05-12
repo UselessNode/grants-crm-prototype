@@ -101,7 +101,7 @@ export function AdminDirectories({ directions, tenders }: AdminDirectoriesProps)
         <div className="flex justify-between items-center">
           <h2 className="AdminDirectories__title">Направления</h2>
           <div>
-            <button className="btn btn-sm btn-primary" onClick={openAddDirection}>
+            <button className="btn btn-sm btn-primary" title="Добавить направление" onClick={openAddDirection}>
               <Icon name="add" size={16} />
             </button>
           </div>
@@ -115,10 +115,10 @@ export function AdminDirectories({ directions, tenders }: AdminDirectoriesProps)
                 {d.description && <div className="AdminDirectories__itemDescription">{d.description}</div>}
               </div>
               <div className="flex gap-2">
-                <button className="btn" title="Редактировать" onClick={() => openEditDirection(d)}>
+                <button className="btn" title="Редактировать направление" onClick={() => openEditDirection(d)}>
                   <Icon name="edit" size={16} />
                 </button>
-                <button className="btn btn-danger" title="Удалить" onClick={() => deleteDirection(d.id)}>
+                <button className="btn-danger" title="Удалить направление" onClick={() => deleteDirection(d.id)}>
                   <Icon name="delete" size={16} />
                 </button>
               </div>
@@ -146,10 +146,10 @@ export function AdminDirectories({ directions, tenders }: AdminDirectoriesProps)
                 {t.description && <div className="AdminDirectories__itemDescription">{t.description}</div>}
               </div>
               <div className="flex gap-2">
-                <button className="btn" title="Редактировать" onClick={() => openEditTender(t)}>
+                <button className="btn" title="Редактировать конкурс" onClick={() => openEditTender(t)}>
                   <Icon name="edit" size={16} />
                 </button>
-                <button className="btn btn-danger" title="Удалить" onClick={() => deleteTender(t.id)}>
+                <button className="btn btn-danger" title="Удалить конкурс" onClick={() => deleteTender(t.id)}>
                   <Icon name="delete" size={16} />
                 </button>
               </div>
