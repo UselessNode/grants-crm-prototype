@@ -1,4 +1,5 @@
-#!/usr/bin/env node
+
+
 
 const { Pool } = require("pg");
 const fs = require("fs");
@@ -7,7 +8,7 @@ require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 const pool = new Pool({
   user: process.env.DB_USER || "postgres",
-  host: process.env.DB_HOST || "localhost",
+  host: process.env.DB_HOST || "app_postgres",
   database: process.env.DB_NAME || "grants_crm",
   password: process.env.DB_PASSWORD || "postgres",
   port: parseInt(process.env.DB_PORT || "5432"),

@@ -1,10 +1,11 @@
 FROM node:18-alpine AS build
 
 WORKDIR /app
-
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 # 1. Копируем и устанавливаем зависимости
 COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps --include=dev  # ← ВКЛЮЧАЕМ dev зависимости!
+RUN npm install --legacy-peer-deps
 
 # 2. Копируем код
 COPY . .
