@@ -58,6 +58,9 @@ export interface AddExpertData {
   name: string;
   patronymic?: string | null;
   extra_info?: string | null;
+  email?: string | null;
+  password?: string | null;
+  specialization_id?: number | null;
 }
 
 export interface UpdateUserData {

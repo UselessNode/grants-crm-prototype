@@ -493,10 +493,11 @@ export class AdminController {
   /**
    * Добавить эксперта
    * POST /api/admin/experts
+   * Может создать эксперта с пользователем (если переданы email и password) или только профиль эксперта
    */
   static async addExpert(req: AuthRequest, res: Response) {
     try {
-      const { surname, name, patronymic, extra_info } = req.body;
+      const { surname, name, patronymic, extra_info, email, password, specialization_id } = req.body;
 
       if (!surname || !name) {
         return res.status(400).json({
@@ -509,18 +510,64 @@ export class AdminController {
       try {
         await client.query('BEGIN');
 
-        const result = await client.query(`
-          INSERT INTO experts (surname, name, patronymic, extra_info)
-          VALUES ($1, $2, $3, $4)
-          RETURNING *
-        `, [surname, name, patronymic || null, extra_info || null]);
+        let expertResult;
+        let userResult = null;
+
+        // Если переданы email и password, создаем пользователя с ролью expert
+        if (email && password) {
+          // Проверяем, есть ли ужеrole 'expert'
+          const expertRole = await client.query('SELECT id FROM roles WHERE name = $1', ['expert']);
+          const expertRoleId = expertRole.rows[0]?.id;
+
+          if (!expertRoleId) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+              success: false,
+              message: 'Роль "expert" не найдена в базе данных',
+            });
+          }
+
+          // Создаем пользователя с ролью expert
+          userResult = await client.query(`
+            INSERT INTO users (email, password_hash, surname, name, patronymic, role_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+          `, [email, password, surname, name, patronymic || null, expertRoleId]);
+
+          // Создаем профиль эксперта, связываем с пользователем
+          expertResult = await client.query(`
+            INSERT INTO experts (user_id, surname, name, patronymic, extra_info, specialization_id, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING *
+          `, [
+            userResult.rows[0].id,
+            surname,
+            name,
+            patronymic || null,
+            extra_info || null,
+            specialization_id || null,
+            'approved' // Статус по умолчанию
+          ]);
+
+          // Обновляем пользователя, чтобы добавить expert_id
+          await client.query(`
+            UPDATE users SET expert_id = $1 WHERE id = $2
+          `, [expertResult.rows[0].id, userResult.rows[0].id]);
+        } else {
+          // Создаем только профиль эксперта (без пользователя)
+          expertResult = await client.query(`
+            INSERT INTO experts (surname, name, patronymic, extra_info, specialization_id, status)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+          `, [surname, name, patronymic || null, extra_info || null, specialization_id || null, 'approved']);
+        }
 
         await client.query('COMMIT');
 
         res.json({
           success: true,
           message: 'Эксперт успешно добавлен',
-          data: result.rows[0],
+          data: expertResult.rows[0],
         });
       } catch (error) {
         await client.query('ROLLBACK');

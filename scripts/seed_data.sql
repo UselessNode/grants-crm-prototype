@@ -44,7 +44,8 @@ SELECT setval('application_statuses_id_seq', COALESCE((SELECT MAX(id) FROM appli
 -- ========================================
 INSERT INTO roles (id, name, description) VALUES
 (1, 'user', 'Обычный пользователь'),
-(2, 'admin', 'Администратор')
+(2, 'admin', 'Администратор'),
+(3, 'expert', 'Эксперт, назначенный на проверку заявок')
 ON CONFLICT (id) DO NOTHING;
 
 SELECT setval('roles_id_seq', COALESCE((SELECT MAX(id) FROM roles), 0) + 1);
@@ -66,7 +67,21 @@ INSERT INTO users (email, password_hash, surname, name, patronymic, role_id) VAL
 ('elena@mail.com', '$2b$10$HkhSy23ingvxK2hOs7QYuenh1EMw0d.NZVS6V0AC2QQxvg6B/a91m', 'Васильева', 'Елена', 'Игоревна', 1)
 ON CONFLICT (email) DO UPDATE SET password_hash = '$2b$10$HkhSy23ingvxK2hOs7QYuenh1EMw0d.NZVS6V0AC2QQxvg6B/a91m';
 
+-- Пользователи-эксперты
+INSERT INTO users (email, password_hash, surname, name, patronymic, role_id) VALUES
+('expert1@mail.ru', '$2b$10$HkhSy23ingvxK2hOs7QYuenh1EMw0d.NZVS6V0AC2QQxvg6B/a91m', 'Смирнов', 'Алексей', 'Владимирович', 3),
+('expert2@mail.ru', '$2b$10$HkhSy23ingvxK2hOs7QYuenh1EMw0d.NZVS6V0AC2QQxvg6B/a91m', 'Кузнецова', 'Елена', 'Михайловна', 3),
+('expert3@mail.ru', '$2b$10$HkhSy23ingvxK2hOs7QYuenh1EMw0d.NZVS6V0AC2QQxvg6B/a91m', 'Попов', 'Дмитрий', 'Сергеевич', 3),
+('expert4@mail.ru', '$2b$10$HkhSy23ingvxK2hOs7QYuenh1EMw0d.NZVS6V0AC2QQxvg6B/a91m', 'Васильева', 'Наталья', 'Александровна', 3)
+ON CONFLICT (email) DO UPDATE SET password_hash = '$2b$10$HkhSy23ingvxK2hOs7QYuenh1EMw0d.NZVS6V0AC2QQxvg6B/a91m';
+
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
+
+-- Связываем пользователей-экспертов с их профилями экспертов
+UPDATE users SET expert_id = 1 WHERE id = 7; -- expert1@mail.ru -> Смирнов
+UPDATE users SET expert_id = 2 WHERE id = 8; -- expert2@mail.ru -> Кузнецова
+UPDATE users SET expert_id = 3 WHERE id = 9; -- expert3@mail.ru -> Попов
+UPDATE users SET expert_id = 4 WHERE id = 10; -- expert4@mail.ru -> Васильева
 
 -- 3. Заявки (Applications)
 -- ========================================
@@ -422,16 +437,23 @@ SELECT setval('additional_materials_id_seq', (SELECT MAX(id) FROM additional_mat
 -- 10. Эксперты
 -- ========================================
 
-INSERT INTO experts (id, surname, name, patronymic, extra_info, created_at) VALUES
-(1, 'Смирнов', 'Алексей', 'Владимирович', 'Кандидат экономических наук, доцент кафедры управления проектами', '2026-01-15 10:00:00'),
-(2, 'Кузнецова', 'Елена', 'Михайловна', 'Эксперт по социальному проектированию, более 10 лет опыта', '2026-01-20 11:30:00'),
-(3, 'Попов', 'Дмитрий', 'Сергеевич', 'Волонтёр с 5-летним стажем, координатор региональных программ', '2026-02-01 09:15:00'),
-(4, 'Васильева', 'Наталья', 'Александровна', 'Специалист по экологическим проектам, кандидат биологических наук', '2026-02-10 14:45:00'),
-(5, 'Морозов', 'Игорь', 'Петрович', 'Эксперт по спортивным проектам, мастер спорта', '2026-02-15 10:00:00'),
-(6, 'Лебедева', 'Ольга', 'Дмитриевна', 'Специалист по образовательным программам, PhD в педагогике', '2026-02-20 11:00:00'),
-(7, 'Новиков', 'Андрей', 'Викторович', 'Эксперт по IT-проектам, senior developer', '2026-03-01 09:00:00'),
-(8, 'Фёдорова', 'Марина', 'Сергеевна', 'Культуролог, эксперт по инклюзивным проектам', '2026-03-05 14:00:00')
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO experts (id, user_id, surname, name, patronymic, extra_info, specialization_id, status, created_at) VALUES
+(1, 7, 'Смирнов', 'Алексей', 'Владимирович', 'Кандидат экономических наук, доцент кафедры управления проектами', 1, 'approved', '2026-01-15 10:00:00'),
+(2, 8, 'Кузнецова', 'Елена', 'Михайловна', 'Эксперт по социальному проектированию, более 10 лет опыта', 2, 'approved', '2026-01-20 11:30:00'),
+(3, 9, 'Попов', 'Дмитрий', 'Сергеевич', 'Волонтёр с 5-летним стажем, координатор региональных программ', NULL, 'approved', '2026-02-01 09:15:00'),
+(4, 10, 'Васильева', 'Наталья', 'Александровна', 'Специалист по экологическим проектам, кандидат биологических наук', 3, 'approved', '2026-02-10 14:45:00'),
+(5, NULL, 'Морозов', 'Игорь', 'Петрович', 'Эксперт по спортивным проектам, мастер спорта', 4, 'approved', '2026-02-15 10:00:00'),
+(6, NULL, 'Лебедева', 'Ольга', 'Дмитриевна', 'Специалист по образовательным программам, PhD в педагогике', 1, 'approved', '2026-02-20 11:00:00'),
+(7, NULL, 'Новиков', 'Андрей', 'Викторович', 'Эксперт по IT-проектам, senior developer', 5, 'approved', '2026-03-01 09:00:00'),
+(8, NULL, 'Фёдорова', 'Марина', 'Сергеевна', 'Культуролог, эксперт по инклюзивным проектам', 2, 'approved', '2026-03-05 14:00:00')
+ON CONFLICT (id) DO UPDATE SET
+  user_id = EXCLUDED.user_id,
+  surname = EXCLUDED.surname,
+  name = EXCLUDED.name,
+  patronymic = EXCLUDED.patronymic,
+  extra_info = EXCLUDED.extra_info,
+  specialization_id = EXCLUDED.specialization_id,
+  status = EXCLUDED.status;
 
 SELECT setval('experts_id_seq', COALESCE((SELECT MAX(id) FROM experts), 0) + 1);
 
