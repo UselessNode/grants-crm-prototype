@@ -103,6 +103,51 @@ export function adminMiddleware(req: AuthRequest, res: Response, next: NextFunct
 }
 
 /**
+ * Middleware для проверки роли эксперта
+ */
+export function expertMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Требуется авторизация',
+    });
+  }
+
+  if (req.user.role !== 'expert') {
+    return res.status(403).json({
+      success: false,
+      message: 'Доступ запрещён. Требуются права эксперта',
+    });
+  }
+
+  next();
+}
+
+/**
+ * Middleware для проверки роли (универсальный)
+ * @param role - требуемая роль
+ */
+export function requireRole(role: 'user' | 'admin' | 'expert') {
+  return function (req: AuthRequest, res: Response, next: NextFunction) {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Требуется авторизация',
+      });
+    }
+
+    if (req.user.role !== role) {
+      return res.status(403).json({
+        success: false,
+        message: `Доступ запрещён. Требуются права ${role}`,
+      });
+    }
+
+    next();
+  };
+}
+
+/**
  * Опциональная аутентификация (не блокирует запрос, если нет токена)
  */
 export async function optionalAuthMiddleware(

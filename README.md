@@ -115,7 +115,7 @@ node scripts/seed-docs.js
 ## 📁 Структура проекта
 
 ```
-C:\project\src\
+C:\project\grants-crm-prototype\
 ├── backend/
 │   ├── src/
 │   │   ├── controllers/

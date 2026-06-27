@@ -5,8 +5,7 @@ import { adminService } from '../services/adminService';
 import { formatFileSize, downloadDocument } from '../utils/documentHelpers';
 import type { Document, DocumentCategory } from '../types';
 
-// ========== Функция генерации цвета по названию категории ==========
-// Возвращает два цвета: для фона (светлый) и для иконки (тёмный насыщенный)
+//  Функция генерации цвета по названию категории
 const getCategoryColors = (categoryName?: string) => {
   // Дефолтные цвета, если категория не указана
   if (!categoryName) {
@@ -27,7 +26,6 @@ const getCategoryColors = (categoryName?: string) => {
 
   return { bg, text };
 };
-// ================================================================
 
 export function Documents() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -90,16 +88,12 @@ export function Documents() {
 
     setUploadLoading(true);
     try {
-      // Здесь будет логика загрузки документа на сервер
-      // await adminService.uploadDocument(formData);
-      
-      // Временная задержка для демонстрации
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
+      await adminService.createDocument(formData);
+
       // Очищаем форму и закрываем модалку
       setFormData({ title: '', category_id: '', file: null });
       setShowAddModal(false);
-      
+
       // Перезагружаем документы
       await loadData();
     } catch (err) {
@@ -119,15 +113,12 @@ export function Documents() {
 
     setUploadLoading(true);
     try {
-      // Здесь будет логика обновления документа на сервере
-      // await adminService.updateDocument(editingDoc?.id, formData);
-      
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
+      await adminService.updateDocument(editingDoc?.id, formData);
+
       setFormData({ title: '', category_id: '', file: null });
       setShowEditModal(false);
       setEditingDoc(null);
-      
+
       await loadData();
     } catch (err) {
       setError('Ошибка при редактировании документа');
@@ -142,14 +133,11 @@ export function Documents() {
 
     setUploadLoading(true);
     try {
-      // Здесь будет логика удаления документа на сервере
-      // await adminService.deleteDocument(deletingDocId);
-      
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
+      await adminService.deleteDocument(deletingDocId);
+
       setShowDeleteConfirm(false);
       setDeletingDocId(null);
-      
+
       await loadData();
     } catch (err) {
       setError('Ошибка при удалении документа');

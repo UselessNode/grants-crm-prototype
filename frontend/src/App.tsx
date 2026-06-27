@@ -11,6 +11,7 @@ import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { Profile } from './pages/profile';
 import { Documents } from './pages/documents-list';
+import { ExpertDashboard } from './pages/expert-dashboard';
 import { NotFoundPage } from './pages/not-found';
 import { PrivateRoute } from './components/common/private-route';
 import { useAuthStore } from './store/auth-store';
@@ -18,7 +19,11 @@ import { ToastProvider } from './context/toast-context';
 
 function HomeRedirect() {
   const { user } = useAuthStore();
-  // Все пользователи идут на страницу заявок, администратор видит там вкладки админ-панели
+  // Перенаправляем экспертов на их дашборд
+  if (user?.role === 'expert') {
+    return <Navigate to="/expert" replace />;
+  }
+  // Админ и пользователи идут на страницу заявок
   return <Navigate to="/applications" replace />;
 }
 
@@ -108,6 +113,24 @@ export function App() {
             </PrivateRoute>
           }
         />*/}
+
+        {/* Маршруты эксперта */}
+        <Route
+          path="/expert"
+          element={
+            <PrivateRoute>
+              <ExpertDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/expert/applications/:id"
+          element={
+            <PrivateRoute>
+              <ApplicationView />
+            </PrivateRoute>
+          }
+        />
 
         {/* Админские маршруты */}
         <Route

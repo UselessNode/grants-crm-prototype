@@ -5,7 +5,7 @@ import pool from '../config/database';
  */
 export interface Role {
   id: number;
-  name: 'user' | 'admin';
+  name: 'user' | 'admin' | 'expert';
   description?: string | null;
   created_at?: Date;
 }
@@ -19,8 +19,9 @@ export interface User {
   surname?: string | null;
   name?: string | null;
   patronymic?: string | null;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'expert';
   role_id?: number;
+  expert_id?: number | null;
   last_activity?: Date;
   created_at?: Date;
   updated_at?: Date;
@@ -35,7 +36,7 @@ export interface UserCreateData {
   surname?: string | null;
   name?: string | null;
   patronymic?: string | null;
-  role?: 'user' | 'admin';
+  role?: 'user' | 'admin' | 'expert';
 }
 
 /**
@@ -45,8 +46,9 @@ export interface UserUpdateData {
   surname?: string | null;
   name?: string | null;
   patronymic?: string | null;
-  role?: 'user' | 'admin';
+  role?: 'user' | 'admin' | 'expert';
   role_id?: number;
+  expert_id?: number | null;
   last_activity?: Date;
 }
 
@@ -61,7 +63,7 @@ export class UserModel {
     try {
       const result = await pool.query(`
         SELECT u.id, u.email, u.password_hash, u.surname, u.name, u.patronymic,
-               COALESCE(r.name, 'user') as role, u.role_id, u.last_activity, u.created_at, u.updated_at
+               COALESCE(r.name, 'user') as role, u.role_id, u.expert_id, u.last_activity, u.created_at, u.updated_at
         FROM users u
         LEFT JOIN roles r ON u.role_id = r.id
         WHERE u.email = $1
@@ -81,7 +83,7 @@ export class UserModel {
     try {
       const result = await pool.query(`
         SELECT u.id, u.email, u.surname, u.name, u.patronymic,
-               COALESCE(r.name, 'user') as role, u.role_id, u.last_activity, u.created_at, u.updated_at
+               COALESCE(r.name, 'user') as role, u.role_id, u.expert_id, u.last_activity, u.created_at, u.updated_at
         FROM users u
         LEFT JOIN roles r ON u.role_id = r.id
         WHERE u.id = $1
@@ -157,6 +159,13 @@ export class UserModel {
         paramIndex++;
       }
 
+      // Если обновляется expert_id
+      if (data.expert_id !== undefined) {
+        fields.push(`expert_id = $${paramIndex}`);
+        values.push(data.expert_id);
+        paramIndex++;
+      }
+
       if (fields.length === 0) {
         return await this.findById(id);
       }
@@ -209,7 +218,7 @@ export class UserModel {
       // Получаем данные с пагинацией
       const dataResult = await pool.query(`
         SELECT u.id, u.email, u.surname, u.name, u.patronymic,
-               COALESCE(r.name, 'user') as role, u.role_id, u.last_activity, u.created_at, u.updated_at
+               COALESCE(r.name, 'user') as role, u.role_id, u.expert_id, u.last_activity, u.created_at, u.updated_at
         FROM users u
         LEFT JOIN roles r ON u.role_id = r.id
         ORDER BY u.created_at DESC
