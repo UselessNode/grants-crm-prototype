@@ -170,13 +170,18 @@ C:\project\grants-crm-prototype\
 │   │   ├── 002_AddRoles.sql
 │   │   ├── 003_AddStatusFlags.sql
 │   │   ├── 004_AddExperts.sql
-│   │   ├── 005_AddDobroLink.sql
-│   │   ├── 005_AddDocuments.sql
-│   │   ├── 006_DocumentsFilePath.sql
-│   │   └── 007_TeamMemberConsent.sql
+│   │   ├── 005_AddDocuments.sql          # Таблицы documents, document_categories
+│   │   ├── 006_AddDobroLink.sql
+│   │   ├── 007_DocumentsFilePath.sql
+│   │   ├── 008_TeamMemberConsent.sql
+│   │   ├── 009_CoordinatorDobroAsTeamMember.sql
+│   │   ├── 010_AddExpertUserLink.sql
+│   │   ├── 011_TeamMemberConsentFiles.sql
+│   │   └── (таблица schema_migrations создаётся автоматически)
 │   ├── seed_data.sql
 │   ├── seed-docs.js          # Создание тестовых файлов
 │   ├── migrate.js
+│   ├── reset-db.js
 │   └── seed.js
 └── .gitignore
 ```
@@ -212,12 +217,19 @@ VITE_API_BASE_URL=http://localhost:3001/api
 | `002_AddRoles.sql` | Роли пользователей |
 | `003_AddStatusFlags.sql` | Флаги статусов заявок |
 | `004_AddExperts.sql` | Эксперты, вердикты, поля expert_1/2 |
-| `005_AddDobroLink.sql` | Поле dobro_link в dobro_responsible |
 | `005_AddDocuments.sql` | Таблицы documents, document_categories |
-| `006_DocumentsFilePath.sql` | Поле file_path в documents (вместо BYTEA) |
-| `007_TeamMemberConsent.sql` | Поля consent_file, is_minor в team_members |
-| `008_CoordinatorDobroAsTeamMember.sql` | Координатор и ответственный DOBRO как team_member |
-| `009_TeamMemberConsentFiles.sql` | Файлы согласий членов команды (consent_files string[]) |
+| `006_AddDobroLink.sql` | Поле dobro_link в dobro_responsible |
+| `007_DocumentsFilePath.sql` | Поле file_path в documents (вместо BYTEA) |
+| `008_TeamMemberConsent.sql` | Поля consent_file, is_minor в team_members |
+| `009_CoordinatorDobroAsTeamMember.sql` | Безопасное добавление team_member_id (без DROP) |
+| `010_AddExpertUserLink.sql` | Связь экспертов с пользователями, роль эксперта |
+| `011_TeamMemberConsentFiles.sql` | Файлы согласий членов команды (consent_files string[]) |
+
+> **⚠️ Важно**: Если вы обновляетесь с предыдущей версии, где были миграции со старыми номерами (`005_AddDobroLink`, старые дублирующиеся `010`/`011`), перед первым `npm run db:rebuild` выполните в БД:
+> ```sql
+> DELETE FROM schema_migrations;
+> ```
+> Это очистит таблицу учёта миграций, и все 11 файлов применятся заново в новом порядке. Альтернатива — запуск `npm run db:reset` (дропает все таблицы), но `DELETE` безопаснее, если есть данные, которые нужно сохранить.
 
 ---
 
