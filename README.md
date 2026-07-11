@@ -10,8 +10,11 @@
 # Установка зависимостей
 npm install
 
-# Запуск режима разработки
+# Запуск режима разработки (основной)
 npm run dev
+
+# Запуск без строгого режима (если сыпятся experimentalWarning)
+npm run dev:clean
 
 # Сборка для продакшена
 npm run build
@@ -166,20 +169,14 @@ C:\project\grants-crm-prototype\
 │       └── types/
 ├── scripts/
 │   ├── migrations/
-│   │   ├── 001_Init.sql
-│   │   ├── 002_AddRoles.sql
-│   │   ├── 003_AddStatusFlags.sql
-│   │   ├── 004_AddExperts.sql
-│   │   ├── 005_AddDocuments.sql          # Таблицы documents, document_categories
-│   │   ├── 006_AddDobroLink.sql
-│   │   ├── 007_DocumentsFilePath.sql
-│   │   ├── 008_TeamMemberConsent.sql
-│   │   ├── 009_CoordinatorDobroAsTeamMember.sql
-│   │   ├── 010_AddExpertUserLink.sql
-│   │   ├── 011_TeamMemberConsentFiles.sql
-│   │   └── (таблица schema_migrations создаётся автоматически)
-│   ├── seed_data.sql
-│   ├── seed-docs.js          # Создание тестовых файлов
+│   │   └── 001_Init.sql          # Единая миграция: 17 таблиц, все индексы и FK
+│   ├── seed/
+│   │   ├── seed_tenders.sql      # Тендеры, направления, статусы
+│   │   ├── seed_users.sql        # Роли и пользователи
+│   │   ├── seed_experts.sql      # Эксперты, назначения, вердикты
+│   │   ├── seed_applications.sql # Заявки + команды + бюджет + планы + материалы
+│   │   └── seed_documents.sql    # Категории документов, документы, журнал изменений
+│   ├── seed-docs.js              # Создание тестовых файлов
 │   ├── migrate.js
 │   ├── reset-db.js
 │   └── seed.js
@@ -209,27 +206,31 @@ VITE_API_BASE_URL=http://localhost:3001/api
 
 ---
 
-## 🗄️ Миграции БД
+## 🗄️ Миграции и seed-данные
 
-| Файл | Описание |
-|------|----------|
-| `001_Init.sql` | Инициализация основных таблиц (включает **tenders** и **directions**) |
-| `002_AddRoles.sql` | Роли пользователей |
-| `003_AddStatusFlags.sql` | Флаги статусов заявок |
-| `004_AddExperts.sql` | Эксперты, вердикты, поля expert_1/2 |
-| `005_AddDocuments.sql` | Таблицы documents, document_categories |
-| `006_AddDobroLink.sql` | Поле dobro_link в dobro_responsible |
-| `007_DocumentsFilePath.sql` | Поле file_path в documents (вместо BYTEA) |
-| `008_TeamMemberConsent.sql` | Поля consent_file, is_minor в team_members |
-| `009_CoordinatorDobroAsTeamMember.sql` | Безопасное добавление team_member_id (без DROP) |
-| `010_AddExpertUserLink.sql` | Связь экспертов с пользователями, роль эксперта |
-| `011_TeamMemberConsentFiles.sql` | Файлы согласий членов команды (consent_files string[]) |
+### Миграции БД (DDL)
 
-> **⚠️ Важно**: Если вы обновляетесь с предыдущей версии, где были миграции со старыми номерами (`005_AddDobroLink`, старые дублирующиеся `010`/`011`), перед первым `npm run db:rebuild` выполните в БД:
-> ```sql
-> DELETE FROM schema_migrations;
-> ```
-> Это очистит таблицу учёта миграций, и все 11 файлов применятся заново в новом порядке. Альтернатива — запуск `npm run db:reset` (дропает все таблицы), но `DELETE` безопаснее, если есть данные, которые нужно сохранить.
+Единый файл `scripts/migrations/001_Init.sql` содержит:
+- **17 таблиц** (CREATE TABLE IF NOT EXISTS)
+- **25+ индексов** (CREATE INDEX IF NOT EXISTS)
+- **23 внешних ключа** (именованные, обёрнутые в DO $$ … EXCEPTION WHEN duplicate_object)
+
+Ранее это были 12 отдельных миграций (002–012), которые постепенно добавляли колонки
+и таблицы. После рефакторинга все DDL-изменения включены в `001_Init.sql` —
+ALTER-ы больше не нужны, т.к. CREATE TABLE уже содержит финальную структуру.
+
+### Seed-данные (DML)
+
+| Файл | Что заполняет |
+|------|---------------|
+| `seed_tenders.sql` | Тендеры, направления, статусы заявок |
+| `seed_users.sql` | Роли (user, admin, expert) + пользователи |
+| `seed_experts.sql` | Эксперты + назначения на заявки + вердикты |
+| `seed_applications.sql` | Заявки + члены команд + координаторы + DOBRO + планы + бюджет + материалы |
+| `seed_documents.sql` | Категории документов + документы + журнал изменений |
+
+**Порядок загрузки** важен для FK-зависимостей и автоматически соблюдается `scripts/seed.js`.
+Каждый файл использует `ON CONFLICT DO NOTHING` — повторный запуск безопасен.
 
 ---
 

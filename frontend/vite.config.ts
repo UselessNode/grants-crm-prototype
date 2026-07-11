@@ -21,6 +21,6 @@ export default defineConfig({
     sourcemap: false
   },
   define: {
-    'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version || '0.1.1')
+'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version || 'dev')
   }
 });

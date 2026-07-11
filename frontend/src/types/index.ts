@@ -78,6 +78,9 @@ export interface Expert {
   name: string;
   patronymic?: string | null;
   extra_info?: string | null;
+  user_id?: number | null;
+  status?: string | null;
+  specialization_id?: number | null;
   created_at?: string;
   updated_at?: string;
 }
