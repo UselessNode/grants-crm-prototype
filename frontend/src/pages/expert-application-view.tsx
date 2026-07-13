@@ -4,7 +4,6 @@ import { UserPanelLayout } from '../components/UserPanel/user-panel-layout';
 import { expertService } from '../services/expertService';
 import { useAuthStore } from '../store/auth-store';
 import { Application, TeamMember, ProjectCoordinator, ProjectPlan, ProjectBudget, AdditionalMaterial, ExpertVerdict } from '../types';
-import { Button } from '../components/common/icon';
 
 export function ExpertApplicationView() {
   const { id } = useParams<{ id: string }>();
@@ -106,7 +105,7 @@ export function ExpertApplicationView() {
     // Эксперт может вынести вердикт только если: применен к заявке и внутри статуса, который позволяет экспертизу
     if (!application) return false;
 
-    // Проверяем, что пользовательiegos expert_id совпадает с одним из экспертов заявки
+    // Проверяем, что пользователь iegos expert_id совпадает с одним из экспертов заявки
     const isAssigned = application.expert_1 === user?.expert_id || application.expert_2 === user?.expert_id;
 
     // Статус должен быть "Подана" или "На рассмотрении"

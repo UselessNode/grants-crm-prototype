@@ -37,7 +37,7 @@ async function runMigrations() {
     const appliedMigrations = new Set(appliedResult.rows.map((r) => r.version));
 
     // Получаем список файлов миграций
-    const migrationsDir = path.join(__dirname, "migrations");
+    const migrationsDir = path.join(__dirname, "new_migrations");
     const migrationFiles = fs
       .readdirSync(migrationsDir)
       .filter((f) => f.endsWith(".sql"))

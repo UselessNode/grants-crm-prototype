@@ -38,7 +38,6 @@ export function generateToken(user: User): string {
     email: user.email,
     role: user.role,
     role_id: user.role_id,
-    expert_id: user.expert_id,
   };
 
   return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRATION });

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { DocumentModel, type Document, type DocumentCategory } from '../models/document';
+import { AdditionalMaterialModel, type FileInfo, type FileCategory } from '../models/additional-material.model';
 import { AuthRequest } from '../middleware/auth';
 import pool from '../config/database';
 import path from 'path';
@@ -35,12 +35,11 @@ export class DocumentController {
         ? parseInt(category_id as string, 10)
         : undefined;
 
-      const result = await DocumentModel.findAll({
+      const result = await AdditionalMaterialModel.findAllFiles({
         page: isNaN(pageNum) ? 1 : pageNum,
         limit: isNaN(limitNum) ? 20 : limitNum,
         category_id: categoryId,
-        is_template: is_template === 'true',
-        template_type: template_type as string | undefined,
+        search: template_type as string | undefined,
       });
 
       res.json({
@@ -64,7 +63,7 @@ export class DocumentController {
   static async downloadDocument(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-      const document = await DocumentModel.findById(parseInt(id));
+      const document = await AdditionalMaterialModel.getFileById(parseInt(id));
 
       if (!document) {
         return res.status(404).json({
@@ -94,7 +93,7 @@ export class DocumentController {
       }
 
       // Увеличиваем счётчик скачиваний
-      await DocumentModel.incrementDownloadCount(parseInt(id));
+      // await AdditionalMaterialModel.incrementDownloadCount(parseInt(id));
 
       // Отправляем файл
       res.download(filePath, document.file_name);
@@ -115,7 +114,7 @@ export class DocumentController {
   static async getDocument(req: AuthRequest, res: Response) {
     try {
       const { id } = req.params;
-      const document = await DocumentModel.findByIdLite(parseInt(id));
+      const document = await AdditionalMaterialModel.getFileById(parseInt(id));
 
       if (!document) {
         return res.status(404).json({
@@ -194,16 +193,14 @@ export class DocumentController {
       // Сохраняем файл на диск
       fs.writeFileSync(filePath, req.file.buffer);
 
-      const document = await DocumentModel.create({
-        title,
+      const document = await AdditionalMaterialModel.createFile({
+        name: title,
         description: description || null,
         category_id: category_id ? parseInt(category_id) : null,
         file_path: fileName,
         file_name: req.file.originalname,
         file_type: req.file.mimetype,
-        file_size: req.file.size,
-        is_template: isTemplate,
-        template_type: template_type || null,
+        file_bytes_size: req.file.size,
         created_by: req.user?.userId,
       });
 
@@ -239,12 +236,10 @@ export class DocumentController {
 
       await client.query('BEGIN');
 
-      const document = await DocumentModel.update(parseInt(id), {
-        title,
+      const document = await AdditionalMaterialModel.update(parseInt(id), {
+        name: title,
         description,
         category_id,
-        is_template,
-        template_type,
       });
 
       if (!document) {
@@ -305,7 +300,7 @@ export class DocumentController {
       }
 
       // Получаем текущий документ для удаления старого файла
-      const currentDoc = await DocumentModel.findById(parseInt(id));
+      const currentDoc = await AdditionalMaterialModel.getFileById(parseInt(id));
 
       if (!currentDoc) {
         await client.query('ROLLBACK');
@@ -320,8 +315,8 @@ export class DocumentController {
       const ext = path.extname(req.file.originalname);
       const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}${ext}`;
 
-      // Определяем папку
-      const targetDir = currentDoc.is_template ? TEMPLATES_DIR : UPLOADS_DIR;
+      // В новой модели файлы хранятся в UPLOADS_DIR
+      const targetDir = UPLOADS_DIR;
       const filePath = path.join(targetDir, fileName);
 
       // Сохраняем новый файл
@@ -329,17 +324,17 @@ export class DocumentController {
 
       // Удаляем старый файл
       if (currentDoc.file_path) {
-        const oldPath = path.join(targetDir, currentDoc.file_path);
+        const oldPath = path.join(UPLOADS_DIR, currentDoc.file_path);
         if (fs.existsSync(oldPath)) {
           fs.unlinkSync(oldPath);
         }
       }
 
-      const document = await DocumentModel.updateFile(parseInt(id), {
+      const document = await AdditionalMaterialModel.update(parseInt(id), {
         file_path: fileName,
         file_name: req.file.originalname,
         file_type: req.file.mimetype,
-        file_size: req.file.size,
+        file_bytes_size: req.file.size,
       });
 
       await client.query('COMMIT');
@@ -374,7 +369,7 @@ export class DocumentController {
       await client.query('BEGIN');
 
       // Получаем документ для удаления файла
-      const doc = await DocumentModel.findById(parseInt(id));
+      const doc = await AdditionalMaterialModel.getFileById(parseInt(id));
 
       if (!doc) {
         await client.query('ROLLBACK');
@@ -386,15 +381,14 @@ export class DocumentController {
 
       // Удаляем файл с диска
       if (doc.file_path) {
-        const targetDir = doc.is_template ? TEMPLATES_DIR : UPLOADS_DIR;
-        const filePath = path.join(targetDir, doc.file_path);
+        const filePath = path.join(UPLOADS_DIR, doc.file_path);
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
       }
 
       // Удаляем запись из БД
-      const deleted = await DocumentModel.delete(parseInt(id));
+      const deleted = await AdditionalMaterialModel.deleteFile(parseInt(id));
 
       if (!deleted) {
         await client.query('ROLLBACK');
@@ -429,7 +423,7 @@ export class DocumentController {
    */
   static async getCategories(req: AuthRequest, res: Response) {
     try {
-      const categories = await DocumentModel.getCategories();
+      const categories = await AdditionalMaterialModel.getFileCategories();
 
       res.json({
         success: true,
@@ -463,10 +457,9 @@ export class DocumentController {
 
       await client.query('BEGIN');
 
-      const category = await DocumentModel.createCategory({
+      const category = await AdditionalMaterialModel.createFileCategory({
         name,
         description,
-        sort_order,
       });
 
       await client.query('COMMIT');
@@ -501,10 +494,9 @@ export class DocumentController {
 
       await client.query('BEGIN');
 
-      const category = await DocumentModel.updateCategory(parseInt(id), {
+      const category = await AdditionalMaterialModel.updateCategory(parseInt(id), {
         name,
         description,
-        sort_order,
       });
 
       if (!category) {
@@ -562,7 +554,7 @@ export class DocumentController {
         });
       }
 
-      const deleted = await DocumentModel.deleteCategory(parseInt(id));
+      const deleted = await AdditionalMaterialModel.deleteCategory(parseInt(id));
 
       if (!deleted) {
         await client.query('ROLLBACK');
@@ -599,7 +591,8 @@ export class DocumentController {
     try {
       const { type } = req.params;
 
-      const templates = await DocumentModel.getTemplatesByType(type);
+      // const templates = await AdditionalMaterialModel.getTemplatesByType(type);
+      const templates = []; // В новой модели шаблоны пока не реализованы
 
       res.json({
         success: true,

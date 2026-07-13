@@ -1,3 +1,7 @@
+// Этот код управляет состоянием аутентификации на фронтенде с помощью Zustand и persist-мидлвари
+// Сохраняет токен и пользователя в localStorage.
+
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from 'axios';
@@ -13,7 +17,7 @@ export interface User {
   surname?: string | null;
   name?: string | null;
   patronymic?: string | null;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'expert';
 }
 
 /**

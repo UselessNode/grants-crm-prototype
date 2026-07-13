@@ -5,7 +5,8 @@
 INSERT INTO "roles" ("id", "name", "description")
 VALUES
   (1, 'user', 'Обычный пользователь'),
-  (2, 'admin', 'Администратор')
+  (2, 'admin', 'Администратор'),
+  (3, 'expert', 'Эксперт')
 ON CONFLICT ("id") DO NOTHING;
 
 -- Сброс счетчика последовательности (если нужно)

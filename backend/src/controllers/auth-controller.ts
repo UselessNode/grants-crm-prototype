@@ -58,7 +58,7 @@ export class AuthController {
       // Создание пользователя
       const userData: UserCreateData = {
         email,
-        password: passwordHash,
+        passwordHash,
         surname: surname || null,
         name: name || null,
         patronymic: patronymic || null,
@@ -133,10 +133,10 @@ export class AuthController {
         });
       }
 
-      // Поиск пользователя
-      const user = await UserModel.findByEmail(email);
+      // Поиск пользователя для проверки пароля
+      const authUser = await UserModel.findByEmailForAuth(email);
 
-      if (!user) {
+      if (!authUser) {
         return res.status(401).json({
           success: false,
           message: 'Неверный email или пароль',
@@ -144,9 +144,19 @@ export class AuthController {
       }
 
       // Проверка пароля
-      const passwordMatch = await bcrypt.compare(password, user.password_hash!);
+      const passwordMatch = await bcrypt.compare(password, authUser.password_hash!);
 
       if (!passwordMatch) {
+        return res.status(401).json({
+          success: false,
+          message: 'Неверный email или пароль',
+        });
+      }
+
+      // Получаем полного пользователя для токена
+      const user = await UserModel.findByEmail(email);
+
+      if (!user) {
         return res.status(401).json({
           success: false,
           message: 'Неверный email или пароль',
@@ -157,7 +167,7 @@ export class AuthController {
       const token = generateToken(user);
 
       // Обновляем время последней активности
-      await UserModel.updateLastActivity(user.id!);
+      await UserModel.updateLastActivity(user.id);
 
       res.json({
         success: true,
