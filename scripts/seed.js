@@ -1,6 +1,3 @@
-
-
-
 const { Pool } = require("pg");
 const fs = require("fs");
 const path = require("path");
@@ -16,28 +13,65 @@ const pool = new Pool({
 
 async function seed() {
   const client = await pool.connect();
+  const seedDir = path.join(__dirname, "seed");
+
+  if (!fs.existsSync(seedDir)) {
+    console.error(`\n❌ Папка seed не найдена по пути: ${seedDir}`);
+    process.exit(1);
+  }
+
+  // Читаем только .sql файлы и сортируем по алфавиту
+  const files = fs
+    .readdirSync(seedDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+
+  if (files.length === 0) {
+    console.log("\n⚠️ В папке seed нет .sql файлов.");
+    process.exit(0);
+  }
+
+  let currentFile = "";
+  let currentSql = "";
 
   try {
-    const seedPath = path.join(__dirname, "seed_data.sql");
-    const sql = fs.readFileSync(seedPath, "utf-8");
-
     console.log("📦 Заполнение тестовыми данными...\n");
-
     await client.query("BEGIN");
-    try {
-      await client.query(sql);
-      await client.query("COMMIT");
-      console.log("\n✅ Seed-данные успешно добавлены!");
-      console.log(
-        "\n💡 Примечание: Повторный запуск не создаст дубликатов (используется ON CONFLICT DO NOTHING).\n",
-      );
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
+
+    for (const file of files) {
+      currentFile = file;
+      currentSql = fs.readFileSync(path.join(seedDir, file), "utf-8");
+
+      console.log(`  📄 ${file}`);
+      await client.query(currentSql);
     }
+
+    await client.query("COMMIT");
+    console.log("\n✅ Seed-данные успешно добавлены!");
+    console.log(
+      "\n💡 Примечание: Повторный запуск не создаст дубликатов (используется ON CONFLICT DO NOTHING).\n",
+    );
   } catch (error) {
-    console.error("\n❌ Ошибка при выполнении seed-данных:", error.message);
-    console.error(error.stack);
+    try {
+      await client.query("ROLLBACK");
+    } catch (e) {} // Игнорируем ошибки самого отката
+
+    console.error("\n❌ Ошибка при выполнении seed-данных!");
+    console.error(`📂 Файл: seed/${currentFile}`);
+    console.error(`💬 Сообщение: ${error.message}`);
+
+    if (error.position && currentSql) {
+      const pos = parseInt(error.position);
+      const linesUpToError = currentSql.substring(0, pos).split("\n");
+      const lineNumber = linesUpToError.length;
+      const errorLineText = linesUpToError[lineNumber - 1] || "";
+
+      console.error(`📍 Ошибка в строке: ${lineNumber} (символ № ${pos})`);
+      console.error(`🔍 Контекст строки:\n   > ${errorLineText.trim()}`);
+    } else {
+      console.error(error.stack);
+    }
+
     process.exit(1);
   } finally {
     client.release();

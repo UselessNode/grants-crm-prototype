@@ -213,8 +213,18 @@
     @apply flex-col items-stretch;
   }
 
+  /* Эксперты — вертикально на мобильных */
   .ApplicationsList__cardExperts {
-    @apply flex-row items-center flex-wrap;
+    @apply flex-col;
+  }
+
+  .ApplicationsList__expertsList {
+    @apply flex-col w-full;
+  }
+
+  .ExpertTag {
+    width: 100%;
+    max-width: none;
   }
 
   .ApplicationsList__cardActions {

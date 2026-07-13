@@ -64,7 +64,7 @@ export function UserPanelLayout({
       {/* Футер */}
       <footer className="bg-gray-100 border-t border-gray-200 py-4">
         <div className="container mx-auto px-6 text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} — Арбузные гранты 🍉
+          © {new Date().getFullYear()} — Арбузные гранты 🍉 | Версия: {import.meta.env.VITE_APP_VERSION}
         </div>
       </footer>
     </div>

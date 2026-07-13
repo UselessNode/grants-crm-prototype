@@ -16,6 +16,9 @@ interface ExpertFormData {
   name: string;
   patronymic: string;
   extra_info: string;
+  email: string;
+  password: string;
+  specialization_id?: number | null;
 }
 
 export function AddExpertModal({
@@ -28,6 +31,9 @@ export function AddExpertModal({
     name: '',
     patronymic: '',
     extra_info: '',
+    email: '',
+    password: '',
+    specialization_id: null,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +46,11 @@ export function AddExpertModal({
       return;
     }
 
+    if (!formData.email || !formData.password) {
+      setError('Email и пароль обязательны');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -49,9 +60,20 @@ export function AddExpertModal({
         name: formData.name,
         patronymic: formData.patronymic || null,
         extra_info: formData.extra_info || null,
+        email: formData.email,
+        password: formData.password,
+        specialization_id: formData.specialization_id || null,
       });
       onClose();
-      setFormData({ surname: '', name: '', patronymic: '', extra_info: '' });
+      setFormData({
+        surname: '',
+        name: '',
+        patronymic: '',
+        extra_info: '',
+        email: '',
+        password: '',
+        specialization_id: null,
+      });
       onExpertAdded?.();
     } catch (err) {
       setError('Ошибка при добавлении эксперта');
@@ -84,6 +106,32 @@ export function AddExpertModal({
           )}
 
           <div className="AddExpertModal__grid">
+            <div className="AddExpertModal__field AddExpertModal__field--full">
+              <label className="AddExpertModal__label">
+                Email <span className="required-mark">*</span>
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="AddExpertModal__input"
+                placeholder="expert@mail.ru"
+              />
+            </div>
+
+            <div className="AddExpertModal__field AddExpertModal__field--full">
+              <label className="AddExpertModal__label">
+                Пароль <span className="required-mark">*</span>
+              </label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="AddExpertModal__input"
+                placeholder="Введите пароль"
+              />
+            </div>
+
             <div className="AddExpertModal__field">
               <label className="AddExpertModal__label">
                 Фамилия <span className="required-mark">*</span>

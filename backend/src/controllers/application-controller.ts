@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ApplicationModel, ApplicationCreateData } from '../models/application';
+import { ApplicationModel, ApplicationCreateData } from '../models/application.model';
 import { AuthRequest } from '../middleware/auth';
 
 /**

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import { logger } from './middleware/logger';
 
 // Загрузка переменных окружения
 dotenv.config();
@@ -12,6 +13,8 @@ const app = express();
 // Middleware
 app.use(helmet()); // Защита заголовков
 app.use(cors()); // Разрешение CORS
+
+app.use(logger);
 
 // Логирование только ошибок (4xx и 5xx)
 app.use((req, res, next) => {
@@ -45,11 +48,13 @@ import authRoutes from './routes/auth-routes';
 import applicationRoutes from './routes/application-routes';
 import documentRoutes from './routes/document-routes';
 import adminRoutes from './routes/admin-routes';
+import expertRoutes from './routes/expert-routes';
 
 app.use('/api', authRoutes);
 app.use('/api', applicationRoutes);
 app.use('/api', documentRoutes);
 app.use('/api', adminRoutes);
+app.use('/api', expertRoutes);
 
 // Обработка 404
 app.use((req, res) => {
@@ -79,12 +84,16 @@ app.listen(PORT, () => {
   console.log('========================================');
   console.log('📝 Тестовые учётные данные:');
   console.log('----------------------------------------');
-  console.log('👤 Администратор:');
-  console.log('   Email: admin@crm.test');
+  console.log('Администратор (Сидоров Алексей Викторович):');
+  console.log('   Email: admin1@test.ru');
   console.log('   Пароль: 123456');
   console.log('----------------------------------------');
-  console.log('👤 Обычный пользователь:');
-  console.log('   Email: anna@mail.com');
+  console.log('Обычный пользователь (Николаев Артём Сергеевич):');
+  console.log('   Email: user1@test.ru');
+  console.log('   Пароль: 123456');
+  console.log('----------------------------------------');
+  console.log('Эксперт (Иванов Пётр Сергеевич):');
+  console.log('   Email: expert1@test.ru');
   console.log('   Пароль: 123456');
   console.log('========================================\n');
 });

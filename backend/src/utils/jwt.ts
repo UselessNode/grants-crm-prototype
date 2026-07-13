@@ -7,8 +7,9 @@ import { User } from '../models/user';
 export interface TokenPayload {
   userId: number;
   email: string;
-  role: string;
+  role: 'user' | 'admin' | 'expert';
   role_id?: number | null;
+  expert_id?: number | null;
 }
 
 /**

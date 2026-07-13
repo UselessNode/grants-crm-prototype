@@ -1,47 +1,82 @@
-CREATE TABLE IF NOT EXISTS "roles" (
+CREATE TABLE IF NOT EXISTS "file" (
 	"id" SERIAL,
-	"name" VARCHAR(50) NOT NULL UNIQUE,
+	"name" VARCHAR(100) NOT NULL UNIQUE,
 	"description" TEXT,
-	"created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	"file_type" VARCHAR(50),
+	"category_id" INTEGER,
+	"path" VARCHAR(500),
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"deleted_at" TIMESTAMPTZ,
+	PRIMARY KEY("id")
+);
+
+CREATE TABLE IF NOT EXISTS "file_categories" (
+	"id" SERIAL,
+	"name" VARCHAR(100) NOT NULL UNIQUE,
+	"description" TEXT,
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"deleted_at" TIMESTAMPTZ,
 	PRIMARY KEY("id")
 );
 
 
+CREATE TABLE IF NOT EXISTS "roles" (
+	"id" SERIAL,
+	"name" VARCHAR(50) NOT NULL UNIQUE,
+	"description" TEXT,
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"deleted_at" TIMESTAMPTZ,
+	PRIMARY KEY("id")
+);
 
+INSERT INTO "roles" ("id", "name", "description")
+VALUES
+  (1, 'user', 'Обычный пользователь'),
+  (2, 'admin', 'Администратор'),
+  (3, 'expert', 'Эксперт')
+ON CONFLICT ("id") DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS "tenders" (
 	"id" SERIAL,
 	"name" VARCHAR(255) NOT NULL,
 	"description" TEXT,
-	"created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	"updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"deleted_at" TIMESTAMPTZ,
 	PRIMARY KEY("id")
 );
-
-
-
 
 CREATE TABLE IF NOT EXISTS "directions" (
 	"id" SERIAL,
 	"name" VARCHAR(255) NOT NULL,
 	"description" TEXT,
 	"tender_id" INTEGER,
-	"created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	"updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"deleted_at" TIMESTAMPTZ,
 	PRIMARY KEY("id")
 );
-
-
-
 
 CREATE TABLE IF NOT EXISTS "application_statuses" (
 	"id" SERIAL,
 	"name" VARCHAR(50) NOT NULL,
+	"is_editable" BOOLEAN DEFAULT true,
+	"is_deletable" BOOLEAN DEFAULT true,
 	"description" TEXT,
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"deleted_at" TIMESTAMPTZ,
 	PRIMARY KEY("id")
 );
 
-
+-- 1. Черновик - можно редактировать и удалять
+-- 2. Подана - нельзя редактировать/удалять (заявка отправлена)
+-- 3. На рассмотрении - нельзя редактировать/удалять
+-- 4. Одобрена - нельзя редактировать/удалять
+-- 5. Отклонена - можно редактировать и удалять (возврат на доработку)
 
 
 CREATE TABLE IF NOT EXISTS "users" (
@@ -52,10 +87,10 @@ CREATE TABLE IF NOT EXISTS "users" (
 	"name" VARCHAR(100),
 	"patronymic" VARCHAR(100),
 	"role_id" INTEGER DEFAULT 1,
-	"last_activity" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	"last_activity" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
 	"deleted_at" TIMESTAMP DEFAULT NULL,
-	"created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	"updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY("id")
 );
 
@@ -78,13 +113,25 @@ CREATE TABLE IF NOT EXISTS "applications" (
 	"project_tasks" TEXT NOT NULL,
 	"implementation_experience" TEXT,
 	"results_description" TEXT,
+
 	"submitted_at" TIMESTAMP,
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
 	"deleted_at" TIMESTAMP DEFAULT NULL,
-	"created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	"updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY("id")
 );
 
+CREATE TABLE IF NOT EXISTS "application_reviews" (
+    "id" SERIAL,
+    "application_id" INTEGER NOT NULL,
+    "expert_id" INTEGER NOT NULL,
+    "review_status" VARCHAR(50),
+    "review_text" TEXT,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+    "deleted_at" TIMESTAMPTZ,
+    UNIQUE("application_id", "expert_id")
+);
 
 CREATE INDEX "idx_applications_direction"
 ON "applications" ("direction_id");
@@ -108,44 +155,50 @@ CREATE TABLE IF NOT EXISTS "team_members" (
 	"tasks_in_project" TEXT,
 	"contact_info" VARCHAR(255),
 	"social_media_links" TEXT,
+
+	"forum_url" VARCHAR(255) DEFAULT NULL, -- Ответственный за портал
+	"is_responsible" BOOLEAN DEFAULT NULL,
+
+	"is_coordinator" BOOLEAN DEFAULT NULL, -- Координатор проекта
+	"education" TEXT DEFAULT NULL,
+	"work_experience" TEXT DEFAULT NULL,
+	"isAdult" BOOLEAN DEFAULT NULL,
+
+	"consent_file_path" VARCHAR(500) NOT NULL,
+	"created_at" TIMESTAMP DEFAULT NOW(),
+	"updated_at" TIMESTAMP DEFAULT NOW(),
+	"deleted_at" TIMESTAMP DEFAULT NULL,
 	PRIMARY KEY("id")
 );
-
 
 CREATE INDEX "idx_team_members_application"
 ON "team_members" ("application_id");
 
-CREATE TABLE IF NOT EXISTS "project_coordinators" (
-	"id" SERIAL,
-	"application_id" INTEGER NOT NULL,
-	"surname" VARCHAR(100) NOT NULL,
-	"name" VARCHAR(100) NOT NULL,
-	"patronymic" VARCHAR(100),
-	"relation_to_team" VARCHAR(255),
-	"contact_info" VARCHAR(255),
-	"social_media_links" TEXT,
-	"education" TEXT,
-	"work_experience" TEXT,
-	PRIMARY KEY("id")
-);
+-- CREATE TABLE IF NOT EXISTS "project_coordinators" (
+-- 	"id" SERIAL,
+-- 	"application_id" INTEGER NOT NULL,
+-- 	"surname" VARCHAR(100),
+-- 	"name" VARCHAR(100) NOT NULL,
+-- 	"patronymic" VARCHAR(100),
+-- 	"relation_to_team" VARCHAR(255),
+-- 	"contact_info" VARCHAR(255),
+-- 	"social_media_links" TEXT,
+-- 	"education" TEXT,
+-- 	"work_experience" TEXT,
+-- 	PRIMARY KEY("id")
+-- );
 
-
-
-
-CREATE TABLE IF NOT EXISTS "dobro_responsible" (
-	"id" SERIAL,
-	"application_id" INTEGER NOT NULL,
-	"surname" VARCHAR(100) NOT NULL,
-	"name" VARCHAR(100) NOT NULL,
-	"patronymic" VARCHAR(100),
-	"relation_to_team" VARCHAR(255),
-	"contact_info" VARCHAR(255),
-	"social_media_links" TEXT,
-	PRIMARY KEY("id")
-);
-
-
-
+-- CREATE TABLE IF NOT EXISTS "dobro_responsible" (
+-- 	"id" SERIAL,
+-- 	"application_id" INTEGER NOT NULL,
+-- 	"surname" VARCHAR(100) NOT NULL,
+-- 	"name" VARCHAR(100) NOT NULL,
+-- 	"patronymic" VARCHAR(100),
+-- 	"relation_to_team" VARCHAR(255),
+-- 	"contact_info" VARCHAR(255),
+-- 	"social_media_links" TEXT,
+-- 	PRIMARY KEY("id")
+-- );
 
 CREATE TABLE IF NOT EXISTS "project_plans" (
 	"id" SERIAL,
@@ -157,9 +210,11 @@ CREATE TABLE IF NOT EXISTS "project_plans" (
 	"end_date" DATE,
 	"results" TEXT,
 	"fixation_form" TEXT,
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"deleted_at" TIMESTAMPTZ,
 	PRIMARY KEY("id")
 );
-
 
 CREATE INDEX "idx_project_plans_application"
 ON "project_plans" ("application_id");
@@ -170,13 +225,15 @@ CREATE TABLE IF NOT EXISTS "project_budget" (
 	"resource_type" VARCHAR(255) NOT NULL,
 	"unit_cost" DECIMAL(10,2),
 	"quantity" INTEGER,
-	"total_cost" DECIMAL(10,2),
+	-- "total_cost" DECIMAL(10,2),
 	"own_funds" DECIMAL(10,2),
 	"grant_funds" DECIMAL(10,2),
 	"comment" TEXT,
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"deleted_at" TIMESTAMPTZ,
 	PRIMARY KEY("id")
 );
-
 
 CREATE INDEX "idx_budget_application"
 ON "project_budget" ("application_id");
@@ -187,12 +244,14 @@ CREATE TABLE IF NOT EXISTS "additional_materials" (
 	"file_path" VARCHAR(255) NOT NULL,
 	"file_name" VARCHAR(255) NOT NULL,
 	"file_type" VARCHAR(50),
-	"file_size" INTEGER,
+	"file_bytes_size" DECIMAL(10,2),
 	"comment" TEXT,
-	"uploaded_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	"uploaded_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"deleted_at" TIMESTAMPTZ,
 	PRIMARY KEY("id")
 );
-
 
 CREATE INDEX "idx_materials_application"
 ON "additional_materials" ("application_id");
@@ -204,11 +263,11 @@ CREATE TABLE IF NOT EXISTS "change_logs" (
 	"action" VARCHAR(50) NOT NULL,
 	"old_value" JSONB,
 	"new_value" JSONB,
-	"created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	"created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+	"deleted_at" TIMESTAMPTZ,
 	PRIMARY KEY("id")
 );
-
-
 
 ALTER TABLE "directions"
 ADD FOREIGN KEY("tender_id") REFERENCES "tenders"("id")

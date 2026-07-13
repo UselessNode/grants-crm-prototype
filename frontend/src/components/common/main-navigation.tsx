@@ -1,21 +1,22 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth-store';
 
-export type MainTab = 'applications' | 'documents' | 'profile' | 'users' | 'experts' | 'directories';
+export type MainTab = 'applications' | 'documents' | 'profile' | 'expert' | 'users' | 'experts' | 'directories';
 
 export function MainNavigation() {
   const location = useLocation();
   const { user } = useAuthStore();
 
   const isAdmin = user?.role === 'admin';
+  const isExpert = user?.role === 'expert';
 
   const tabs: { id: MainTab; label: string; path: string }[] = [
-    { id: 'applications', label: 'Заявки', path: '/applications' },
+    { id: 'applications', label: 'Заявки', path: isExpert ? '/expert' : '/applications' },
     { id: 'documents', label: 'Документы', path: '/documents' },
   ];
 
   // Вкладки только для обычных пользователей
-  if (!isAdmin) {
+  if (!isAdmin && !isExpert) {
     tabs.push({ id: 'profile', label: 'Профиль', path: '/profile' });
   }
 

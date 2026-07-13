@@ -25,13 +25,13 @@ async function resetDatabase() {
     }
 
     console.log("🗑  Сброс базы данных...");
-    
+
     // 1. Дроп таблиц одним запросом
     const tablesResult = await client.query(`
       SELECT tablename FROM pg_tables WHERE schemaname = 'public'
     `);
-    const tables = tablesResult.rows.map(r => `"${r.tablename}"`);
-    
+    const tables = tablesResult.rows.map((r) => `"${r.tablename}"`);
+
     if (tables.length > 0) {
       await client.query(`DROP TABLE IF EXISTS ${tables.join(", ")} CASCADE`);
       console.log(`   Удалено таблиц: ${tables.length}`);
@@ -47,42 +47,72 @@ async function resetDatabase() {
 
     // 3. Применение миграций
     console.log("📁 Миграции...");
-    const migrationsDir = path.join(__dirname, "migrations");
+    const migrationsDir = path.join(__dirname, "new_migrations");
     const migrationFiles = fs
       .readdirSync(migrationsDir)
       .filter((f) => f.endsWith(".sql"))
       .sort();
 
-    const appliedRes = await client.query("SELECT version FROM schema_migrations");
-    const appliedSet = new Set(appliedRes.rows.map(r => r.version));
-    
+    const appliedRes = await client.query(
+      "SELECT version FROM schema_migrations",
+    );
+    const appliedSet = new Set(appliedRes.rows.map((r) => r.version));
+
     let appliedCount = 0;
+
     for (const file of migrationFiles) {
       if (appliedSet.has(file)) {
-        console.log(`   ⊘ ${file}`);
         continue;
       }
-      
-      const sql = fs.readFileSync(path.join(migrationsDir, file), "utf-8");
-      await client.query("BEGIN");
+
+      const filePath = path.join(migrationsDir, file);
+      const sql = fs.readFileSync(filePath, "utf8");
+
       try {
+        await client.query("BEGIN");
         await client.query(sql);
-        await client.query("INSERT INTO schema_migrations (version) VALUES ($1)", [file]);
+        await client.query(
+          "INSERT INTO schema_migrations (version) VALUES ($1)",
+          [file],
+        );
         await client.query("COMMIT");
-        console.log(`   ✓ ${file}`);
+        console.log(`   ✅ Выполнена: ${file}`);
         appliedCount++;
       } catch (err) {
         await client.query("ROLLBACK");
+        // Привязываем к ошибке имя файла и его SQL-содержимое
+        err.migrationFile = file;
+        err.migrationSql = sql;
         throw err;
       }
     }
 
-    console.log("\n✅ Готово");
-    console.log(`   Применено миграций: ${appliedCount}/${migrationFiles.length}`);
-    console.log("\n💡 Для тестовых данных: npm run seed");
-
+    console.log(`🎉 Сброс завершен. Применено миграций: ${appliedCount}`);
   } catch (error) {
-    console.error("\n❌ Ошибка:", error.message);
+    console.error("\n❌ Произошла ошибка при выполнении скрипта!");
+
+    if (error.migrationFile) {
+      console.error(`📂 Файл миграции: ${error.migrationFile}`);
+    }
+
+    console.error(`💬 Сообщение: ${error.message}`);
+
+    // Вычисляем строку по позиции символа от pg
+    if (error.position && error.migrationSql) {
+      const pos = parseInt(error.position);
+      const sqlText = error.migrationSql;
+
+      // Считаем номер строки
+      const linesUpToError = sqlText.substring(0, pos).split("\n");
+      const lineNumber = linesUpToError.length;
+
+      // Достаем саму строку из текста
+      const errorLineText = linesUpToError[lineNumber - 1] || "";
+
+      console.error(`📍 Ошибка в строке: ${lineNumber} (символ № ${pos})`);
+      console.error(`🔍 Контекст строки:\n   > ${errorLineText.trim()}`);
+    }
+
     process.exit(1);
   } finally {
     client.release();
@@ -90,4 +120,5 @@ async function resetDatabase() {
   }
 }
 
+// Запуск функции
 resetDatabase();
