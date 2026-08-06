@@ -18,7 +18,7 @@ export function Login() {
     password?: string;
   }>({});
 
-  const from = (location.state as { from?: Location })?.from?.pathname || '/applications';
+  const from = (location.state as { from?: Location })?.from?.pathname || '/';
 
   /**
    * Обработка отправки формы

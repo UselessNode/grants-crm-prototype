@@ -101,7 +101,7 @@ export function Register() {
     );
 
     if (result.success) {
-      navigate('/applications', { replace: true });
+      navigate('/', { replace: true });
     }
   };
 
