@@ -1,0 +1,7 @@
+$kind: http-request
+method: DELETE
+url: '{{baseUrl}}/api/documents/categories/{{categoryId}}'
+order: 12000
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

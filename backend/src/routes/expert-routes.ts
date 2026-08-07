@@ -1,29 +1,16 @@
 import { Router } from 'express';
 import { ExpertController } from '../controllers/expert-controller';
-import { authMiddleware } from '../middleware/auth';
-import { expertMiddleware } from '../middleware/auth';
+import { authMiddleware, expertMiddleware } from '../middleware/auth';
 
 const router = Router();
 
-/**
- * Маршруты для экспертов
- * Все маршруты требуют аутентификации и роли эксперта
- */
-
-// Middleware для всех маршрутов
+// Только authMiddleware глобально, expertMiddleware — индивидуально
 router.use(authMiddleware);
-router.use(expertMiddleware);
 
-// Профиль эксперта
-router.get('/expert/profile', ExpertController.profile);
-
-// Список заявок эксперта
-router.get('/expert/applications', ExpertController.getApplications);
-
-// Детальный просмотр заявки
-router.get('/expert/applications/:id', ExpertController.getApplicationDetail);
-
-// Вынесение вердикта
-router.post('/expert/applications/:id/verdict', ExpertController.submitVerdict);
+router.get('/expert/profile', expertMiddleware, ExpertController.profile);
+router.get('/expert/applications', expertMiddleware, ExpertController.getApplications);
+router.get('/expert/applications/:id', expertMiddleware, ExpertController.getApplicationDetail);
+router.post('/expert/applications/:id/draft', expertMiddleware, ExpertController.saveDraft);
+router.post('/expert/applications/:id/finalize', expertMiddleware, ExpertController.finalizeReview);
 
 export default router;

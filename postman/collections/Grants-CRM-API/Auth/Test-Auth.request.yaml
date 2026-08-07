@@ -1,0 +1,5 @@
+$kind: http-request
+name: Test-Auth
+url: "{{baseUrl}}/sapi/auth/test"
+method: POST
+order: 2244401096035265

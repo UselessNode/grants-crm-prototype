@@ -88,8 +88,11 @@ export function Documents() {
 
     setUploadLoading(true);
     try {
-      await adminService.createDocument(formData);
-
+      // Преобразуем category_id в число
+      await adminService.createDocument({
+        ...formData,
+        category_id: Number(formData.category_id),
+      });
       // Очищаем форму и закрываем модалку
       setFormData({ title: '', category_id: '', file: null });
       setShowAddModal(false);

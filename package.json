@@ -18,15 +18,11 @@
     "type-check:frontend": "cd frontend && npx tsc --noEmit",
     "type-check:backend": "cd backend && npx tsc --noEmit",
     "lint": "cd frontend && npx eslint src --ext .ts,.tsx",
-    "db:reset": "node scripts/reset-db.js",
     "db:seed": "node scripts/seed.js",
-    "db:migrate": "node scripts/migrate.js",
+    "db:migrate": "npx prisma migrate deploy",
+    "db:reset": "cd backend && npx prisma migrate reset",
     "db:rebuild": "npm run db:reset && npm run db:seed",
-    "migrate": "node scripts/migrate.js",
-    "seed": "node scripts/seed.js",
-    "seed:docs": "node scripts/seed-docs.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky install"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "workspaces": [
     "frontend",
@@ -34,7 +30,7 @@
   ],
   "devDependencies": {
     "@types/html2pdf.js": "^0.10.0",
-    "concurrently": "^8.2.2",
+    "concurrently": "^10.0.4",
     "cross-env": "^7.0.3",
     "husky": "^9.0.11"
   },

@@ -2,8 +2,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ApplicationsList } from './pages/applications-list';
 import { ApplicationForm } from './pages/application-form';
-import { ApplicationView } from './pages/application-view';
+
+import { ApplicationView } from './components/application-view/index';
 import { ExpertApplicationView } from './pages/expert-application-view';
+
 import { AdminPanel } from './pages/admin-panel';
 import { AdminUsers } from './pages/admin-users';
 import { AdminExperts } from './pages/admin-experts';
@@ -124,6 +126,8 @@ export function App() {
             </PrivateRoute>
           }
         />
+
+        {/* Маршруты эксперта */}
         <Route
           path="/expert/applications/:id"
           element={

@@ -20,9 +20,37 @@ export interface ExpertApplicationsResponse {
 export interface SubmitVerdictData {
   verdict: 'approved' | 'rejected';
   comment?: string | null;
+  isDraft?: boolean; // Для универсального метода
 }
 
 export interface SubmitVerdictResponse {
+  success: boolean;
+  message: string;
+  data: {
+    verdict: 'approved' | 'rejected' | 'draft';
+    comment: string | null;
+  };
+}
+
+export interface SaveDraftData {
+  comment?: string | null;
+}
+
+export interface SaveDraftResponse {
+  success: boolean;
+  message: string;
+  data: {
+    review_status: string;
+    comment: string | null;
+  };
+}
+
+export interface FinalizeReviewData {
+  verdict: 'approved' | 'rejected';
+  comment?: string | null;
+}
+
+export interface FinalizeReviewResponse {
   success: boolean;
   message: string;
   data: {
@@ -78,6 +106,28 @@ export const expertService = {
   async submitVerdict(applicationId: number, data: SubmitVerdictData): Promise<SubmitVerdictResponse> {
     const response = await api.post<SubmitVerdictResponse>(
       `/expert/applications/${applicationId}/verdict`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Сохранить черновик вердикта
+   */
+  async saveDraft(applicationId: number, data: SaveDraftData): Promise<SaveDraftResponse> {
+    const response = await api.post<SaveDraftResponse>(
+      `/expert/applications/${applicationId}/draft`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Завершить экспертизу (финальный вердикт)
+   */
+  async finalizeReview(applicationId: number, data: FinalizeReviewData): Promise<FinalizeReviewResponse> {
+    const response = await api.post<FinalizeReviewResponse>(
+      `/expert/applications/${applicationId}/finalize`,
       data
     );
     return response.data;

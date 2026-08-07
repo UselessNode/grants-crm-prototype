@@ -1,15 +1,14 @@
 import { Request, Response } from 'express';
-import { AdditionalMaterialModel, type FileInfo, type FileCategory } from '../models/additional-material.model';
 import { AuthRequest } from '../middleware/auth';
-import pool from '../config/database';
+import { prisma } from '../config/database'; // Пути не меняй, они корректны
 import path from 'path';
 import fs from 'fs';
 
-// Базовая папка для загрузки файлов
+// Базовые папки для загрузки
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads', 'documents');
 const TEMPLATES_DIR = path.join(__dirname, '..', '..', 'uploads', 'templates');
 
-// Убедимся что папки существуют
+// Убедимся, что папки существуют
 [UPLOADS_DIR, TEMPLATES_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -17,34 +16,57 @@ const TEMPLATES_DIR = path.join(__dirname, '..', '..', 'uploads', 'templates');
 });
 
 /**
- * Контроллер для управления документами
+ * Контроллер для управления документами (Prisma)
  */
 export class DocumentController {
+
   /**
-   * Получить список документов
-   * GET /api/documents
+   * Получить список документов с пагинацией и фильтрацией
+   * GET /api/documents?page=1&limit=20&category_id=2&search=шаблон
    */
   static async getDocuments(req: AuthRequest, res: Response) {
     try {
-      const { page, limit, category_id, is_template, template_type } = req.query;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const categoryId = req.query.category_id ? parseInt(req.query.category_id as string) : undefined;
+      const search = req.query.search as string | undefined;
 
-      // Проверка и валидация параметров
-      const pageNum = page ? parseInt(page as string, 10) : 1;
-      const limitNum = limit ? parseInt(limit as string, 10) : 20;
-      const categoryId = category_id && !isNaN(parseInt(category_id as string, 10))
-        ? parseInt(category_id as string, 10)
-        : undefined;
+      const skip = (page - 1) * limit;
 
-      const result = await AdditionalMaterialModel.findAllFiles({
-        page: isNaN(pageNum) ? 1 : pageNum,
-        limit: isNaN(limitNum) ? 20 : limitNum,
-        category_id: categoryId,
-        search: template_type as string | undefined,
+      // Строим условия WHERE
+      const where: any = {
+        deleted_at: null,
+      };
+      if (categoryId && !isNaN(categoryId)) {
+        where.category_id = categoryId;
+      }
+      if (search) {
+        where.name = { contains: search, mode: 'insensitive' };
+      }
+
+      // Получаем общее количество для пагинации
+      const total = await prisma.files.count({ where });
+
+      // Получаем файлы
+      const files = await prisma.files.findMany({
+        where,
+        include: {
+          file_categories: true,
+        },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
       });
 
       res.json({
         success: true,
-        ...result,
+        data: files,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
       });
     } catch (error) {
       console.error('Error fetching documents:', error);
@@ -57,46 +79,37 @@ export class DocumentController {
   }
 
   /**
-   * Получить документ по ID (с бинарными данными для скачивания)
+   * Скачать файл по ID
    * GET /api/documents/:id/download
    */
   static async downloadDocument(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
-      const document = await AdditionalMaterialModel.getFileById(parseInt(id));
-
-      if (!document) {
-        return res.status(404).json({
-          success: false,
-          message: 'Документ не найден',
-        });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, message: 'Некорректный ID' });
       }
 
-      // Определяем путь к файлу
-      if (!document.file_path) {
-        return res.status(404).json({
-          success: false,
-          message: 'Путь к файлу не указан',
-        });
+      const file = await prisma.files.findUnique({
+        where: { id, deleted_at: null },
+      });
+
+      if (!file) {
+        return res.status(404).json({ success: false, message: 'Документ не найден' });
       }
 
-      const filePath = document.is_template
-        ? path.join(TEMPLATES_DIR, document.file_path)
-        : path.join(UPLOADS_DIR, document.file_path);
+      if (!file.path) {
+        return res.status(404).json({ success: false, message: 'Путь к файлу не указан' });
+      }
 
-      // Проверяем существование файла
+      // Определяем полный путь (файлы могут лежать в documents/ или templates/)
+      const filePath = path.join(UPLOADS_DIR, file.path);
+      // Проверяем, существует ли файл
       if (!fs.existsSync(filePath)) {
-        return res.status(404).json({
-          success: false,
-          message: 'Файл не найден на сервере',
-        });
+        return res.status(404).json({ success: false, message: 'Файл не найден на сервере' });
       }
 
-      // Увеличиваем счётчик скачиваний
-      // await AdditionalMaterialModel.incrementDownloadCount(parseInt(id));
-
-      // Отправляем файл
-      res.download(filePath, document.file_name);
+      // Отправляем файл (используем оригинальное имя из БД)
+      res.download(filePath, file.name);
     } catch (error) {
       console.error('Error downloading document:', error);
       res.status(500).json({
@@ -108,25 +121,26 @@ export class DocumentController {
   }
 
   /**
-   * Получить документ по ID (без бинарных данных)
+   * Получить метаданные документа по ID (без содержимого)
    * GET /api/documents/:id
    */
   static async getDocument(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
-      const document = await AdditionalMaterialModel.getFileById(parseInt(id));
-
-      if (!document) {
-        return res.status(404).json({
-          success: false,
-          message: 'Документ не найден',
-        });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, message: 'Некорректный ID' });
       }
 
-      res.json({
-        success: true,
-        data: document,
+      const file = await prisma.files.findUnique({
+        where: { id, deleted_at: null },
+        include: { file_categories: true },
       });
+
+      if (!file) {
+        return res.status(404).json({ success: false, message: 'Документ не найден' });
+      }
+
+      res.json({ success: true, data: file });
     } catch (error) {
       console.error('Error fetching document:', error);
       res.status(500).json({
@@ -140,295 +154,247 @@ export class DocumentController {
   /**
    * Загрузить новый документ
    * POST /api/documents
+   * Тело: multipart/form-data с полями: file, title, description, category_id, is_template (boolean)
    */
   static async createDocument(req: AuthRequest, res: Response) {
-    const client = await pool.connect();
     try {
-      const {
-        title,
-        description,
-        category_id,
-        is_template,
-        template_type,
-      } = req.body;
+      const { title, description, category_id, is_template } = req.body;
+      const file = req.file;
 
-      // Проверка наличия файла
-      if (!req.file) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({
-          success: false,
-          message: 'Файл не загружен',
-        });
+      if (!file) {
+        return res.status(400).json({ success: false, message: 'Файл не загружен' });
       }
 
-      // Валидация
       if (!title) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({
-          success: false,
-          message: 'Название документа обязательно',
-        });
+        return res.status(400).json({ success: false, message: 'Название документа обязательно' });
       }
 
-      // Проверка размера файла (макс 10 МБ)
-      const maxSize = 10 * 1024 * 1024; // 10 MB
-      if (req.file.size > maxSize) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({
-          success: false,
-          message: 'Размер файла не должен превышать 10 МБ',
-        });
+      // Проверка размера (10 МБ)
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        return res.status(400).json({ success: false, message: 'Размер файла не должен превышать 10 МБ' });
       }
 
-      // Генерируем уникальное имя файла
+      // Генерируем уникальное имя файла на диске
       const timestamp = Date.now();
-      const ext = path.extname(req.file.originalname);
-      const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}${ext}`;
+      const ext = path.extname(file.originalname);
+      const diskFileName = `${timestamp}_${Math.random().toString(36).substring(7)}${ext}`;
 
-      // Определяем папку (шаблон или обычный документ)
-      const isTemplate = is_template === 'true' || false;
+      // Определяем папку назначения (шаблоны или документы)
+      const isTemplate = is_template === 'true' || is_template === true;
       const targetDir = isTemplate ? TEMPLATES_DIR : UPLOADS_DIR;
-      const filePath = path.join(targetDir, fileName);
+      const relativePath = isTemplate ? `templates/${diskFileName}` : `documents/${diskFileName}`;
+      const fullPath = path.join(targetDir, diskFileName);
 
       // Сохраняем файл на диск
-      fs.writeFileSync(filePath, req.file.buffer);
+      fs.writeFileSync(fullPath, file.buffer);
 
-      const document = await AdditionalMaterialModel.createFile({
-        name: title,
-        description: description || null,
-        category_id: category_id ? parseInt(category_id) : null,
-        file_path: fileName,
-        file_name: req.file.originalname,
-        file_type: req.file.mimetype,
-        file_bytes_size: req.file.size,
-        created_by: req.user?.userId,
+      // Создаём запись в БД
+      const newFile = await prisma.files.create({
+        data: {
+          name: title,
+          description: description || null,
+          file_type: file.mimetype || null,
+          category_id: category_id ? parseInt(category_id) : null,
+          path: relativePath,
+        },
       });
-
-      await client.query('COMMIT');
 
       res.status(201).json({
         success: true,
         message: 'Документ успешно загружен',
-        data: document,
+        data: newFile,
       });
     } catch (error) {
-      await client.query('ROLLBACK');
       console.error('Error creating document:', error);
       res.status(500).json({
         success: false,
         message: 'Ошибка при загрузке документа',
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
       });
-    } finally {
-      client.release();
     }
   }
 
   /**
-   * Обновить документ (метаданные)
+   * Обновить метаданные документа (без замены файла)
    * PUT /api/documents/:id
    */
   static async updateDocument(req: AuthRequest, res: Response) {
-    const client = await pool.connect();
     try {
-      const { id } = req.params;
-      const { title, description, category_id, is_template, template_type } = req.body;
-
-      await client.query('BEGIN');
-
-      const document = await AdditionalMaterialModel.update(parseInt(id), {
-        name: title,
-        description,
-        category_id,
-      });
-
-      if (!document) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({
-          success: false,
-          message: 'Документ не найден',
-        });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, message: 'Некорректный ID' });
       }
 
-      await client.query('COMMIT');
+      const { title, description, category_id } = req.body;
+
+      // Проверяем существование документа
+      const existing = await prisma.files.findUnique({
+        where: { id, deleted_at: null },
+      });
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Документ не найден' });
+      }
+
+      const updated = await prisma.files.update({
+        where: { id },
+        data: {
+          name: title || undefined,
+          description: description || undefined,
+          category_id: category_id ? parseInt(category_id) : undefined,
+        },
+      });
 
       res.json({
         success: true,
-        message: 'Документ успешно обновлён',
-        data: document,
+        message: 'Документ обновлён',
+        data: updated,
       });
     } catch (error) {
-      await client.query('ROLLBACK');
       console.error('Error updating document:', error);
       res.status(500).json({
         success: false,
         message: 'Ошибка при обновлении документа',
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
       });
-    } finally {
-      client.release();
     }
   }
 
   /**
-   * Заменить файл документа
+   * Заменить файл документа (новый бинарный файл)
    * PUT /api/documents/:id/file
    */
   static async updateDocumentFile(req: AuthRequest, res: Response) {
-    const client = await pool.connect();
     try {
-      const { id } = req.params;
-
-      // Проверка наличия файла
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: 'Файл не загружен',
-        });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, message: 'Некорректный ID' });
       }
 
-      await client.query('BEGIN');
-
-      // Проверка размера файла (макс 10 МБ)
-      const maxSize = 10 * 1024 * 1024; // 10 MB
-      if (req.file.size > maxSize) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({
-          success: false,
-          message: 'Размер файла не должен превышать 10 МБ',
-        });
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ success: false, message: 'Файл не загружен' });
       }
 
-      // Получаем текущий документ для удаления старого файла
-      const currentDoc = await AdditionalMaterialModel.getFileById(parseInt(id));
-
-      if (!currentDoc) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({
-          success: false,
-          message: 'Документ не найден',
-        });
+      // Проверка размера
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        return res.status(400).json({ success: false, message: 'Размер файла не должен превышать 10 МБ' });
       }
 
-      // Генерируем уникальное имя файла
-      const timestamp = Date.now();
-      const ext = path.extname(req.file.originalname);
-      const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}${ext}`;
+      // Получаем текущий документ
+      const existing = await prisma.files.findUnique({
+        where: { id, deleted_at: null },
+      });
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Документ не найден' });
+      }
 
-      // В новой модели файлы хранятся в UPLOADS_DIR
-      const targetDir = UPLOADS_DIR;
-      const filePath = path.join(targetDir, fileName);
-
-      // Сохраняем новый файл
-      fs.writeFileSync(filePath, req.file.buffer);
-
-      // Удаляем старый файл
-      if (currentDoc.file_path) {
-        const oldPath = path.join(UPLOADS_DIR, currentDoc.file_path);
+      // Удаляем старый файл с диска, если он существует
+      if (existing.path) {
+        const oldPath = path.join(UPLOADS_DIR, existing.path);
         if (fs.existsSync(oldPath)) {
           fs.unlinkSync(oldPath);
         }
       }
 
-      const document = await AdditionalMaterialModel.update(parseInt(id), {
-        file_path: fileName,
-        file_name: req.file.originalname,
-        file_type: req.file.mimetype,
-        file_bytes_size: req.file.size,
-      });
+      // Генерируем новое имя файла
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      const diskFileName = `${timestamp}_${Math.random().toString(36).substring(7)}${ext}`;
 
-      await client.query('COMMIT');
+      // Определяем, был ли это шаблон (по наличию "templates/" в пути)
+      const isTemplate = existing.path?.startsWith('templates/') || false;
+      const targetDir = isTemplate ? TEMPLATES_DIR : UPLOADS_DIR;
+      const relativePath = isTemplate ? `templates/${diskFileName}` : `documents/${diskFileName}`;
+      const fullPath = path.join(targetDir, diskFileName);
+
+      // Сохраняем новый файл
+      fs.writeFileSync(fullPath, file.buffer);
+
+      // Обновляем запись в БД
+      const updated = await prisma.files.update({
+        where: { id },
+        data: {
+          name: file.originalname, // можно обновить имя, но обычно оставляем старое
+          file_type: file.mimetype || null,
+          path: relativePath,
+        },
+      });
 
       res.json({
         success: true,
-        message: 'Файл документа успешно обновлён',
-        data: document,
+        message: 'Файл документа успешно заменён',
+        data: updated,
       });
     } catch (error) {
-      await client.query('ROLLBACK');
       console.error('Error updating document file:', error);
       res.status(500).json({
         success: false,
-        message: 'Ошибка при обновлении файла документа',
+        message: 'Ошибка при замене файла',
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
       });
-    } finally {
-      client.release();
     }
   }
 
   /**
-   * Удалить документ
+   * Удалить документ (мягкое удаление + удаление файла с диска)
    * DELETE /api/documents/:id
    */
   static async deleteDocument(req: AuthRequest, res: Response) {
-    const client = await pool.connect();
     try {
-      const { id } = req.params;
-
-      await client.query('BEGIN');
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, message: 'Некорректный ID' });
+      }
 
       // Получаем документ для удаления файла
-      const doc = await AdditionalMaterialModel.getFileById(parseInt(id));
-
-      if (!doc) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({
-          success: false,
-          message: 'Документ не найден',
-        });
+      const existing = await prisma.files.findUnique({
+        where: { id, deleted_at: null },
+      });
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Документ не найден' });
       }
 
       // Удаляем файл с диска
-      if (doc.file_path) {
-        const filePath = path.join(UPLOADS_DIR, doc.file_path);
+      if (existing.path) {
+        const filePath = path.join(UPLOADS_DIR, existing.path);
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
       }
 
-      // Удаляем запись из БД
-      const deleted = await AdditionalMaterialModel.deleteFile(parseInt(id));
-
-      if (!deleted) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({
-          success: false,
-          message: 'Документ не найден',
-        });
-      }
-
-      await client.query('COMMIT');
+      // Мягкое удаление (устанавливаем deleted_at)
+      await prisma.files.update({
+        where: { id },
+        data: { deleted_at: new Date() },
+      });
 
       res.json({
         success: true,
-        message: 'Документ успешно удалён',
+        message: 'Документ удалён',
       });
     } catch (error) {
-      await client.query('ROLLBACK');
       console.error('Error deleting document:', error);
       res.status(500).json({
         success: false,
         message: 'Ошибка при удалении документа',
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
       });
-    } finally {
-      client.release();
     }
   }
 
   /**
-   * Получить категории документов
+   * Получить список категорий документов
    * GET /api/documents/categories
    */
   static async getCategories(req: AuthRequest, res: Response) {
     try {
-      const categories = await AdditionalMaterialModel.getFileCategories();
-
-      res.json({
-        success: true,
-        data: categories,
+      const categories = await prisma.file_categories.findMany({
+        where: { deleted_at: null },
+        orderBy: { name: 'asc' },
       });
+      res.json({ success: true, data: categories });
     } catch (error) {
       console.error('Error fetching categories:', error);
       res.status(500).json({
@@ -440,164 +406,159 @@ export class DocumentController {
   }
 
   /**
-   * Создать категорию документов
+   * Создать категорию
    * POST /api/documents/categories
    */
   static async createCategory(req: AuthRequest, res: Response) {
-    const client = await pool.connect();
     try {
-      const { name, description, sort_order } = req.body;
-
+      const { name, description } = req.body;
       if (!name) {
-        return res.status(400).json({
-          success: false,
-          message: 'Название категории обязательно',
-        });
+        return res.status(400).json({ success: false, message: 'Название категории обязательно' });
       }
 
-      await client.query('BEGIN');
-
-      const category = await AdditionalMaterialModel.createFileCategory({
-        name,
-        description,
+      const category = await prisma.file_categories.create({
+        data: {
+          name,
+          description: description || null,
+        },
       });
-
-      await client.query('COMMIT');
 
       res.status(201).json({
         success: true,
-        message: 'Категория успешно создана',
+        message: 'Категория создана',
         data: category,
       });
-    } catch (error) {
-      await client.query('ROLLBACK');
+    } catch (error: any) {
+      // Если имя уже существует, Prisma выбросит ошибку unique constraint
+      if (error.code === 'P2002') {
+        return res.status(400).json({
+          success: false,
+          message: 'Категория с таким именем уже существует',
+        });
+      }
       console.error('Error creating category:', error);
       res.status(500).json({
         success: false,
         message: 'Ошибка при создании категории',
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
       });
-    } finally {
-      client.release();
     }
   }
 
   /**
-   * Обновить категорию документов
+   * Обновить категорию
    * PUT /api/documents/categories/:id
    */
   static async updateCategory(req: AuthRequest, res: Response) {
-    const client = await pool.connect();
     try {
-      const { id } = req.params;
-      const { name, description, sort_order } = req.body;
-
-      await client.query('BEGIN');
-
-      const category = await AdditionalMaterialModel.updateCategory(parseInt(id), {
-        name,
-        description,
-      });
-
-      if (!category) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({
-          success: false,
-          message: 'Категория не найдена',
-        });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, message: 'Некорректный ID' });
       }
 
-      await client.query('COMMIT');
+      const { name, description } = req.body;
+      if (!name) {
+        return res.status(400).json({ success: false, message: 'Название категории обязательно' });
+      }
+
+      // Проверяем существование
+      const existing = await prisma.file_categories.findUnique({
+        where: { id, deleted_at: null },
+      });
+      if (!existing) {
+        return res.status(404).json({ success: false, message: 'Категория не найдена' });
+      }
+
+      const updated = await prisma.file_categories.update({
+        where: { id },
+        data: { name, description },
+      });
 
       res.json({
         success: true,
-        message: 'Категория успешно обновлена',
-        data: category,
+        message: 'Категория обновлена',
+        data: updated,
       });
-    } catch (error) {
-      await client.query('ROLLBACK');
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        return res.status(400).json({
+          success: false,
+          message: 'Категория с таким именем уже существует',
+        });
+      }
       console.error('Error updating category:', error);
       res.status(500).json({
         success: false,
         message: 'Ошибка при обновлении категории',
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
       });
-    } finally {
-      client.release();
     }
   }
 
   /**
-   * Удалить категорию документов
+   * Удалить категорию (только если в ней нет документов)
    * DELETE /api/documents/categories/:id
    */
   static async deleteCategory(req: AuthRequest, res: Response) {
-    const client = await pool.connect();
     try {
-      const { id } = req.params;
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ success: false, message: 'Некорректный ID' });
+      }
 
-      await client.query('BEGIN');
+      // Проверяем, есть ли файлы в этой категории
+      const count = await prisma.files.count({
+        where: { category_id: id, deleted_at: null },
+      });
 
-      // Проверяем, есть ли документы в этой категории
-      const docsCheck = await client.query(
-        'SELECT COUNT(*) FROM documents WHERE category_id = $1',
-        [parseInt(id)]
-      );
-
-      const docsCount = parseInt(docsCheck.rows[0].count);
-
-      if (docsCount > 0) {
-        await client.query('ROLLBACK');
+      if (count > 0) {
         return res.status(400).json({
           success: false,
-          message: `Нельзя удалить категорию: в ней находится ${docsCount} документ(ов)`,
+          message: `Нельзя удалить категорию: в ней находится ${count} документ(ов)`,
         });
       }
 
-      const deleted = await AdditionalMaterialModel.deleteCategory(parseInt(id));
-
-      if (!deleted) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({
-          success: false,
-          message: 'Категория не найдена',
-        });
-      }
-
-      await client.query('COMMIT');
+      // Мягкое удаление категории
+      await prisma.file_categories.update({
+        where: { id },
+        data: { deleted_at: new Date() },
+      });
 
       res.json({
         success: true,
-        message: 'Категория успешно удалена',
+        message: 'Категория удалена',
       });
     } catch (error) {
-      await client.query('ROLLBACK');
       console.error('Error deleting category:', error);
       res.status(500).json({
         success: false,
         message: 'Ошибка при удалении категории',
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
       });
-    } finally {
-      client.release();
     }
   }
 
   /**
-   * Получить шаблоны согласий
+   * Получить шаблоны по типу (устаревший эндпоинт, можно заменить на фильтр по категории)
    * GET /api/documents/templates/:type
    */
   static async getTemplates(req: AuthRequest, res: Response) {
     try {
       const { type } = req.params;
-
-      // const templates = await AdditionalMaterialModel.getTemplatesByType(type);
-      const templates = []; // В новой модели шаблоны пока не реализованы
-
-      res.json({
-        success: true,
-        data: templates,
+      // В новой логике шаблоны — это файлы с определённой категорией или именем
+      // Например, можно искать по имени, содержащему "шаблон" или по категории "Шаблоны"
+      const templates = await prisma.files.findMany({
+        where: {
+          deleted_at: null,
+          name: { contains: 'шаблон', mode: 'insensitive' },
+          // или можно фильтровать по категории с id=2 (шаблоны)
+          // category_id: 2,
+        },
+        include: { file_categories: true },
+        orderBy: { created_at: 'desc' },
       });
+
+      res.json({ success: true, data: templates });
     } catch (error) {
       console.error('Error fetching templates:', error);
       res.status(500).json({

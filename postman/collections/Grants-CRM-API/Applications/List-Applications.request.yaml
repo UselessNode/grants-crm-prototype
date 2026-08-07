@@ -1,0 +1,21 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/applications'
+order: 1000
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+queryParams:
+  - key: page
+    value: '1'
+  - key: limit
+    value: '10'
+  - key: search
+    value: ''
+    disabled: true
+  - key: direction_id
+    value: ''
+    disabled: true
+  - key: status_id
+    value: ''
+    disabled: true

@@ -1,831 +1,366 @@
 import { Request, Response } from 'express';
-import { UserModel } from '../models/user';
-import { ApplicationModel } from '../models/application.model';
+import bcrypt from 'bcryptjs';
+import { prisma } from '../config/database';
+import { Prisma, ReviewStatus } from '../generated/prisma/client';
 import { AuthRequest } from '../middleware/auth';
-import pool from '../config/database';
 
-/**
- * Контроллер для админ-панели
- */
 export class AdminController {
-  /**
-   * Получить статистику для админ-панели
-   * GET /api/admin/stats
-   */
   static async stats(req: AuthRequest, res: Response) {
     try {
-      // Получаем общую статистику
       const [usersCount, applicationsCount] = await Promise.all([
-        UserModel.findAll({ page: 1, limit: 1 }),
-        ApplicationModel.findAll({ page: 1, limit: 1 }),
+        prisma.users.count({ where: { deleted_at: null } }),
+        prisma.applications.count({ where: { deleted_at: null } }),
       ]);
 
       res.json({
         success: true,
-        data: {
-          users: usersCount.pagination.total,
-          applications: applicationsCount.pagination.total,
-        },
+        data: { users: usersCount, applications: applicationsCount },
       });
     } catch (error) {
       console.error('Error fetching admin stats:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении статистики',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при получении статистики' });
     }
   }
 
-  /**
-   * Получить список всех пользователей
-   * GET /api/admin/users
-   */
   static async getUsers(req: AuthRequest, res: Response) {
     try {
-      const { page, limit } = req.query;
+      const page = Number(req.query.page) || 1;
+      const limit = Number(req.query.limit) || 20;
+      const skip = (page - 1) * limit;
 
-      const result = await UserModel.findAll({
-        page: page ? parseInt(page as string) : 1,
-        limit: limit ? parseInt(limit as string) : 20,
-      });
+      const [total, data] = await Promise.all([
+        prisma.users.count({ where: { deleted_at: null } }),
+        prisma.users.findMany({
+          skip,
+          take: limit,
+          where: { deleted_at: null },
+          include: { roles: { select: { name: true } } },
+          orderBy: { created_at: 'desc' },
+        }),
+      ]);
 
-      res.json({
-        success: true,
-        ...result,
-      });
+      res.json({ success: true, data, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
     } catch (error) {
       console.error('Error fetching users:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении пользователей',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при получении пользователей' });
     }
   }
 
-  /**
-   * Получить все заявки (для админ-панели)
-   * GET /api/admin/applications
-   */
   static async getApplications(req: AuthRequest, res: Response) {
     try {
-      const { page, limit, search, direction_id, status_id } = req.query;
+      const page = Number(req.query.page) || 1;
+      const limit = Number(req.query.limit) || 20;
+      const { search, direction_id, status_id } = req.query;
+      const skip = (page - 1) * limit;
 
-      const result = await ApplicationModel.findAll({
-        page: page ? parseInt(page as string) : 1,
-        limit: limit ? parseInt(limit as string) : 20,
-        search: search as string | undefined,
-        direction_id: direction_id ? parseInt(direction_id as string) : undefined,
-        status_id: status_id ? parseInt(status_id as string) : undefined,
-        userRole: 'admin',
-      });
+      const where: Prisma.applicationsWhereInput = { deleted_at: null };
+      if (search) where.title = { contains: search as string, mode: 'insensitive' };
+      if (direction_id) where.direction_id = Number(direction_id);
+      if (status_id) where.status_id = Number(status_id);
 
-      res.json({
-        success: true,
-        ...result,
-      });
+      const [total, data] = await Promise.all([
+        prisma.applications.count({ where }),
+        prisma.applications.findMany({
+          skip,
+          take: limit,
+          where,
+          orderBy: { created_at: 'desc' },
+          include: {
+            users: { select: { surname: true, name: true, email: true } },
+            application_statuses: { select: { name: true } },
+            directions: { select: { name: true } },
+          },
+        }),
+      ]);
+
+      res.json({ success: true, data, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
     } catch (error) {
       console.error('Error fetching applications:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении заявок',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при получении заявок' });
     }
   }
 
-  /**
-   * Получить все направления
-   * GET /api/admin/directions
-   */
   static async getDirections(req: AuthRequest, res: Response) {
-    try {
-      const directions = await ApplicationModel.getDirections();
-
-      res.json({
-        success: true,
-        data: directions,
-      });
-    } catch (error) {
-      console.error('Error fetching directions:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении направлений',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
-    }
+    const data = await prisma.directions.findMany({ where: { deleted_at: null }, orderBy: { name: 'asc' } });
+    res.json({ success: true, data });
   }
 
-  /**
-   * Получить все тендеры (конкурсы)
-   * GET /api/admin/tenders
-   */
   static async getTenders(req: AuthRequest, res: Response) {
-    try {
-      const tenders = await ApplicationModel.getTenders();
-
-      res.json({
-        success: true,
-        data: tenders,
-      });
-    } catch (error) {
-      console.error('Error fetching tenders:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении тендеров',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
-    }
+    const data = await prisma.tenders.findMany({ where: { deleted_at: null }, orderBy: { name: 'asc' } });
+    res.json({ success: true, data });
   }
 
-  /**
-   * Создать направление
-   * POST /api/admin/directions
-   */
   static async createDirection(req: AuthRequest, res: Response) {
     try {
       const { name, description } = req.body;
-      if (!name || typeof name !== 'string') {
-        return res.status(400).json({ success: false, message: 'Название направления обязательно' });
-      }
+      if (!name) return res.status(400).json({ success: false, message: 'Название обязательно' });
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const result = await client.query(`
-          INSERT INTO directions (name, description)
-          VALUES ($1, $2)
-          RETURNING *
-        `, [name, description || null]);
-        await client.query('COMMIT');
-
-        res.json({ success: true, data: result.rows[0] });
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
-      }
+      const data = await prisma.directions.create({ data: { name, description: description || null } });
+      res.json({ success: true, data });
     } catch (error) {
       console.error('Error creating direction:', error);
-      res.status(500).json({ success: false, message: 'Ошибка при создании направления', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+      res.status(500).json({ success: false, message: 'Ошибка при создании направления' });
     }
   }
 
-  /**
-   * Обновить направление
-   * PUT /api/admin/directions/:id
-   */
   static async updateDirection(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
+      const id = Number(req.params.id);
       const { name, description } = req.body;
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const result = await client.query(`
-          UPDATE directions
-          SET name = $1, description = $2, updated_at = CURRENT_TIMESTAMP
-          WHERE id = $3
-          RETURNING *
-        `, [name || null, description || null, parseInt(id)]);
-
-        if (result.rows.length === 0) {
-          await client.query('ROLLBACK');
-          return res.status(404).json({ success: false, message: 'Направление не найдено' });
-        }
-
-        await client.query('COMMIT');
-        res.json({ success: true, data: result.rows[0] });
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
-      }
+      const data = await prisma.directions.update({
+        where: { id },
+        data: { name, description: description || null, updated_at: new Date() },
+      });
+      res.json({ success: true, data });
     } catch (error) {
-      console.error('Error updating direction:', error);
-      res.status(500).json({ success: false, message: 'Ошибка при обновлении направления', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+      if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Не найдено' });
+      res.status(500).json({ success: false, message: 'Ошибка при обновлении' });
     }
   }
 
-  /**
-   * Удалить направление
-   * DELETE /api/admin/directions/:id
-   */
   static async deleteDirection(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        // Проверяем связанные заявки
-        const check = await client.query('SELECT COUNT(*) FROM applications WHERE direction_id = $1', [parseInt(id)]);
-        const count = parseInt(check.rows[0].count);
-        if (count > 0) {
-          await client.query('ROLLBACK');
-          return res.status(400).json({ success: false, message: `Нельзя удалить направление: использовано в ${count} заявке(ах)` });
-        }
+      const id = Number(req.params.id);
 
-        const result = await client.query('DELETE FROM directions WHERE id = $1 RETURNING *', [parseInt(id)]);
-        if (result.rows.length === 0) {
-          await client.query('ROLLBACK');
-          return res.status(404).json({ success: false, message: 'Направление не найдено' });
-        }
-
-        await client.query('COMMIT');
-        res.json({ success: true });
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
+      // Проверка на связанные заявки
+      const count = await prisma.applications.count({ where: { direction_id: id, deleted_at: null } });
+      if (count > 0) {
+        return res.status(400).json({ success: false, message: `Нельзя удалить: используется в ${count} заявке(ах)` });
       }
+
+      await prisma.directions.update({ where: { id }, data: { deleted_at: new Date() } });
+      res.json({ success: true });
     } catch (error) {
-      console.error('Error deleting direction:', error);
-      res.status(500).json({ success: false, message: 'Ошибка при удалении направления', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+      if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Не найдено' });
+      res.status(500).json({ success: false, message: 'Ошибка при удалении' });
     }
   }
 
-  /**
-   * Создать тендер (конкурс)
-   * POST /api/admin/tenders
-   */
   static async createTender(req: AuthRequest, res: Response) {
     try {
       const { name, description } = req.body;
-      if (!name || typeof name !== 'string') {
-        return res.status(400).json({ success: false, message: 'Название тендера обязательно' });
-      }
+      if (!name) return res.status(400).json({ success: false, message: 'Название обязательно' });
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const result = await client.query(`
-          INSERT INTO tenders (name, description)
-          VALUES ($1, $2)
-          RETURNING *
-        `, [name, description || null]);
-        await client.query('COMMIT');
-
-        res.json({ success: true, data: result.rows[0] });
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
-      }
+      const data = await prisma.tenders.create({ data: { name, description: description || null } });
+      res.json({ success: true, data });
     } catch (error) {
-      console.error('Error creating tender:', error);
-      res.status(500).json({ success: false, message: 'Ошибка при создании тендера', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+      res.status(500).json({ success: false, message: 'Ошибка при создании тендера' });
     }
   }
 
-  /**
-   * Обновить тендер
-   * PUT /api/admin/tenders/:id
-   */
   static async updateTender(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
+      const id = Number(req.params.id);
       const { name, description } = req.body;
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const result = await client.query(`
-          UPDATE tenders
-          SET name = $1, description = $2, updated_at = CURRENT_TIMESTAMP
-          WHERE id = $3
-          RETURNING *
-        `, [name || null, description || null, parseInt(id)]);
-
-        if (result.rows.length === 0) {
-          await client.query('ROLLBACK');
-          return res.status(404).json({ success: false, message: 'Тендер не найден' });
-        }
-
-        await client.query('COMMIT');
-        res.json({ success: true, data: result.rows[0] });
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
-      }
+      const data = await prisma.tenders.update({
+        where: { id },
+        data: { name, description: description || null, updated_at: new Date() },
+      });
+      res.json({ success: true, data });
     } catch (error) {
-      console.error('Error updating tender:', error);
-      res.status(500).json({ success: false, message: 'Ошибка при обновлении тендера', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+      if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Не найдено' });
+      res.status(500).json({ success: false, message: 'Ошибка при обновлении' });
     }
   }
 
-  /**
-   * Удалить тендер
-   * DELETE /api/admin/tenders/:id
-   */
   static async deleteTender(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        // Проверяем связанные заявки
-        const check = await client.query('SELECT COUNT(*) FROM applications WHERE tender_id = $1', [parseInt(id)]);
-        const count = parseInt(check.rows[0].count);
-        if (count > 0) {
-          await client.query('ROLLBACK');
-          return res.status(400).json({ success: false, message: `Нельзя удалить тендер: использовано в ${count} заявке(ах)` });
-        }
+      const id = Number(req.params.id);
 
-        const result = await client.query('DELETE FROM tenders WHERE id = $1 RETURNING *', [parseInt(id)]);
-        if (result.rows.length === 0) {
-          await client.query('ROLLBACK');
-          return res.status(404).json({ success: false, message: 'Тендер не найден' });
-        }
-
-        await client.query('COMMIT');
-        res.json({ success: true });
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
+      const count = await prisma.applications.count({ where: { tender_id: id, deleted_at: null } });
+      if (count > 0) {
+        return res.status(400).json({ success: false, message: `Нельзя удалить: используется в ${count} заявке(ах)` });
       }
+
+      await prisma.tenders.update({ where: { id }, data: { deleted_at: new Date() } });
+      res.json({ success: true });
     } catch (error) {
-      console.error('Error deleting tender:', error);
-      res.status(500).json({ success: false, message: 'Ошибка при удалении тендера', error: error instanceof Error ? error.message : 'Неизвестная ошибка' });
+      if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Не найдено' });
+      res.status(500).json({ success: false, message: 'Ошибка при удалении' });
     }
   }
 
-  /**
-   * Получить всех экспертов
-   * GET /api/admin/experts
-   */
   static async getExperts(req: AuthRequest, res: Response) {
     try {
-      const experts = await ApplicationModel.getExperts();
-
-      res.json({
-        success: true,
-        data: experts,
+      const expertRole = await prisma.roles.findUnique({ where: { name: 'expert' } });
+      const data = await prisma.users.findMany({
+        where: { role_id: expertRole?.id, deleted_at: null },
+        select: { id: true, surname: true, name: true, patronymic: true, email: true }
       });
+      res.json({ success: true, data });
     } catch (error) {
-      console.error('Error fetching experts:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении экспертов',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при получении экспертов' });
     }
   }
 
-  /**
-   * Назначить экспертов на заявку
-   * PUT /api/admin/applications/:id/experts
-   */
   static async assignExperts(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
+      const id = Number(req.params.id);
       const { expert1Id, expert2Id } = req.body;
 
-      const application = await ApplicationModel.assignExperts(
-        parseInt(id),
-        expert1Id ? parseInt(expert1Id) : null,
-        expert2Id ? parseInt(expert2Id) : null
-      );
+      const expertsToAssign = [expert1Id, expert2Id]
+        .filter(Boolean)
+        .map((expId: any) => ({
+          application_id: id,
+          expert_id: Number(expId),
+          review_status: ReviewStatus.draft,
+        }));
 
-      if (!application) {
-        return res.status(404).json({
-          success: false,
-          message: 'Заявка не найдена',
-        });
+      if (expertsToAssign.length === 0) {
+        return res.status(400).json({ success: false, message: 'Не указаны эксперты' });
       }
 
-      res.json({
-        success: true,
-        data: application,
+      // Удаляем все старые назначения для этой заявки
+      await prisma.application_reviews.deleteMany({
+        where: { application_id: id },
       });
+
+      // Вставляем новые
+      await prisma.application_reviews.createMany({
+        data: expertsToAssign,
+        skipDuplicates: true, // на всякий случай
+      });
+
+      res.json({ success: true, message: 'Эксперты назначены' });
     } catch (error) {
       console.error('Error assigning experts:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при назначении экспертов',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при назначении экспертов' });
     }
   }
 
-  /**
-   * Изменить статус заявки (только для администратора)
-   * POST /api/admin/applications/:id/change-status
-   */
   static async changeStatus(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
+      const id = Number(req.params.id);
       const { status_id } = req.body;
+      if (!status_id) return res.status(400).json({ success: false, message: 'status_id обязателен' });
 
-      if (!status_id || isNaN(parseInt(status_id))) {
-        return res.status(400).json({
-          success: false,
-          message: 'status_id обязателен и должен быть числом',
-        });
-      }
-
-      const application = await ApplicationModel.updateStatus(
-        parseInt(id),
-        parseInt(status_id),
-        'admin'
-      );
-
-      if (!application) {
-        return res.status(404).json({
-          success: false,
-          message: 'Заявка не найдена',
-        });
-      }
-
-      res.json({
-        success: true,
-        message: 'Статус заявки успешно изменён',
-        data: application,
+      const data = await prisma.applications.update({
+        where: { id },
+        data: { status_id: Number(status_id), updated_at: new Date() },
       });
+      res.json({ success: true, message: 'Статус изменён', data });
     } catch (error) {
-      console.error('Error changing application status:', error);
-      res.status(400).json({
-        success: false,
-        message: error instanceof Error ? error.message : 'Ошибка при изменении статуса заявки',
-      });
+      if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Заявка не найдена' });
+      res.status(500).json({ success: false, message: 'Ошибка при изменении статуса' });
     }
   }
 
-  /**
-   * Получить вердикты экспертов для заявки
-   * GET /api/admin/applications/:id/verdicts
-   */
   static async getVerdicts(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
-      const application = await ApplicationModel.findById(parseInt(id));
-
-      if (!application) {
-        return res.status(404).json({
-          success: false,
-          message: 'Заявка не найдена',
-        });
-      }
-
-      res.json({
-        success: true,
-        data: application.expert_verdicts || [],
+      const id = Number(req.params.id);
+      const data = await prisma.application_reviews.findMany({
+        where: { application_id: id, deleted_at: null },
+        include: { users: { select: { surname: true, name: true } } }, // users здесь - это эксперт
       });
+      res.json({ success: true, data });
     } catch (error) {
-      console.error('Error fetching verdicts:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении вердиктов',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при получении вердиктов' });
     }
   }
 
-  /**
-   * Добавить эксперта
-   * POST /api/admin/experts
-   * Может создать эксперта с пользователем (если переданы email и password) или только профиль эксперта
-   */
   static async addExpert(req: AuthRequest, res: Response) {
     try {
-      const { surname, name, patronymic, extra_info, email, password, specialization_id } = req.body;
+      const { surname, name, patronymic, email, password } = req.body;
+      if (!surname || !name) return res.status(400).json({ success: false, message: 'Фамилия и имя обязательны' });
 
-      if (!surname || !name) {
-        return res.status(400).json({
-          success: false,
-          message: 'Фамилия и имя обязательны',
-        });
+      const expertRole = await prisma.roles.findUnique({ where: { name: 'expert' } });
+      if (!expertRole) return res.status(500).json({ success: false, message: 'Роль expert не найдена в БД' });
+
+      let passwordHash = '';
+      if (email && password) {
+        passwordHash = await bcrypt.hash(password, 10);
+      } else {
+        return res.status(400).json({ success: false, message: 'Для создания эксперта нужны email и password' });
       }
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-
-        let expertResult;
-        let userResult = null;
-
-        // Если переданы email и password, создаем пользователя с ролью expert
-        if (email && password) {
-          // Проверяем, есть ли ужеrole 'expert'
-          const expertRole = await client.query('SELECT id FROM roles WHERE name = $1', ['expert']);
-          const expertRoleId = expertRole.rows[0]?.id;
-
-          if (!expertRoleId) {
-            await client.query('ROLLBACK');
-            return res.status(400).json({
-              success: false,
-              message: 'Роль "expert" не найдена в базе данных',
-            });
-          }
-
-          // Создаем пользователя с ролью expert
-          userResult = await client.query(`
-            INSERT INTO users (email, password_hash, surname, name, patronymic, role_id)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *
-          `, [email, password, surname, name, patronymic || null, expertRoleId]);
-
-          // Создаем профиль эксперта, связываем с пользователем
-          expertResult = await client.query(`
-            INSERT INTO experts (user_id, surname, name, patronymic, extra_info, specialization_id, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING *
-          `, [
-            userResult.rows[0].id,
-            surname,
-            name,
-            patronymic || null,
-            extra_info || null,
-            specialization_id || null,
-            'approved' // Статус по умолчанию
-          ]);
-
-          // Обновляем пользователя, чтобы добавить expert_id
-          await client.query(`
-            UPDATE users SET expert_id = $1 WHERE id = $2
-          `, [expertResult.rows[0].id, userResult.rows[0].id]);
-        } else {
-          // Создаем только профиль эксперта (без пользователя)
-          expertResult = await client.query(`
-            INSERT INTO experts (surname, name, patronymic, extra_info, specialization_id, status)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *
-          `, [surname, name, patronymic || null, extra_info || null, specialization_id || null, 'approved']);
-        }
-
-        await client.query('COMMIT');
-
-        res.json({
-          success: true,
-          message: 'Эксперт успешно добавлен',
-          data: expertResult.rows[0],
-        });
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
-      }
-    } catch (error) {
-      console.error('Error adding expert:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при добавлении эксперта',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      const data = await prisma.users.create({
+        data: {
+          email,
+          password_hash: passwordHash,
+          surname,
+          name,
+          patronymic: patronymic || null,
+          role_id: expertRole.id,
+        },
       });
+
+      res.json({ success: true, message: 'Эксперт успешно добавлен', data });
+    } catch (error) {
+      if ((error as any).code === 'P2002') return res.status(409).json({ success: false, message: 'Email уже занят' });
+      res.status(500).json({ success: false, message: 'Ошибка при добавлении эксперта' });
     }
   }
 
-  /**
-   * Обновить данные пользователя
-   * PUT /api/admin/users/:id
-   */
   static async updateUser(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
+      const id = Number(req.params.id);
       const { surname, name, patronymic, role_id } = req.body;
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-
-        const result = await client.query(`
-          UPDATE users
-          SET
-            surname = $1,
-            name = $2,
-            patronymic = $3,
-            role_id = $4,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = $5
-          RETURNING *
-        `, [surname || null, name || null, patronymic || null, role_id || 1, parseInt(id)]);
-
-        if (result.rows.length === 0) {
-          await client.query('ROLLBACK');
-          return res.status(404).json({
-            success: false,
-            message: 'Пользователь не найден',
-          });
-        }
-
-        await client.query('COMMIT');
-
-        res.json({
-          success: true,
-          message: 'Пользователь успешно обновлён',
-          data: result.rows[0],
-        });
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
-      }
-    } catch (error) {
-      console.error('Error updating user:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при обновлении пользователя',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      const data = await prisma.users.update({
+        where: { id },
+        data: { surname, name, patronymic, role_id: role_id || 1, updated_at: new Date() },
       });
+      res.json({ success: true, message: 'Пользователь обновлён', data });
+    } catch (error) {
+      if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Не найден' });
+      res.status(500).json({ success: false, message: 'Ошибка при обновлении' });
     }
   }
 
-  /**
-   * Удалить пользователя
-   * DELETE /api/admin/users/:id
-   */
   static async deleteUser(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
-      const userId = parseInt(id);
+      const id = Number(req.params.id);
+      if (req.user?.userId === id) return res.status(400).json({ success: false, message: 'Нельзя удалить самого себя' });
 
-      // Нельзя удалить самого себя
-      if (req.user && req.user.userId === userId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Нельзя удалить самого себя',
-        });
+      const count = await prisma.applications.count({ where: { owner_id: id, deleted_at: null } });
+      if (count > 0) {
+        return res.status(400).json({ success: false, message: `Нельзя удалить: у пользователя ${count} заявка(ок)` });
       }
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-
-        // Проверяем, есть ли у пользователя заявки
-        const applicationsCheck = await client.query(
-          'SELECT COUNT(*) FROM applications WHERE owner_id = $1',
-          [userId]
-        );
-
-        const applicationsCount = parseInt(applicationsCheck.rows[0].count);
-
-        if (applicationsCount > 0) {
-          await client.query('ROLLBACK');
-          return res.status(400).json({
-            success: false,
-            message: `Нельзя удалить пользователя: у него есть ${applicationsCount} заявка(ок)`,
-          });
-        }
-
-        // Мягкое удаление - устанавливаем deleted_at
-        await client.query(
-          'UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1',
-          [userId]
-        );
-
-        await client.query('COMMIT');
-
-        res.json({
-          success: true,
-          message: 'Пользователь успешно удалён',
-        });
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
-      }
+      await prisma.users.update({ where: { id }, data: { deleted_at: new Date() } });
+      res.json({ success: true, message: 'Пользователь удалён' });
     } catch (error) {
-      console.error('Error deleting user:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при удалении пользователя',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Не найден' });
+      res.status(500).json({ success: false, message: 'Ошибка при удалении' });
     }
   }
 
-  /**
-   * Обновить данные эксперта
-   * PUT /api/admin/experts/:id
-   */
+  // Обновление эксперта = обновление пользователя с ролью эксперта
   static async updateExpert(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
-      const { surname, name, patronymic, extra_info } = req.body;
+      const id = Number(req.params.id);
+      const { surname, name, patronymic } = req.body;
+      if (!surname || !name) return res.status(400).json({ success: false, message: 'Фамилия и имя обязательны' });
 
-      if (!surname || !name) {
-        return res.status(400).json({
-          success: false,
-          message: 'Фамилия и имя обязательны',
-        });
-      }
-
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-
-        const result = await client.query(`
-          UPDATE experts
-          SET
-            surname = $1,
-            name = $2,
-            patronymic = $3,
-            extra_info = $4,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = $5
-          RETURNING *
-        `, [surname, name, patronymic || null, extra_info || null, parseInt(id)]);
-
-        if (result.rows.length === 0) {
-          await client.query('ROLLBACK');
-          return res.status(404).json({
-            success: false,
-            message: 'Эксперт не найден',
-          });
-        }
-
-        await client.query('COMMIT');
-
-        res.json({
-          success: true,
-          message: 'Эксперт успешно обновлён',
-          data: result.rows[0],
-        });
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
-      }
-    } catch (error) {
-      console.error('Error updating expert:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при обновлении эксперта',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      const data = await prisma.users.update({
+        where: { id },
+        data: { surname, name, patronymic: patronymic || null, updated_at: new Date() },
       });
+      res.json({ success: true, message: 'Эксперт обновлён', data });
+    } catch (error) {
+      if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Не найден' });
+      res.status(500).json({ success: false, message: 'Ошибка при обновлении' });
     }
   }
 
-  /**
-   * Удалить эксперта
-   * DELETE /api/admin/experts/:id
-   */
   static async deleteExpert(req: AuthRequest, res: Response) {
     try {
-      const { id } = req.params;
-      const expertId = parseInt(id);
+      const id = Number(req.params.id);
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-
-        // Проверяем, назначен ли эксперт на заявки
-        const assignmentsCheck = await client.query(`
-          SELECT COUNT(*) FROM (
-            SELECT 1 FROM applications WHERE expert_1 = $1
-            UNION ALL
-            SELECT 1 FROM applications WHERE expert_2 = $1
-          ) AS assignments
-        `, [expertId]);
-
-        const assignmentsCount = parseInt(assignmentsCheck.rows[0].count);
-
-        if (assignmentsCount > 0) {
-          await client.query('ROLLBACK');
-          return res.status(400).json({
-            success: false,
-            message: `Нельзя удалить эксперта: он назначен на ${assignmentsCount} заявка(ок)`,
-          });
-        }
-
-        // Удаляем вердикты эксперта (каскадно)
-        await client.query('DELETE FROM expert_verdicts WHERE expert_id = $1', [expertId]);
-
-        // Удаляем эксперта
-        await client.query('DELETE FROM experts WHERE id = $1', [expertId]);
-
-        await client.query('COMMIT');
-
-        res.json({
-          success: true,
-          message: 'Эксперт успешно удалён',
-        });
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
+      // Проверяем, назначен ли эксперт на заявки (через таблицу reviews)
+      const count = await prisma.application_reviews.count({ where: { expert_id: id, deleted_at: null } });
+      if (count > 0) {
+        return res.status(400).json({ success: false, message: `Нельзя удалить: эксперт назначен на ${count} заявка(ок)` });
       }
+
+      // Мягкое удаление пользователя-эксперта
+      await prisma.users.update({ where: { id }, data: { deleted_at: new Date() } });
+      res.json({ success: true, message: 'Эксперт удалён' });
     } catch (error) {
-      console.error('Error deleting expert:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при удалении эксперта',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Не найден' });
+      res.status(500).json({ success: false, message: 'Ошибка при удалении' });
     }
   }
 }

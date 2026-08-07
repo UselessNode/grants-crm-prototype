@@ -1,0 +1,19 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/documents'
+order: 6000
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+body:
+  type: formdata
+  content:
+    - key: file
+      type: file
+      src: ''
+    - key: name
+      type: text
+      value: 'Название документа'
+    - key: category_id
+      type: text
+      value: '1'

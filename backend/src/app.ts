@@ -1,72 +1,49 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
-import { logger } from './middleware/logger';
-
-// Загрузка переменных окружения
-dotenv.config();
-
-// Инициализация Express
-const app = express();
-
-// Middleware
-app.use(helmet()); // Защита заголовков
-app.use(cors()); // Разрешение CORS
-
-app.use(logger);
-
-// Логирование только ошибок (4xx и 5xx)
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const status = res.statusCode;
-    if (status >= 400) {
-      const duration = Date.now() - start;
-      console.error(`[ERROR] ${req.method} ${req.url} ${status} - ${duration}ms`);
-    }
-  });
-  next();
-});
-
-// Установка кодировки UTF-8 для всех ответов
-app.use((req, res, next) => {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  next();
-});
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Базовый маршрут для проверки работы сервера
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
-});
-
-// Подключение маршрутов
+import { httpLogger, logger } from './utils/logger';
+import { constants } from './config/database';
 import authRoutes from './routes/auth-routes';
+import expertRoutes from './routes/expert-routes';
 import applicationRoutes from './routes/application-routes';
 import documentRoutes from './routes/document-routes';
 import adminRoutes from './routes/admin-routes';
-import expertRoutes from './routes/expert-routes';
 
-app.use('/api', authRoutes);
-app.use('/api', applicationRoutes);
-app.use('/api', documentRoutes);
-app.use('/api', adminRoutes);
-app.use('/api', expertRoutes);
+const app = express();
 
-// Обработка 404
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Маршрут не найден',
-  });
+app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true,
+  optionsSuccessStatus: 200,
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Подключаем чистый HTTP-логгер
+app.use(httpLogger);
+
+// Health check
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', message: 'Server is running' });
 });
 
-// Обработка ошибок
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
+app.use('/api', authRoutes);
+
+app.use('/api', applicationRoutes);
+app.use('/api', expertRoutes);
+app.use('/api', adminRoutes);
+app.use('/api', documentRoutes);
+
+// 404
+app.use((_req, res) => {
+  res.status(404).json({ success: false, message: 'Маршрут не найден' });
+});
+
+// Error handler
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error({ err }, 'Ошибка сервера');
   res.status(500).json({
     success: false,
     message: 'Внутренняя ошибка сервера',
@@ -74,28 +51,23 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
   });
 });
 
-// Порт из переменных окружения или по умолчанию
 const PORT = process.env.BACKEND_PORT || 3001;
 
-// Запуск сервера
-app.listen(PORT, () => {
-  console.log('\n========================================');
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log('========================================');
-  console.log('📝 Тестовые учётные данные:');
-  console.log('----------------------------------------');
-  console.log('Администратор (Сидоров Алексей Викторович):');
-  console.log('   Email: admin1@test.ru');
-  console.log('   Пароль: 123456');
-  console.log('----------------------------------------');
-  console.log('Обычный пользователь (Николаев Артём Сергеевич):');
-  console.log('   Email: user1@test.ru');
-  console.log('   Пароль: 123456');
-  console.log('----------------------------------------');
-  console.log('Эксперт (Иванов Пётр Сергеевич):');
-  console.log('   Email: expert1@test.ru');
-  console.log('   Пароль: 123456');
-  console.log('========================================\n');
-});
+const startServer = async () => {
+  try {
+    await constants.load();
+    app.listen(PORT, () => {
+      logger.info(`🚀 Сервер запущен на порту ${PORT}`);
+      logger.info('Администратор: admin1@test.ru / 123456');
+      logger.info('Эксперт: expert1@test.ru / 123456');
+      logger.info('Пользователь: user1@test.ru / 123456');
+    });
+  } catch (error) {
+    logger.error({ error }, 'Ошибка запуска сервера');
+    process.exit(1);
+  }
+};
+
+startServer();
 
 export default app;

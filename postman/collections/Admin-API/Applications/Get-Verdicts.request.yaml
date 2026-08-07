@@ -1,0 +1,7 @@
+$kind: http-request
+method: GET
+url: '{{baseUrl}}/api/admin/applications/{{applicationId}}/verdicts'
+order: 4000
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'

@@ -1,0 +1,7 @@
+$kind: collection
+name: Grants CRM API
+variables:
+  authToken: ""
+  applicationId: "1"
+  documentId: "1"
+  categoryId: "1"

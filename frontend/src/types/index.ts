@@ -21,6 +21,9 @@ export interface Application {
   owner_name?: string | null;
   expert_1?: number | null;
   expert_2?: number | null;
+  // Статус и комментарий ревью текущего эксперта (для списка заявок)
+  review_status?: 'draft' | 'approved' | 'rejected' | null;
+  review_text?: string | null;
   // Связанные данные (загружаются при получении полной заявки)
   team_members?: TeamMember[];
   project_coordinators?: ProjectCoordinator[];
@@ -89,7 +92,7 @@ export interface ExpertVerdict {
   id?: number;
   application_id: number;
   expert_id: number;
-  verdict: 'approved' | 'rejected';
+  verdict: 'approved' | 'rejected' | 'draft';
   comment?: string | null;
   created_at?: string;
   updated_at?: string;

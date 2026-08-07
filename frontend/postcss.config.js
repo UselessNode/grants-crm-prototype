@@ -1,6 +1,6 @@
 export default {
   plugins: {
-    tailwindcss: {},
+    tailwindcss: {}, // Подключаем старый конфиг v3. ВАЖНО
     autoprefixer: {},
   },
-}
+};

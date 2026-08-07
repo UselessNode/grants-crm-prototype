@@ -7,9 +7,9 @@ export default defineConfig({
   plugins: [react(), svgr()],
   resolve: {
     alias: {
-      '@frontend': path.resolve(__dirname, './src'),
-      'frontend': path.resolve(__dirname, './src'), // Fix for 'frontend/' imports
-      '@shared': path.resolve(__dirname, './src')
+      '@frontend': path.resolve(import.meta.dirname, './src'),
+      'frontend': path.resolve(import.meta.dirname, './src'),
+      '@shared': path.resolve(import.meta.dirname, './src')
     }
   },
   server: {
@@ -18,9 +18,8 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false
+    sourcemap: true
   },
-  define: {
-'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version || 'dev')
-  }
+  define: { 'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version || 'dev') },
+  logLevel: 'info',
 });

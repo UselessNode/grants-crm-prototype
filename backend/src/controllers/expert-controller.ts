@@ -1,49 +1,45 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import pool from '../config/database';
+import { prisma, constants } from '../config/database'; // Пути не меняй, они корректны
+import { ReviewStatus } from '../generated/prisma/client';
 
-/**
- * Контроллер для работы экспертов
- * GET  /api/expert/profile          — профиль эксперта
- * GET  /api/expert/applications     — список заявок эксперта
- * GET  /api/expert/applications/:id — детальный просмотр заявки
- * POST /api/expert/applications/:id/verdict — вынести вердикт
- */
+const REQUIRED_REVIEWS = 2;
+
 export class ExpertController {
 
   /**
-   * Получить профиль эксперта (связка users + experts)
+   * 1. Получить профиль эксперта
    */
   static async profile(req: AuthRequest, res: Response) {
     try {
       const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Не авторизован' });
+      }
 
-      const result = await pool.query(`
-        SELECT
-          e.id,
-          e.surname,
-          e.name,
-          e.patronymic,
-          e.extra_info,
-          e.status,
-          e.specialization_id,
-          d.name as specialization_name,
-          e.created_at
-        FROM experts e
-        LEFT JOIN directions d ON e.specialization_id = d.id
-        WHERE e.user_id = $1
-      `, [userId]);
+      const user = await prisma.users.findUnique({
+        where: { id: userId, deleted_at: null },
+        include: { roles: true },
+      });
 
-      if (result.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'Профиль эксперта не найден',
-        });
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Пользователь не найден' });
+      }
+      if (user.role_id !== constants.EXPERT_ROLE_ID) {
+        return res.status(403).json({ success: false, message: 'У вас нет прав эксперта' });
       }
 
       res.json({
         success: true,
-        data: result.rows[0],
+        data: {
+          id: user.id,
+          surname: user.surname,
+          name: user.name,
+          patronymic: user.patronymic,
+          email: user.email,
+          role: user.roles?.name || 'Эксперт',
+          created_at: user.created_at,
+        },
       });
     } catch (error) {
       console.error('Error fetching expert profile:', error);
@@ -56,58 +52,62 @@ export class ExpertController {
   }
 
   /**
-   * Получить список заявок, назначенных эксперту
+   * 2. Получить список заявок эксперта
    */
   static async getApplications(req: AuthRequest, res: Response) {
     try {
       const userId = req.user?.userId;
-
-      // Получаем expert_id по user_id
-      const expertResult = await pool.query(
-        'SELECT id FROM experts WHERE user_id = $1',
-        [userId]
-      );
-
-      if (expertResult.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'Профиль эксперта не найден',
-        });
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Не авторизован' });
       }
 
-      const expertId = expertResult.rows[0].id;
-
-      const applications = await pool.query(`
-        SELECT
-          a.id,
-          a.title,
-          a.status_id,
-          s.name as status_name,
-          a.direction_id,
-          d.name as direction_name,
-          a.tender_id,
-          t.name as tender_name,
-          a.created_at,
-          a.submitted_at,
-          a.updated_at,
-          -- Вердикты эксперта по этой заявке
-          ev.verdict,
-          ev.comment,
-          ev.created_at as verdict_date
-        FROM applications a
-        LEFT JOIN application_statuses s ON a.status_id = s.id
-        LEFT JOIN directions d ON a.direction_id = d.id
-        LEFT JOIN tenders t ON a.tender_id = t.id
-        LEFT JOIN expert_verdicts ev ON ev.application_id = a.id AND ev.expert_id = $1
-        WHERE (a.expert_1 = $1 OR a.expert_2 = $1)
-          AND a.deleted_at IS NULL
-        ORDER BY a.created_at DESC
-      `, [expertId]);
-
-      res.json({
-        success: true,
-        data: applications.rows,
+      const user = await prisma.users.findUnique({
+        where: { id: userId, deleted_at: null },
+        select: { role_id: true },
       });
+      if (!user || user.role_id !== constants.EXPERT_ROLE_ID) {
+        return res.status(403).json({ success: false, message: 'Доступ разрешён только экспертам' });
+      }
+
+      const reviews = await prisma.application_reviews.findMany({
+        where: {
+          expert_id: userId,
+          deleted_at: null,
+          applications: { deleted_at: null },
+        },
+        include: {
+          applications: {
+            include: {
+              application_statuses: true,
+              directions: true,
+              tenders: true,
+            },
+          },
+        },
+        orderBy: { applications: { created_at: 'desc' } },
+      });
+
+      const applications = reviews.map((review) => {
+        const app = review.applications;
+        return {
+          id: app.id,
+          title: app.title,
+          status_id: app.status_id,
+          status_name: app.application_statuses?.name || null,
+          direction_id: app.direction_id,
+          direction_name: app.directions?.name || null,
+          tender_id: app.tender_id,
+          tender_name: app.tenders?.name || null,
+          created_at: app.created_at,
+          submitted_at: app.submitted_at,
+          updated_at: app.updated_at,
+          review_status: review.review_status,
+          comment: review.review_text,
+          verdict_date: review.updated_at,
+        };
+      });
+
+      res.json({ success: true, data: applications });
     } catch (error) {
       console.error('Error fetching expert applications:', error);
       res.status(500).json({
@@ -119,120 +119,106 @@ export class ExpertController {
   }
 
   /**
-   * Детальный просмотр заявки для эксперта (с полной информацией)
+   * 3. Детальный просмотр заявки
    */
   static async getApplicationDetail(req: AuthRequest, res: Response) {
     try {
-      const appId = parseInt(req.params.id);
       const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Не авторизован' });
+      }
 
+      const appId = parseInt(req.params.id);
       if (isNaN(appId)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Некорректный ID заявки',
-        });
+        return res.status(400).json({ success: false, message: 'Некорректный ID заявки' });
       }
 
-      // Получаем expert_id по user_id
-      const expertResult = await pool.query(
-        'SELECT id FROM experts WHERE user_id = $1',
-        [userId]
-      );
+      const review = await prisma.application_reviews.findFirst({
+        where: {
+          application_id: appId,
+          expert_id: userId,
+          deleted_at: null,
+          applications: { deleted_at: null },
+        },
+        include: {
+          applications: {
+            include: {
+              application_statuses: true,
+              directions: true,
+              tenders: true,
+              users: {
+                select: { surname: true, name: true, patronymic: true, email: true },
+              },
+              team_members: { where: { deleted_at: null } },
+              project_plans: { where: { deleted_at: null } },
+              project_budget: { where: { deleted_at: null } },
+              additional_materials: { where: { deleted_at: null } },
+              application_reviews: {
+                where: { deleted_at: null },
+                include: {
+                  users: {
+                    select: { surname: true, name: true, patronymic: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
 
-      if (expertResult.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'Профиль эксперта не найден',
-        });
-      }
-
-      const expertId = expertResult.rows[0].id;
-
-      // Получаем заявку с привязкой, что эксперт назначен на неё
-      const appResult = await pool.query(`
-        SELECT
-          a.*,
-          s.name as status_name,
-          d.name as direction_name,
-          t.name as tender_name,
-          u.surname as owner_surname,
-          u.name as owner_name,
-          u.patronymic as owner_patronymic,
-          u.email as owner_email,
-          e1.surname as expert1_surname,
-          e1.name as expert1_name,
-          e1.patronymic as expert1_patronymic,
-          e2.surname as expert2_surname,
-          e2.name as expert2_name,
-          e2.patronymic as expert2_patronymic
-        FROM applications a
-        LEFT JOIN application_statuses s ON a.status_id = s.id
-        LEFT JOIN directions d ON a.direction_id = d.id
-        LEFT JOIN tenders t ON a.tender_id = t.id
-        LEFT JOIN users u ON a.owner_id = u.id
-        LEFT JOIN experts e1 ON a.expert_1 = e1.id
-        LEFT JOIN experts e2 ON a.expert_2 = e2.id
-        WHERE a.id = $1
-          AND (a.expert_1 = $2 OR a.expert_2 = $2)
-          AND a.deleted_at IS NULL
-      `, [appId, expertId]);
-
-      if (appResult.rows.length === 0) {
+      if (!review) {
         return res.status(404).json({
           success: false,
           message: 'Заявка не найдена или у вас нет к ней доступа',
         });
       }
 
-      const application = appResult.rows[0];
+      const app = review.applications;
+      const {
+        users: owner,
+        application_statuses: status,
+        directions: direction,
+        tenders: tender,
+        application_reviews: expertReviews,
+        team_members,
+        project_plans,
+        project_budget,
+        additional_materials,
+        ...appFields
+      } = app;
 
-      // Получаем связанные данные
-      const [
-        teamMembers,
-        coordinators,
-        dobro,
-        plans,
-        budget,
-        materials,
-        verdicts
-      ] = await Promise.all([
-        pool.query('SELECT * FROM team_members WHERE application_id = $1', [appId]),
-        pool.query(`
-          SELECT c.*, tm.surname, tm.name, tm.patronymic
-          FROM project_coordinators c
-          LEFT JOIN team_members tm ON c.team_member_id = tm.id
-          WHERE c.application_id = $1
-        `, [appId]),
-        pool.query(`
-          SELECT d.*, tm.surname, tm.name, tm.patronymic
-          FROM dobro_responsible d
-          LEFT JOIN team_members tm ON d.team_member_id = tm.id
-          WHERE d.application_id = $1
-        `, [appId]),
-        pool.query('SELECT * FROM project_plans WHERE application_id = $1', [appId]),
-        pool.query('SELECT * FROM project_budget WHERE application_id = $1', [appId]),
-        pool.query('SELECT * FROM additional_materials WHERE application_id = $1', [appId]),
-        pool.query(`
-          SELECT ev.*, e.surname, e.name, e.patronymic
-          FROM expert_verdicts ev
-          LEFT JOIN experts e ON ev.expert_id = e.id
-          WHERE ev.application_id = $1
-        `, [appId]),
-      ]);
+      const coordinators = team_members.filter((m) => m.is_coordinator === true);
+      const dobroResponsible = team_members.filter((m) => m.is_responsible === true);
 
-      res.json({
-        success: true,
-        data: {
-          ...application,
-          team_members: teamMembers.rows,
-          project_coordinators: coordinators.rows,
-          dobro_responsible: dobro.rows,
-          project_plans: plans.rows,
-          project_budget: budget.rows,
-          additional_materials: materials.rows,
-          expert_verdicts: verdicts.rows,
-        },
-      });
+      const result = {
+        ...appFields,
+        owner_surname: owner?.surname || null,
+        owner_name: owner?.name || null,
+        owner_patronymic: owner?.patronymic || null,
+        owner_email: owner?.email || null,
+        status_name: status?.name || null,
+        direction_name: direction?.name || null,
+        tender_name: tender?.name || null,
+        expert_verdicts: expertReviews.map((r) => ({
+          id: r.id,
+          expert_id: r.expert_id,
+          verdict: r.review_status,
+          comment: r.review_text,
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+          surname: r.users?.surname || null,
+          name: r.users?.name || null,
+          patronymic: r.users?.patronymic || null,
+        })),
+        team_members,
+        project_coordinators: coordinators,
+        dobro_responsible: dobroResponsible,
+        project_plans,
+        project_budget,
+        additional_materials,
+      };
+
+      res.json({ success: true, data: result });
     } catch (error) {
       console.error('Error fetching application detail:', error);
       res.status(500).json({
@@ -244,21 +230,108 @@ export class ExpertController {
   }
 
   /**
-   * Вынести (или обновить) вердикт эксперта по заявке
+   * 4. Сохранить черновик
    */
-  static async submitVerdict(req: AuthRequest, res: Response) {
+  static async saveDraft(req: AuthRequest, res: Response) {
     try {
-      const appId = parseInt(req.params.id);
       const userId = req.user?.userId;
-      const { verdict, comment } = req.body;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Не авторизован' });
+      }
 
+      const appId = parseInt(req.params.id);
       if (isNaN(appId)) {
-        return res.status(400).json({
+        return res.status(400).json({ success: false, message: 'Некорректный ID заявки' });
+      }
+
+      const { comment } = req.body;
+
+      // Проверка прав эксперта
+      const user = await prisma.users.findUnique({
+        where: { id: userId, deleted_at: null },
+        select: { role_id: true },
+      });
+      if (!user || user.role_id !== constants.EXPERT_ROLE_ID) {
+        return res.status(403).json({ success: false, message: 'Только эксперты могут сохранять черновики' });
+      }
+
+      // Проверка заявки
+      const application = await prisma.applications.findUnique({
+        where: { id: appId, deleted_at: null },
+        select: { id: true },
+      });
+      if (!application) {
+        return res.status(404).json({ success: false, message: 'Заявка не найдена' });
+      }
+
+      // Проверяем, нет ли уже финального решения
+      const existingFinal = await prisma.application_reviews.findFirst({
+        where: {
+          application_id: appId,
+          expert_id: userId,
+          deleted_at: null,
+          review_status: { in: [ReviewStatus.approved, ReviewStatus.rejected] },
+        },
+      });
+      if (existingFinal) {
+        return res.status(403).json({
           success: false,
-          message: 'Некорректный ID заявки',
+          message: 'Нельзя изменить финальное решение. Оно уже вынесено.',
         });
       }
 
+      // UPSERT черновика
+      const review = await prisma.application_reviews.upsert({
+        where: {
+          application_id_expert_id: { application_id: appId, expert_id: userId },
+        },
+        update: {
+          review_status: ReviewStatus.draft,
+          review_text: comment || undefined,
+          updated_at: new Date(),
+        },
+        create: {
+          application_id: appId,
+          expert_id: userId,
+          review_status: ReviewStatus.draft,
+          review_text: comment || null,
+        },
+      });
+
+      res.json({
+        success: true,
+        message: 'Черновик сохранён',
+        data: {
+          review_status: review.review_status,
+          comment: review.review_text,
+        },
+      });
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при сохранении черновика',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
+
+  /**
+   * 5. Завершить экспертизу
+   */
+  static async finalizeReview(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Не авторизован' });
+      }
+
+      const appId = parseInt(req.params.id);
+      if (isNaN(appId)) {
+        return res.status(400).json({ success: false, message: 'Некорректный ID заявки' });
+      }
+
+      const { verdict, comment } = req.body;
       if (!verdict || (verdict !== 'approved' && verdict !== 'rejected')) {
         return res.status(400).json({
           success: false,
@@ -266,89 +339,139 @@ export class ExpertController {
         });
       }
 
-      // Получаем expert_id по user_id
-      const expertResult = await pool.query(
-        'SELECT id FROM experts WHERE user_id = $1 AND status = $2',
-        [userId, 'approved']
-      );
-
-      if (expertResult.rows.length === 0) {
-        return res.status(403).json({
-          success: false,
-          message: 'Ваш профиль эксперта не подтверждён или не найден',
-        });
+      // Проверка прав эксперта
+      const user = await prisma.users.findUnique({
+        where: { id: userId, deleted_at: null },
+        select: { role_id: true },
+      });
+      if (!user || user.role_id !== constants.EXPERT_ROLE_ID) {
+        return res.status(403).json({ success: false, message: 'Только эксперты могут выносить решение' });
       }
 
-      const expertId = expertResult.rows[0].id;
+      // Проверка заявки
+      const application = await prisma.applications.findUnique({
+        where: { id: appId, deleted_at: null },
+        select: { id: true },
+      });
+      if (!application) {
+        return res.status(404).json({ success: false, message: 'Заявка не найдена' });
+      }
 
       // Проверяем, что эксперт назначен на эту заявку
-      const appCheck = await pool.query(`
-        SELECT id FROM applications
-        WHERE id = $1 AND (expert_1 = $2 OR expert_2 = $2) AND deleted_at IS NULL
-      `, [appId, expertId]);
+      const existingReview = await prisma.application_reviews.findFirst({
+        where: {
+          application_id: appId,
+          expert_id: userId,
+          deleted_at: null,
+        },
+      });
 
-      if (appCheck.rows.length === 0) {
+      if (!existingReview) {
         return res.status(403).json({
           success: false,
           message: 'Вы не назначены экспертом на эту заявку',
         });
       }
 
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
+      // Если уже есть финальное решение, запрещаем перезапись
+      if (existingReview.review_status === ReviewStatus.approved || existingReview.review_status === ReviewStatus.rejected) {
+        return res.status(403).json({
+          success: false,
+          message: 'Финальное решение уже было вынесено. Изменение запрещено.',
+        });
+      }
 
-        // UPSERT: вставляем или обновляем вердикт
-        await client.query(`
-          INSERT INTO expert_verdicts (application_id, expert_id, verdict, comment)
-          VALUES ($1, $2, $3, $4)
-          ON CONFLICT (application_id, expert_id)
-          DO UPDATE SET verdict = $3, comment = $4, updated_at = CURRENT_TIMESTAMP
-        `, [appId, expertId, verdict, comment || null]);
-
-        // Проверяем, оба ли эксперта вынесли вердикт
-        const verdictCountResult = await client.query(`
-          SELECT COUNT(*) as count FROM expert_verdicts WHERE application_id = $1
-        `, [appId]);
-        const verdictCount = parseInt(verdictCountResult.rows[0].count);
-
-        if (verdictCount >= 2) {
-          // Оба эксперта высказались — определяем итог
-          const allVerdicts = await client.query(`
-            SELECT verdict FROM expert_verdicts WHERE application_id = $1
-          `, [appId]);
-
-          const hasRejection = allVerdicts.rows.some((v: { verdict: string }) => v.verdict === 'rejected');
-          const newStatusId = hasRejection ? 5 : 4; // 5 - отклонена, 4 - одобрена
-
-          await client.query(`
-            UPDATE applications
-            SET status_id = $1, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $2
-          `, [newStatusId, appId]);
-        }
-
-        await client.query('COMMIT');
-
-        res.json({
-          success: true,
-          message: 'Вердикт успешно сохранён',
+      // Транзакция
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Обновляем ревью
+        const updatedReview = await tx.application_reviews.update({
+          where: { id: existingReview.id },
           data: {
-            verdict,
-            comment: comment || null,
+            review_status: verdict === 'approved' ? ReviewStatus.approved : ReviewStatus.rejected,
+            review_text: comment || null,
+            updated_at: new Date(),
           },
         });
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
-      }
+
+        // 2. Считаем количество финальных решений по этой заявке
+        const finalizedCount = await tx.application_reviews.count({
+          where: {
+            application_id: appId,
+            deleted_at: null,
+            review_status: { in: [ReviewStatus.approved, ReviewStatus.rejected] },
+          },
+        });
+
+        // 3. Если оба эксперта (или более) высказались – меняем статус заявки
+
+        if (finalizedCount >= REQUIRED_REVIEWS) {
+          const reviews = await tx.application_reviews.findMany({
+            where: {
+              application_id: appId,
+              deleted_at: null,
+              review_status: { in: [ReviewStatus.approved, ReviewStatus.rejected] },
+            },
+            select: { review_status: true },
+          });
+
+          const hasRejection = reviews.some((r) => r.review_status === ReviewStatus.rejected);
+          const newStatusId = hasRejection ? constants.REJECTED_STATUS_ID : constants.CONFIRMED_STATUS_ID;
+          if (newStatusId === null || newStatusId === undefined) {
+            throw new Error(`Статус заявки не определён. Заявка ${appId}, эксперт ${userId}, hasRejection=${hasRejection}`);
+          }
+          await tx.applications.update({
+            where: { id: appId },
+            data: {
+              status_id: newStatusId,
+              updated_at: new Date(),
+            },
+          });
+        }
+
+        return updatedReview;
+      });
+
+      res.json({
+        success: true,
+        message: 'Экспертиза завершена',
+        data: {
+          verdict: result.review_status,
+          comment: result.review_text,
+        },
+      });
     } catch (error) {
-      console.error('Error submitting verdict:', error);
+      console.error('Error finalizing review:', error);
       res.status(500).json({
         success: false,
-        message: 'Ошибка при сохранении вердикта',
+        message: 'Ошибка при завершении экспертизы',
+        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+      });
+    }
+  }
+
+  /**
+   * Универсальный метод для сохранения/обновления вердикта
+   */
+  static async submitVerdict(req: AuthRequest, res: Response) {
+    try {
+      const { isDraft, verdict, comment } = req.body;
+      // Если это черновик — вызываем saveDraft
+      if (isDraft === true) {
+        // Передаём управление в saveDraft, но чтобы не дублировать код,
+        // можно вызвать saveDraft как статический метод, но проще скопировать логику
+        // или сделать рефакторинг. Для скорости — просто продублируем.
+        // Вместо дублирования — перенаправим вызов, но это сложно из-за res.
+        // Сделаем отдельную реализацию:
+        return await ExpertController.saveDraft(req, res);
+      } else {
+        // Иначе — финализация
+        return await ExpertController.finalizeReview(req, res);
+      }
+    } catch (error) {
+      console.error('Error in submitVerdict:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при обработке вердикта',
         error: error instanceof Error ? error.message : 'Неизвестная ошибка',
       });
     }

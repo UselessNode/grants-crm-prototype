@@ -4,9 +4,7 @@ import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 
-/**
- * Маршруты для аутентификации
- */
+router.get('/auth/test', (_req, res) => res.json({ ok: true }));
 
 // Регистрация нового пользователя
 router.post('/auth/register', AuthController.register);

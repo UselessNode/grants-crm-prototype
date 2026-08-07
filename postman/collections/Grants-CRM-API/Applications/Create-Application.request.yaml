@@ -1,0 +1,24 @@
+$kind: http-request
+method: POST
+url: '{{baseUrl}}/api/applications'
+order: 3000
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Название проекта",
+      "idea_description": "Описание идеи",
+      "importance_to_team": "Важность для команды",
+      "project_goal": "Цель проекта",
+      "project_tasks": "Задачи проекта",
+      "tender_id": 1,
+      "direction_id": 1,
+      "team_members": [],
+      "project_plans": [],
+      "project_budget": []
+    }

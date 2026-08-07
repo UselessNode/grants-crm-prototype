@@ -1,110 +1,73 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
-import { UserModel, UserCreateData } from '../models/user';
-import { generateToken, verifyToken, getTokenRemainingTime } from '../utils/jwt';
+import bcrypt from 'bcryptjs';
+import { prisma } from '../config/database';
+import { Prisma } from '../generated/prisma/client'; // Для типизации ошибок Prisma
+import { generateToken, getTokenRemainingTime } from '../utils/jwt';
 import { AuthRequest } from '../middleware/auth';
 
-/**
- * Контроллер для управления аутентификацией
- */
+// Хелпер для очистки данных пользователя перед отправкой клиенту
+const sanitizeUser = (user: any) => {
+  const { password_hash, ...sanitized } = user;
+  return {
+    ...sanitized,
+    role: user.roles?.name || 'user',
+  };
+};
+
 export class AuthController {
-  /**
-   * Регистрация нового пользователя
-   * POST /api/auth/register
-   */
   static async register(req: Request, res: Response) {
     try {
       const { email, password, surname, name, patronymic } = req.body;
 
-      // Валидация обязательных полей
       if (!email || !password) {
         return res.status(400).json({
           success: false,
           message: 'Email и пароль обязательны',
-          errors: {
-            email: !email ? 'Email обязателен' : null,
-            password: !password ? 'Пароль обязателен' : null,
-          },
+          errors: { email: !email ? 'Email обязателен' : null, password: !password ? 'Пароль обязателен' : null },
         });
       }
 
-      // Валидация email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Некорректный формат email',
-          errors: {
-            email: 'Введите корректный email',
-          },
-        });
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ success: false, message: 'Некорректный формат email', errors: { email: 'Введите корректный email' } });
       }
 
-      // Валидация пароля (минимум 6 символов)
       if (password.length < 6) {
-        return res.status(400).json({
-          success: false,
-          message: 'Пароль должен содержать минимум 6 символов',
-          errors: {
-            password: 'Пароль должен содержать минимум 6 символов',
-          },
-        });
+        return res.status(400).json({ success: false, message: 'Пароль должен содержать минимум 6 символов', errors: { password: 'Пароль слишком короткий' } });
       }
 
-      // Хеширование пароля
-      const saltRounds = 10;
-      const passwordHash = await bcrypt.hash(password, saltRounds);
+      const passwordHash = await bcrypt.hash(password, 10);
 
-      // Создание пользователя
-      const userData: UserCreateData = {
-        email,
-        passwordHash,
-        surname: surname || null,
-        name: name || null,
-        patronymic: patronymic || null,
-        role: 'user',
-      };
+      // Prisma сама проверит уникальность email благодаря @unique в схеме
+      const user = await prisma.users.create({
+        data: {
+          email,
+          password_hash: passwordHash,
+          surname: surname || null,
+          name: name || null,
+          patronymic: patronymic || null,
+          role_id: 1, // По умолчанию 'user' (id=1 в таблице roles)
+        },
+        include: { roles: true },
+      });
 
-      const user = await UserModel.create(userData);
-
-      if (!user) {
-        return res.status(500).json({
-          success: false,
-          message: 'Ошибка при создании пользователя',
-        });
-      }
-
-      // Генерируем токен
-      const token = generateToken(user);
+      const token = generateToken({ id: user.id, email: user.email, role: user.roles?.name || 'user' });
 
       res.status(201).json({
         success: true,
         message: 'Пользователь успешно зарегистрирован',
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            surname: user.surname,
-            name: user.name,
-            patronymic: user.patronymic,
-            role: user.role,
-          },
-          token,
-        },
+        data: { user: sanitizeUser(user), token },
       });
     } catch (error) {
-      console.error('Error registering user:', error);
-
-      if (error instanceof Error && error.message === 'Пользователь с таким email уже существует') {
+      // P2002 - это код ошибки Prisma при нарушении уникального ограничения (Unique constraint failed)
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         return res.status(409).json({
           success: false,
           message: 'Пользователь с таким email уже существует',
-          errors: {
-            email: 'Такой email уже зарегистрирован',
-          },
+          errors: { email: 'Такой email уже зарегистрирован' },
         });
       }
 
+      console.error('Error registering user:', error);
       res.status(500).json({
         success: false,
         message: 'Ошибка при регистрации',
@@ -113,76 +76,42 @@ export class AuthController {
     }
   }
 
-  /**
-   * Вход пользователя (логин)
-   * POST /api/auth/login
-   */
   static async login(req: Request, res: Response) {
     try {
       const { email, password } = req.body;
 
-      // Валидация обязательных полей
       if (!email || !password) {
         return res.status(400).json({
           success: false,
-          message: 'Email и пароль обязательны',
-          errors: {
-            email: !email ? 'Email обязателен' : null,
-            password: !password ? 'Пароль обязателен' : null,
-          },
+          message: 'Email и пароль обязательны'
         });
       }
 
-      // Поиск пользователя для проверки пароля
-      const authUser = await UserModel.findByEmailForAuth(email);
+      // ОДИН запрос вместо двух. Сразу тянем роль.
+      const user = await prisma.users.findFirst({
+        where: { email, deleted_at: null },
+        include: { roles: true },
+      });
 
-      if (!authUser) {
+      if (!user || !(await bcrypt.compare(password, user.password_hash))) {
         return res.status(401).json({
           success: false,
-          message: 'Неверный email или пароль',
+          message: 'Неверный email или пароль'
         });
       }
 
-      // Проверка пароля
-      const passwordMatch = await bcrypt.compare(password, authUser.password_hash!);
+      // Обновляем активность асинхронно, не блокируя ответ
+      prisma.users.update({
+        where: { id: user.id },
+        data: { last_activity: new Date() },
+      }).catch(console.error);
 
-      if (!passwordMatch) {
-        return res.status(401).json({
-          success: false,
-          message: 'Неверный email или пароль',
-        });
-      }
-
-      // Получаем полного пользователя для токена
-      const user = await UserModel.findByEmail(email);
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: 'Неверный email или пароль',
-        });
-      }
-
-      // Генерируем токен
-      const token = generateToken(user);
-
-      // Обновляем время последней активности
-      await UserModel.updateLastActivity(user.id);
+      const token = generateToken({ id: user.id, email: user.email, role: user.roles?.name || 'user' });
 
       res.json({
         success: true,
         message: 'Успешный вход',
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            surname: user.surname,
-            name: user.name,
-            patronymic: user.patronymic,
-            role: user.role,
-          },
-          token,
-        },
+        data: { user: sanitizeUser(user), token },
       });
     } catch (error) {
       console.error('Error logging in:', error);
@@ -194,145 +123,72 @@ export class AuthController {
     }
   }
 
-  /**
-   * Получить текущий профиль пользователя
-   * GET /api/auth/me
-   */
   static async me(req: AuthRequest, res: Response) {
     try {
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          message: 'Требуется авторизация',
-        });
-      }
+      if (!req.user) return res.status(401).json({ success: false, message: 'Требуется авторизация' });
 
-      const user = await UserModel.findById(req.user.userId);
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'Пользователь не найден',
-        });
-      }
-
-      res.json({
-        success: true,
-        data: {
-          id: user.id,
-          email: user.email,
-          surname: user.surname,
-          name: user.name,
-          patronymic: user.patronymic,
-          role: user.role,
-        },
+      const user = await prisma.users.findUnique({
+        where: { id: req.user.userId, deleted_at: null },
+        include: { roles: true },
       });
+
+      if (!user) return res.status(404).json({ success: false, message: 'Пользователь не найден' });
+
+      res.json({ success: true, data: sanitizeUser(user) });
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении профиля',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при получении профиля' });
     }
   }
 
-  /**
-   * Проверка токена (валидация сессии)
-   * GET /api/auth/verify
-   */
   static async verify(req: AuthRequest, res: Response) {
     try {
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          message: 'Требуется авторизация',
-        });
-      }
+      if (!req.user) return res.status(401).json({ success: false, message: 'Требуется авторизация' });
 
-      // Получаем токен из заголовка
       const authHeader = req.headers.authorization;
       const token = authHeader?.substring(7);
 
-      if (!token) {
-        return res.status(401).json({
-          success: false,
-          message: 'Токен не предоставлен',
-        });
-      }
-
-      // Проверяем оставшееся время
-      const remainingTime = getTokenRemainingTime(token);
+      if (!token) return res.status(401).json({ success: false, message: 'Токен не предоставлен' });
 
       res.json({
         success: true,
         data: {
           valid: true,
-          remainingTime,
-          user: {
-            id: req.user.userId,
-            email: req.user.email,
-            role: req.user.role,
-          },
+          remainingTime: getTokenRemainingTime(token),
+          user: { id: req.user.userId, email: req.user.email, role: req.user.role },
         },
       });
     } catch (error) {
       console.error('Error verifying token:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при проверке токена',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при проверке токена' });
     }
   }
 
-  /**
-   * Обновить профиль пользователя
-   * PUT /api/auth/profile
-   */
   static async updateProfile(req: AuthRequest, res: Response) {
     try {
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          message: 'Требуется авторизация',
-        });
-      }
+      if (!req.user) return res.status(401).json({ success: false, message: 'Требуется авторизация' });
 
       const { surname, name, patronymic } = req.body;
 
-      const updatedUser = await UserModel.update(req.user.userId, {
-        surname,
-        name,
-        patronymic,
+      const updatedUser = await prisma.users.update({
+        where: { id: req.user.userId, deleted_at: null },
+        data: {
+          surname: surname ?? undefined, // ?? undefined говорит Prisma не трогать поле, если оно не передано
+          name: name ?? undefined,
+          patronymic: patronymic ?? undefined,
+          updated_at: new Date(),
+        },
+        include: { roles: true },
       });
-
-      if (!updatedUser) {
-        return res.status(404).json({
-          success: false,
-          message: 'Пользователь не найден',
-        });
-      }
 
       res.json({
         success: true,
         message: 'Профиль успешно обновлён',
-        data: {
-          id: updatedUser.id,
-          email: updatedUser.email,
-          surname: updatedUser.surname,
-          name: updatedUser.name,
-          patronymic: updatedUser.patronymic,
-          role: updatedUser.role,
-        },
+        data: sanitizeUser(updatedUser),
       });
     } catch (error) {
       console.error('Error updating profile:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при обновлении профиля',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при обновлении профиля' });
     }
   }
 }

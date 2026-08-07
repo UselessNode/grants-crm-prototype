@@ -1,0 +1,11 @@
+$kind: http-request
+name: Get-Tenders
+method: GET
+url: "{{baseUrl}}/api/admin/tenders"
+auth:
+  type: bearer
+  credentials:
+    token: ""
+order: 1000
+headers:
+  Authorization: Bearer {{adminAuthToken}}

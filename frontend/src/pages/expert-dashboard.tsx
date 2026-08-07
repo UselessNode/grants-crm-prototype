@@ -32,16 +32,16 @@ export function ExpertDashboard() {
       if (appsResponse.success) {
         setApplications(appsResponse.data);
 
-        // Считаем статистику
+        // Считаем статистику на основе review_status
         const total = appsResponse.data.length;
         const pending = appsResponse.data.filter(
-          (app: Application) => !app.expert_verdicts || app.expert_verdicts.length === 0
+          (app: Application) => !app.review_status || app.review_status === 'draft'
         ).length;
         const approved = appsResponse.data.filter(
-          (app: Application) => app.expert_verdicts?.some(v => v.verdict === 'approved' && v.expert_id === user?.expert_id)
+          (app: Application) => app.review_status === 'approved'
         ).length;
         const rejected = appsResponse.data.filter(
-          (app: Application) => app.expert_verdicts?.some(v => v.verdict === 'rejected' && v.expert_id === user?.expert_id)
+          (app: Application) => app.review_status === 'rejected'
         ).length;
 
         setStats({ total, pending, approved, rejected });
@@ -75,12 +75,31 @@ export function ExpertDashboard() {
     }
   };
 
-  const getApplicationVerdictStatus = (app: Application) => {
-    const myVerdict = app.expert_verdicts?.find(v => v.expert_id === user?.expert_id);
-    if (myVerdict) {
-      return myVerdict.verdict === 'approved' ? 'Вердикт: Одобрено' : 'Вердикт: Отклонено';
+  const getVerdictStatusColor = (reviewStatus?: string) => {
+    switch (reviewStatus) {
+      case 'approved':
+        return 'bg-green-100 text-green-600';
+      case 'rejected':
+        return 'bg-red-100 text-red-600';
+      case 'draft':
+        return 'bg-yellow-100 text-yellow-600';
+      default:
+        return 'bg-gray-100 text-gray-600';
     }
-    return 'Ожидает оценки';
+  };
+
+  const getApplicationVerdictStatus = (app: Application) => {
+    // Используем поле review_status, которое приходит из API эксперта
+    switch (app.review_status) {
+      case 'approved':
+        return 'Вердикт: Одобрено';
+      case 'rejected':
+        return 'Вердикт: Отклонено';
+      case 'draft':
+        return 'Вердикт: Черновик';
+      default:
+        return 'Ожидает оценки';
+    }
   };
 
   return (
@@ -121,7 +140,7 @@ export function ExpertDashboard() {
                 </div>
                 <div className="bg-yellow-50 rounded-lg p-3 text-center min-w-[100px]">
                   <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-                  <div className="text-xs text-gray-500">Ожидают</div>
+                  <div className="text-xs text-gray-500">Ожидают/Черновики</div>
                 </div>
                 <div className="bg-green-50 rounded-lg p-3 text-center min-w-[100px]">
                   <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
@@ -176,8 +195,10 @@ export function ExpertDashboard() {
                           {app.status_name}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {getApplicationVerdictStatus(app)}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded-full text-xs ${getVerdictStatusColor(app.review_status)}`}>
+                          {getApplicationVerdictStatus(app)}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(app.created_at || '').toLocaleDateString('ru-RU')}

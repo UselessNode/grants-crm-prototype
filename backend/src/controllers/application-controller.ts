@@ -1,549 +1,296 @@
 import { Request, Response } from 'express';
-import { ApplicationModel, ApplicationCreateData } from '../models/application.model';
+import { prisma } from '../config/database';
+import { Prisma } from '../generated/prisma/client';
 import { AuthRequest } from '../middleware/auth';
 
-/**
- * Контроллер для управления заявками
- */
+// Хелпер для проверки прав: админ видит всё, юзер - только своё
+const checkAccess = (app: any, userId: number, userRole: string) => {
+  if (userRole === 'admin') return true;
+  return app.owner_id === userId;
+};
+
 export class ApplicationController {
-  /**
-   * Получить список заявок с пагинацией, поиском и фильтрацией
-   * GET /api/applications
-   */
   static async index(req: AuthRequest, res: Response) {
     try {
-      const { page, limit, search, direction_id, status_id } = req.query;
+      const { page = 1, limit = 10, search, direction_id, status_id } = req.query;
       const userId = req.user?.userId;
       const userRole = req.user?.role || 'user';
 
-      const result = await ApplicationModel.findAll({
-        page: page ? parseInt(page as string) : 1,
-        limit: limit ? parseInt(limit as string) : 10,
-        search: search as string | undefined,
-        direction_id: direction_id ? parseInt(direction_id as string) : undefined,
-        status_id: status_id ? parseInt(status_id as string) : undefined,
-        ownerId: userId,
-        userRole: userRole as 'user' | 'admin',
-      });
+      const skip = (Number(page) - 1) * Number(limit);
+      const take = Number(limit);
+
+      const where: Prisma.applicationsWhereInput = { deleted_at: null };
+
+      if (userRole !== 'admin') {
+        where.owner_id = userId;
+      }
+      if (search) where.title = { contains: search as string, mode: 'insensitive' };
+      if (direction_id) where.direction_id = Number(direction_id);
+      if (status_id) where.status_id = Number(status_id);
+
+      const [total, data] = await Promise.all([
+        prisma.applications.count({ where }),
+        prisma.applications.findMany({
+          where,
+          skip,
+          take,
+          orderBy: { created_at: 'desc' },
+          include: {
+            application_statuses: { select: { name: true } },
+            directions: { select: { name: true } },
+            users: { select: { surname: true, name: true, patronymic: true } },
+          },
+        }),
+      ]);
 
       res.json({
         success: true,
-        ...result,
+        data,
+        pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) },
       });
     } catch (error) {
       console.error('Error fetching applications:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении списка заявок',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при получении списка заявок' });
     }
   }
 
-  /**
-   * Получить заявку по ID
-   * GET /api/applications/:id
-   */
   static async show(req: AuthRequest, res: Response) {
     try {
-      const id = parseInt(req.params.id);
-      const userId = req.user?.userId;
-      const userRole = req.user?.role || 'user';
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ success: false, message: 'Некорректный ID' });
 
-      if (isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Некорректный ID заявки',
-        });
-      }
-
-      const application = await ApplicationModel.findById(id);
-
-      if (!application) {
-        return res.status(404).json({
-          success: false,
-          message: 'Заявка не найдена',
-        });
-      }
-
-      // Проверяем права доступа: админ видит все, пользователь - только свои
-      if (userRole !== 'admin' && application.owner_id !== userId) {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Вы можете просматривать только свои заявки',
-        });
-      }
-
-      res.json({
-        success: true,
-        data: application,
+      const application = await prisma.applications.findFirst({
+        where: { id, deleted_at: null },
+        include: {
+          application_statuses: true,
+          directions: true,
+          tenders: true,
+          users: { select: { id: true, surname: true, name: true, patronymic: true, email: true } },
+          team_members: true,
+          project_plans: true,
+          project_budget: true,
+          additional_materials: true,
+          application_reviews: { include: { users: { select: { surname: true, name: true } } } },
+        },
       });
+
+      if (!application) return res.status(404).json({ success: false, message: 'Заявка не найдена' });
+      if (!checkAccess(application, req.user!.userId, req.user!.role)) {
+        return res.status(403).json({ success: false, message: 'Доступ запрещён' });
+      }
+
+      res.json({ success: true, data: application });
     } catch (error) {
       console.error('Error fetching application:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении заявки',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при получении заявки' });
     }
   }
 
-  /**
-   * Создать новую заявку
-   * POST /api/applications
-   */
   static async create(req: AuthRequest, res: Response) {
     try {
       const {
-        title,
-        tender_id,
-        direction_id,
-        status_id,
-        idea_description,
-        importance_to_team,
-        project_goal,
-        project_tasks,
-        implementation_experience,
-        results_description,
-        team_members,
-        coordinators,
-        dobro_responsible,
-        project_plans,
-        project_budget,
+        title, idea_description, importance_to_team, project_goal, project_tasks,
+        tender_id, direction_id, status_id = 1, implementation_experience, results_description,
+        team_members, project_plans, project_budget
       } = req.body;
 
-      // Валидация обязательных полей
       if (!title || !idea_description || !importance_to_team || !project_goal || !project_tasks) {
-        return res.status(400).json({
-          success: false,
-          message: 'Заполните все обязательные поля',
-          errors: {
-            title: !title ? 'Название обязательно' : null,
-            idea_description: !idea_description ? 'Описание идеи обязательно' : null,
-            importance_to_team: !importance_to_team ? 'Важность для команды обязательна' : null,
-            project_goal: !project_goal ? 'Цель проекта обязательна' : null,
-            project_tasks: !project_tasks ? 'Задачи проекта обязательны' : null,
-          },
-        });
+        return res.status(400).json({ success: false, message: 'Заполните все обязательные поля' });
       }
 
-      const applicationData: ApplicationCreateData = {
-        title,
-        tender_id,
-        direction_id,
-        status_id: status_id || 1, // По умолчанию Черновик
-        idea_description,
-        importance_to_team,
-        project_goal,
-        project_tasks,
-        implementation_experience,
-        results_description,
-        team_members,
-        coordinators,
-        dobro_responsible,
-        project_plans,
-        project_budget,
-      };
-
-      const ownerId = req.user?.userId;
-      const newApplication = await ApplicationModel.create(applicationData, ownerId);
-
-      res.status(201).json({
-        success: true,
-        message: 'Заявка успешно создана',
-        data: newApplication,
+      // Prisma создаст заявку и все связанные таблицы одним запросом (Nested Writes)
+      const newApplication = await prisma.applications.create({
+        data: {
+          owner_id: req.user!.userId,
+          title, idea_description, importance_to_team, project_goal, project_tasks,
+          tender_id: tender_id || null,
+          direction_id: direction_id || null,
+          status_id,
+          implementation_experience: implementation_experience || null,
+          results_description: results_description || null,
+          team_members: team_members?.length ? { createMany: { data: team_members } } : undefined,
+          project_plans: project_plans?.length ? { createMany: { data: project_plans } } : undefined,
+          project_budget: project_budget?.length ? { createMany: { data: project_budget } } : undefined,
+        },
+        include: { team_members: true, project_plans: true, project_budget: true },
       });
+
+      res.status(201).json({ success: true, message: 'Заявка успешно создана', data: newApplication });
     } catch (error) {
       console.error('Error creating application:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при создании заявки',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при создании заявки' });
     }
   }
 
-  /**
-   * Обновить заявку
-   * PUT /api/applications/:id
-   */
   static async update(req: AuthRequest, res: Response) {
     try {
-      const id = parseInt(req.params.id);
-      const userId = req.user?.userId;
-      const userRole = req.user?.role || 'user';
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ success: false, message: 'Некорректный ID' });
 
-      if (isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Некорректный ID заявки',
-        });
+      const application = await prisma.applications.findUnique({ where: { id, deleted_at: null } });
+      if (!application) return res.status(404).json({ success: false, message: 'Заявка не найдена' });
+      if (!checkAccess(application, req.user!.userId, req.user!.role)) {
+        return res.status(403).json({ success: false, message: 'Доступ запрещён' });
       }
 
-      const application = await ApplicationModel.findById(id);
+      const { title, idea_description, importance_to_team, project_goal, project_tasks, direction_id, tender_id } = req.body;
 
-      if (!application) {
-        return res.status(404).json({
-          success: false,
-          message: 'Заявка не найдена',
-        });
-      }
-
-      const updatedApplication = await ApplicationModel.update(id, req.body, userId, userRole as 'user' | 'admin');
-
-      res.json({
-        success: true,
-        message: 'Заявка успешно обновлена',
-        data: updatedApplication,
+      const updatedApplication = await prisma.applications.update({
+        where: { id },
+        data: {
+          title, idea_description, importance_to_team, project_goal, project_tasks,
+          direction_id: direction_id ?? undefined,
+          tender_id: tender_id ?? undefined,
+          updated_at: new Date(),
+        },
       });
+
+      res.json({ success: true, message: 'Заявка успешно обновлена', data: updatedApplication });
     } catch (error) {
       console.error('Error updating application:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при обновлении заявки',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при обновлении заявки' });
     }
   }
 
-  /**
-   * Удалить заявку
-   * DELETE /api/applications/:id
-   */
   static async delete(req: AuthRequest, res: Response) {
     try {
-      const id = parseInt(req.params.id);
-      const userId = req.user?.userId;
-      const userRole = req.user?.role || 'user';
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ success: false, message: 'Некорректный ID' });
 
-      if (isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Некорректный ID заявки',
-        });
+      const application = await prisma.applications.findUnique({ where: { id, deleted_at: null } });
+      if (!application) return res.status(404).json({ success: false, message: 'Заявка не найдена' });
+      if (!checkAccess(application, req.user!.userId, req.user!.role)) {
+        return res.status(403).json({ success: false, message: 'Доступ запрещён' });
       }
 
-      const application = await ApplicationModel.findById(id);
-
-      if (!application) {
-        return res.status(404).json({
-          success: false,
-          message: 'Заявка не найдена',
-        });
+      if (application.status_id !== 1 && application.status_id !== 5) {
+        return res.status(403).json({ success: false, message: 'Нельзя удалить заявку в текущем статусе' });
       }
 
-      // Проверяем, можно ли удалить заявку (статус должен позволять удаление)
-      if (application.status_id && application.status_id !== 1 && application.status_id !== 5) {
-        return res.status(403).json({
-          success: false,
-          message: 'Нельзя удалить заявку в текущем статусе',
-        });
-      }
-
-      await ApplicationModel.delete(id, userId, userRole as 'user' | 'admin');
-
-      res.json({
-        success: true,
-        message: 'Заявка успешно удалена',
-      });
+      await prisma.applications.update({ where: { id }, data: { deleted_at: new Date() } });
+      res.json({ success: true, message: 'Заявка успешно удалена' });
     } catch (error) {
       console.error('Error deleting application:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при удалении заявки',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при удалении заявки' });
     }
   }
 
-  /**
-   * Подать заявку
-   * POST /api/applications/:id/submit
-   */
   static async submit(req: AuthRequest, res: Response) {
     try {
-      const id = parseInt(req.params.id);
-      const userId = req.user?.userId;
-      const userRole = req.user?.role || 'user';
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ success: false, message: 'Некорректный ID' });
 
-      if (isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Некорректный ID заявки',
-        });
+      const application = await prisma.applications.findUnique({ where: { id, deleted_at: null } });
+      if (!application) return res.status(404).json({ success: false, message: 'Заявка не найдена' });
+      if (!checkAccess(application, req.user!.userId, req.user!.role)) {
+        return res.status(403).json({ success: false, message: 'Доступ запрещён' });
       }
 
-      const application = await ApplicationModel.findById(id);
-
-      if (!application) {
-        return res.status(404).json({
-          success: false,
-          message: 'Заявка не найдена',
-        });
-      }
-
-      const updatedApplication = await ApplicationModel.submit(id, userId, userRole as 'user' | 'admin');
-
-      res.json({
-        success: true,
-        message: 'Заявка успешно подана',
-        data: updatedApplication,
+      const updatedApplication = await prisma.applications.update({
+        where: { id },
+        data: { status_id: 2, submitted_at: new Date(), updated_at: new Date() },
       });
+
+      res.json({ success: true, message: 'Заявка успешно подана', data: updatedApplication });
     } catch (error) {
       console.error('Error submitting application:', error);
-      res.status(400).json({
-        success: false,
-        message: error instanceof Error ? error.message : 'Ошибка при подаче заявки',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при подаче заявки' });
     }
   }
 
-  /**
-   * Изменить статус заявки (только для администратора)
-   * POST /api/applications/:id/change-status
-   */
   static async changeStatus(req: AuthRequest, res: Response) {
     try {
-      const id = parseInt(req.params.id);
-      const userId = req.user?.userId;
-      const userRole = req.user?.role || 'user';
+      const id = Number(req.params.id);
       const { status_id } = req.body;
+      if (isNaN(id) || !status_id) return res.status(400).json({ success: false, message: 'Некорректные данные' });
 
-      if (isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Некорректный ID заявки',
-        });
-      }
-
-      if (!status_id || isNaN(parseInt(status_id))) {
-        return res.status(400).json({
-          success: false,
-          message: 'status_id обязателен и должен быть числом',
-        });
-      }
-
-      const application = await ApplicationModel.findById(id);
-
-      if (!application) {
-        return res.status(404).json({
-          success: false,
-          message: 'Заявка не найдена',
-        });
-      }
-
-      const updatedApplication = await ApplicationModel.updateStatus(id, parseInt(status_id), userRole as 'user' | 'admin');
-
-      res.json({
-        success: true,
-        message: 'Статус заявки успешно изменён',
-        data: updatedApplication,
+      const updatedApplication = await prisma.applications.update({
+        where: { id, deleted_at: null },
+        data: { status_id: Number(status_id), updated_at: new Date() },
       });
+
+      res.json({ success: true, message: 'Статус изменён', data: updatedApplication });
     } catch (error) {
-      console.error('Error changing application status:', error);
-      res.status(400).json({
-        success: false,
-        message: error instanceof Error ? error.message : 'Ошибка при изменении статуса заявки',
-      });
+      console.error('Error changing status:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при изменении статуса' });
     }
   }
 
-  /**
-   * Получить список направлений
-   * GET /api/directions
-   */
+  // --- Справочники ---
   static async getDirections(req: AuthRequest, res: Response) {
-    try {
-      const directions = await ApplicationModel.getDirections();
-
-      res.json({
-        success: true,
-        data: directions,
-      });
-    } catch (error) {
-      console.error('Error fetching directions:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении направлений',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
-    }
+    const data = await prisma.directions.findMany({ where: { deleted_at: null } });
+    res.json({ success: true, data });
   }
 
-  /**
-   * Получить список статусов
-   * GET /api/statuses
-   */
   static async getStatuses(req: AuthRequest, res: Response) {
-    try {
-      const statuses = await ApplicationModel.getStatuses();
-
-      res.json({
-        success: true,
-        data: statuses,
-      });
-    } catch (error) {
-      console.error('Error fetching statuses:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении статусов',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
-    }
+    const data = await prisma.application_statuses.findMany({ where: { deleted_at: null }, orderBy: { id: 'asc' } });
+    res.json({ success: true, data });
   }
 
-  /**
-   * Получить список тендеров
-   * GET /api/tenders
-   */
   static async getTenders(req: AuthRequest, res: Response) {
-    try {
-      const tenders = await ApplicationModel.getTenders();
-
-      res.json({
-        success: true,
-        data: tenders,
-      });
-    } catch (error) {
-      console.error('Error fetching tenders:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении тендеров',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
-    }
+    const data = await prisma.tenders.findMany({ where: { deleted_at: null } });
+    res.json({ success: true, data });
   }
 
-  /**
-   * Получить список ролей
-   * GET /api/roles
-   */
   static async getRoles(req: AuthRequest, res: Response) {
-    try {
-      const { UserModel } = await import('../models/user');
-      const roles = await UserModel.getRoles();
-
-      res.json({
-        success: true,
-        data: roles,
-      });
-    } catch (error) {
-      console.error('Error fetching roles:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении ролей',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
-    }
+    const data = await prisma.roles.findMany({ orderBy: { id: 'asc' } });
+    res.json({ success: true, data });
   }
 
-  /**
-   * Выставить вердикт эксперта
-   * POST /api/applications/:id/verdict
-   */
+  // --- Экспертная часть ---
   static async addVerdict(req: AuthRequest, res: Response) {
     try {
-      const id = parseInt(req.params.id);
-      const expertId = req.body.expertId;
+      const id = Number(req.params.id);
       const { verdict, comment } = req.body;
+      const expertId = req.user!.userId; // Берём ID из токена, а не из body (безопаснее)
 
-      if (isNaN(id)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Некорректный ID заявки',
-        });
+      if (isNaN(id) || !verdict) return res.status(400).json({ success: false, message: 'Некорректные данные' });
+      if (!['approved', 'rejected'].includes(verdict)) {
+        return res.status(400).json({ success: false, message: 'verdict должен быть "approved" или "rejected"' });
       }
 
-      if (!expertId || !verdict) {
-        return res.status(400).json({
-          success: false,
-          message: 'expertId и verdict обязательны',
-        });
-      }
+      const application = await prisma.applications.findUnique({ where: { id, deleted_at: null } });
+      if (!application) return res.status(404).json({ success: false, message: 'Заявка не найдена' });
 
-      if (verdict !== 'approved' && verdict !== 'rejected') {
-        return res.status(400).json({
-          success: false,
-          message: 'verdict должен быть "approved" или "rejected"',
-        });
-      }
+      // Upsert: обновляет существующий вердикт или создаёт новый
+      await prisma.application_reviews.upsert({
+        where: { application_id_expert_id: { application_id: id, expert_id: expertId } },
+        update: { review_status: verdict, review_text: comment || null, updated_at: new Date() },
+        create: { application_id: id, expert_id: expertId, review_status: verdict, review_text: comment || null },
+      });
 
-      const application = await ApplicationModel.findById(id);
-
-      if (!application) {
-        return res.status(404).json({
-          success: false,
-          message: 'Заявка не найдена',
-        });
-      }
-
-      // Проверяем, является ли пользователь одним из экспертов
-      const isExpert = application.expert1?.id === expertId || application.expert2?.id === expertId;
-      if (!isExpert && req.user?.role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Доступ запрещён. Вы не являетесь экспертом этой заявки',
-        });
-      }
-
-      await ApplicationModel.addVerdict(id, parseInt(expertId), verdict, comment || null);
-
-      // Получаем обновлённую заявку для проверки статуса и вердиктов
-      const updatedApplication = await ApplicationModel.findById(id);
-
-      // Формируем ответ с информацией о вердиктах
-      const verdictsCount = updatedApplication?.expert_verdicts?.length || 0;
-      const allVerdictsIn = verdictsCount >= 2;
-      const statusChanged = allVerdictsIn; // Если все вердикты выставлены, статус уже изменён
+      const reviewsCount = await prisma.application_reviews.count({ where: { application_id: id, deleted_at: null } });
 
       res.json({
         success: true,
-        message: 'Вердикт успешно выставлен',
-        data: {
-          allVerdictsIn,
-          statusChanged,
-          verdictsCount,
-          currentStatusId: updatedApplication?.status_id,
-        },
+        message: 'Вердикт успешно сохранён',
+        data: { allVerdictsIn: reviewsCount >= 2, verdictsCount: reviewsCount },
       });
     } catch (error) {
       console.error('Error adding verdict:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при выставлении вердикта',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при выставлении вердикта' });
     }
   }
 
-  /**
-   * Получить заявки, назначенные эксперту
-   * GET /api/expert/:id/applications
-   */
   static async getExpertApplications(req: AuthRequest, res: Response) {
     try {
-      const expertId = parseInt(req.params.id);
+      const expertId = req.user!.userId;
 
-      if (isNaN(expertId)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Некорректный ID эксперта',
-        });
-      }
-
-      const applications = await ApplicationModel.findByExpert(expertId);
-
-      res.json({
-        success: true,
-        data: applications,
+      const applications = await prisma.applications.findMany({
+        where: {
+          deleted_at: null,
+          application_reviews: { some: { expert_id: expertId, deleted_at: null } }
+        },
+        include: {
+          application_statuses: { select: { name: true } },
+          application_reviews: { where: { expert_id: expertId }, select: { review_status: true, review_text: true } }
+        }
       });
+
+      res.json({ success: true, data: applications });
     } catch (error) {
       console.error('Error fetching expert applications:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении заявок эксперта',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      });
+      res.status(500).json({ success: false, message: 'Ошибка при получении заявок' });
     }
   }
 }

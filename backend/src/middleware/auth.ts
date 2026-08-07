@@ -1,155 +1,74 @@
 import { Request, Response, NextFunction } from 'express';
+import { prisma } from '../config/database';
 import { verifyToken, TokenPayload } from '../utils/jwt';
-import { UserModel } from '../models/user';
 
-/**
- * Расширенный интерфейс Request с данными пользователя
- */
 export interface AuthRequest extends Request {
-  user?: TokenPayload & {
-    surname?: string | null;
-    name?: string | null;
-    patronymic?: string | null;
-    role_id?: number | null;
-  };
+  user?: TokenPayload;
 }
 
-/**
- * Middleware для проверки аутентификации
- */
 export async function authMiddleware(
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ) {
   try {
-    // Получаем токен из заголовка Authorization
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Требуется авторизация',
-      });
+      return res.status(401).json({ success: false, message: 'Требуется авторизация' });
     }
 
-    const token = authHeader.substring(7); // Убираем "Bearer "
-
-    // Проверяем токен
+    const token = authHeader.substring(7);
     const payload = verifyToken(token);
 
     if (!payload) {
-      return res.status(401).json({
-        success: false,
-        message: 'Неверный или истёкший токен',
-      });
+      return res.status(401).json({ success: false, message: 'Неверный или истёкший токен' });
     }
 
-    // Проверяем существование пользователя
-    const user = await UserModel.findById(payload.userId);
+    // СВЕРХБЫСТРАЯ проверка: существует ли пользователь и не удалён ли он.
+    // Мы не тянем все поля, только id.
+    const userExists = await prisma.users.findUnique({
+      where: { id: payload.userId, deleted_at: null },
+      select: { id: true }
+    });
 
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Пользователь не найден',
-      });
+    if (!userExists) {
+      return res.status(401).json({ success: false, message: 'Пользователь не найден или удалён' });
     }
 
-    // Добавляем данные пользователя в запрос
-    req.user = {
-      ...payload,
-      role: user.role,
-      name: user.name,
-      surname: user.surname,
-      patronymic: user.patronymic,
-      role_id: user.role_id,
-    };
-
+    // Если всё ок, прикрепляем payload (в котором уже есть role, email и т.д.)
+    req.user = payload;
     next();
   } catch (error) {
-    if (error === 'Сессия истекла') {
-      return res.status(401).json({
-        success: false,
-        message: 'Сессия истекла',
-      });
-    }
     console.error('Auth middleware error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Ошибка аутентификации',
-    });
+    return res.status(500).json({ success: false, message: 'Ошибка аутентификации' });
   }
 }
 
-/**
- * Middleware для проверки роли администратора
- */
 export function adminMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
-  if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      message: 'Требуется авторизация',
-    });
+  if (!req.user?.role || req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Доступ запрещён. Требуются права администратора' });
   }
-
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({
-      success: false,
-      message: 'Доступ запрещён. Требуются права администратора',
-    });
-  }
-
   next();
 }
 
-/**
- * Middleware для проверки роли эксперта
- */
 export function expertMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
-  if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      message: 'Требуется авторизация',
-    });
-  }
 
-  if (req.user.role !== 'expert') {
-    return res.status(403).json({
-      success: false,
-      message: 'Доступ запрещён. Требуются права эксперта',
-    });
+  if (!req.user?.role || req.user.role !== 'expert') {
+    return res.status(403).json({ success: false, message: 'Доступ запрещён. Требуются права эксперта' });
   }
-
   next();
 }
 
-/**
- * Middleware для проверки роли (универсальный)
- * @param role - требуемая роль
- */
 export function requireRole(role: 'user' | 'admin' | 'expert') {
   return function (req: AuthRequest, res: Response, next: NextFunction) {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Требуется авторизация',
-      });
+    if (!req.user?.role || req.user.role !== role) {
+      return res.status(403).json({ success: false, message: `Доступ запрещён. Требуются права ${role}` });
     }
-
-    if (req.user.role !== role) {
-      return res.status(403).json({
-        success: false,
-        message: `Доступ запрещён. Требуются права ${role}`,
-      });
-    }
-
     next();
   };
 }
 
-/**
- * Опциональная аутентификация (не блокирует запрос, если нет токена)
- */
 export async function optionalAuthMiddleware(
   req: AuthRequest,
   res: Response,
@@ -163,21 +82,21 @@ export async function optionalAuthMiddleware(
       const payload = verifyToken(token);
 
       if (payload) {
-        const user = await UserModel.findById(payload.userId);
-        if (user) {
+        // Проверяем, что пользователь жив, но не блокируем запрос, если нет
+        const userExists = await prisma.users.findUnique({
+          where: { id: payload.userId, deleted_at: null },
+          select: { id: true, name: true, surname: true, patronymic: true }
+        });
+
+        if (userExists) {
           req.user = {
             ...payload,
-            name: user.name,
-            surname: user.surname,
-            patronymic: user.patronymic,
           };
         }
       }
     }
-
-    next();
+    next(); // Всегда идём дальше, даже если токена нет или он невалиден
   } catch (error) {
-    // Просто продолжаем без пользователя
-    next();
+    next(); // Игнорируем ошибки в опциональной авторизации
   }
 }

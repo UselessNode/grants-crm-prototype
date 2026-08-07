@@ -1,10 +1,26 @@
 import { Link } from 'react-router-dom';
 import { Badge } from '../../ui/badge';
-import type { Application, Expert, Status } from '../../../types';
+import type { Application, Status } from '../../../types';
+
+// Расширяем тип Application, чтобы TypeScript знал о вложенных данных от Prisma
+interface ApplicationWithReviews extends Application {
+  application_reviews?: Array<{
+    expert_id: number;
+    review_status?: string | null;
+    users?: {
+      surname: string | null;
+      name: string | null;
+      patronymic: string | null;
+    } | null;
+  }>;
+}
 
 interface ApplicationsListCardProps {
-  app: Application & { owner_email?: string; owner_name?: string; owner_id?: number | null };
-  experts: Expert[];
+  app: ApplicationWithReviews & {
+    owner_email?: string;
+    owner_name?: string;
+    owner_id?: number | null;
+  };
   statuses: Status[];
   selectedIds: number[];
   changingStatusId: number | null;
@@ -15,7 +31,6 @@ interface ApplicationsListCardProps {
 
 export function ApplicationsListCard({
   app,
-  experts,
   statuses,
   selectedIds,
   changingStatusId,
@@ -23,13 +38,7 @@ export function ApplicationsListCard({
   getStatusVariant,
   onStatusChange,
 }: ApplicationsListCardProps) {
-  const findExpert = (id: number | null | undefined) => {
-    if (!id) return null;
-    return experts.find(e => e.id === id);
-  };
-
-  const expert1 = findExpert(app.expert_1);
-  const expert2 = findExpert(app.expert_2);
+  const reviews = [];
 
   return (
     <div className="ApplicationsList__card relative">
@@ -39,8 +48,9 @@ export function ApplicationsListCard({
           type="checkbox"
           checked={selectedIds.includes(app.id!)}
           onChange={() => onSelect(app.id!)}
+          disabled={changingStatusId === app.id} // Блокируем во время изменения статуса
         />
-      </div>
+          </div>
 
       {/* Основная информация */}
       <div className="ApplicationsList__cardMain">
@@ -62,16 +72,17 @@ export function ApplicationsListCard({
                 value={app.status_id ?? undefined}
                 colorizeOptions
                 onSelect={(option) => onStatusChange(app.id!, option.id as number)}
+                disabled={changingStatusId === app.id} // Блокируем во время изменения статуса
               />
             </span>
           </div>
         </div>
+
         <div className="ApplicationsList__cardMeta">
           <div className="ApplicationsList__cardMetaItem">
             <span className="ApplicationsList__cardMetaLabel">Владелец:</span>
             <span className="ApplicationsList__cardMetaValue">{app.owner_name || app.owner_email || '—'}</span>
           </div>
-
           <div className="ApplicationsList__cardMetaItem">
             <span className="ApplicationsList__cardMetaLabel">Направление:</span>
             <span className="ApplicationsList__cardMetaValue">{app.direction_name || '—'}</span>
@@ -89,22 +100,29 @@ export function ApplicationsListCard({
         </div>
       </div>
 
-      {/* Эксперты */}
+      {/* Эксперты (теперь динамически из application_reviews) */}
       <div className="ApplicationsList__cardExperts">
         <div className="ApplicationsList__expertsLabel">Эксперты:</div>
         <div className="ApplicationsList__expertsList">
-          <span
-            className={`ExpertTag ${!expert1 ? 'ExpertTag--empty' : ''}`}
-            title={expert1 ? `${expert1.surname} ${expert1.name}` : 'Не назначен'}
-          >
-            {expert1 ? `${expert1.surname} ${expert1.name}` : '—'}
-          </span>
-          <span
-            className={`ExpertTag ${!expert2 ? 'ExpertTag--empty' : ''}`}
-            title={expert2 ? `${expert2.surname} ${expert2.name}` : 'Не назначен'}
-          >
-            {expert2 ? `${expert2.surname} ${expert2.name}` : '—'}
-          </span>
+          {reviews.length > 0 ? (
+            reviews.map((review) => {
+              const expertName = review.users
+                ? `${review.users.surname || ''} ${review.users.name || ''}`.trim() || `Эксперт #${review.expert_id}`
+                : `Эксперт #${review.expert_id}`;
+
+              return (
+                <span
+                  key={review.expert_id}
+                  className="ExpertTag"
+                  title={expertName}
+                >
+                  {expertName}
+                </span>
+              );
+            })
+          ) : (
+            <span className="ExpertTag ExpertTag--empty" title="Не назначен">—</span>
+          )}
         </div>
       </div>
     </div>

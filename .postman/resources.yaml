@@ -1,0 +1,9 @@
+# Use this workspace to collaborate
+workspace:
+  id: 2bb7e2e1-e823-4174-b21e-3d4c1dc09d65
+
+localResources:
+  collections:
+    - ../backend/postman/Grants-crm Expert API.postman_collection.json
+  environments:
+    - ../backend/postman/CRM Local.postman_environment.json

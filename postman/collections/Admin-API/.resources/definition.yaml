@@ -1,0 +1,9 @@
+$kind: collection
+name: Admin API
+variables:
+  authToken: ""
+  applicationId: "1"
+  userId: "1"
+  directionId: "1"
+  tenderId: "1"
+  expertId: "1"

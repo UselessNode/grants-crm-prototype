@@ -1,0 +1,15 @@
+$kind: http-request
+method: PUT
+url: '{{baseUrl}}/api/documents/categories/{{categoryId}}'
+order: 11000
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Обновлённое название"
+    }

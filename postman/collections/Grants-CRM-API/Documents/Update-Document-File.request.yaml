@@ -1,0 +1,13 @@
+$kind: http-request
+method: PUT
+url: '{{baseUrl}}/api/documents/{{documentId}}/file'
+order: 8000
+headers:
+  - key: Authorization
+    value: 'Bearer {{authToken}}'
+body:
+  type: formdata
+  content:
+    - key: file
+      type: file
+      src: ''

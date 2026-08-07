@@ -4,6 +4,37 @@ import { UserPanelLayout } from '../components/UserPanel/user-panel-layout';
 import { expertService } from '../services/expertService';
 import { useAuthStore } from '../store/auth-store';
 import { Application, TeamMember, ProjectCoordinator, ProjectPlan, ProjectBudget, AdditionalMaterial, ExpertVerdict } from '../types';
+import { Badge } from '../components/ui/badge';
+
+// Компонент для отображения текущего статуса вердикта эксперта
+function MyVerdictStatus({ verdict, hasFinalVerdict }: { verdict: ExpertVerdict | null; hasFinalVerdict: boolean }) {
+  if (!verdict) {
+    return <span className="text-sm text-gray-500">Вы не выносили вердикт</span>;
+  }
+
+  const getVerdictBadge = () => {
+    switch (verdict.verdict) {
+      case 'approved':
+        return <Badge variant="success">Одобрено</Badge>;
+      case 'rejected':
+        return <Badge variant="error">Отклонено</Badge>;
+      case 'draft':
+        return <Badge variant="warning">Черновик</Badge>;
+      default:
+        return <Badge variant="default">Неизвестно</Badge>;
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-gray-600">Ваш вердикт:</span>
+      {getVerdictBadge()}
+      {verdict.verdict === 'draft' && (
+        <span className="text-gray-400 text-xs">(не отправлен)</span>
+      )}
+    </div>
+  );
+}
 
 export function ExpertApplicationView() {
   const { id } = useParams<{ id: string }>();
@@ -14,9 +45,11 @@ export function ExpertApplicationView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submittingDraft, setSubmittingDraft] = useState(false);
   const [verdict, setVerdict] = useState<'approved' | 'rejected' | ''>('');
   const [comment, setComment] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   const loadApplication = async () => {
     if (!id) return;
@@ -29,10 +62,11 @@ export function ExpertApplicationView() {
 
         // Проверяем, есть ли уже вердикт от этого эксперта
         const existingVerdict = response.data.expert_verdicts?.find(
-          (v: ExpertVerdict) => v.expert_id === user?.expert_id
+          (v: ExpertVerdict) => v.expert_id === user?.id
         );
         if (existingVerdict) {
-          setVerdict(existingVerdict.verdict);
+          // Если вердикт черновик, то не выбираем никакой вердикт (остается пустым)
+          setVerdict(existingVerdict.verdict === 'draft' ? '' : existingVerdict.verdict);
           setComment(existingVerdict.comment || '');
         }
       } else {
@@ -50,9 +84,33 @@ export function ExpertApplicationView() {
     loadApplication();
   }, [id]);
 
-  const handleSubmitVerdict = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveDraft = async () => {
+    if (!id) return;
 
+    setSubmittingDraft(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await expertService.saveDraft(parseInt(id), {
+        comment: comment || null,
+      });
+
+      if (response.success) {
+        setSuccess('Черновик вердикта сохранён');
+        await loadApplication();
+      } else {
+        setError(response.message || 'Ошибка при сохранении черновика');
+      }
+    } catch (err) {
+      setError('Ошибка при сохранении черновика');
+      console.error(err);
+    } finally {
+      setSubmittingDraft(false);
+    }
+  };
+
+  const handleFinalizeReview = async () => {
     if (!verdict) {
       setError('Пожалуйста, выберите вердикт');
       return;
@@ -60,28 +118,34 @@ export function ExpertApplicationView() {
 
     if (!id) return;
 
-    setSubmitting(true);
+    setIsFinalizing(true);
     setError(null);
     setSuccess(null);
 
     try {
-      const response = await expertService.submitVerdict(parseInt(id), {
+      const response = await expertService.finalizeReview(parseInt(id), {
         verdict,
         comment: comment || null,
       });
 
       if (response.success) {
-        setSuccess('Вердикт успешно сохранён!');
-        await loadApplication(); // Обновляем данные
+        setSuccess('Финальный вердикт успешно сохранён!');
+        await loadApplication();
       } else {
-        setError(response.message || 'Ошибка при сохранении вердикта');
+        setError(response.message || 'Ошибка при сохранении финального вердикта');
       }
     } catch (err) {
-      setError('Ошибка при сохранении вердикта');
+      setError('Ошибка при сохранении финального вердикта');
       console.error(err);
     } finally {
-      setSubmitting(false);
+      setIsFinalizing(false);
     }
+  };
+
+  const handleSubmitVerdict = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Эта функция оставлена для совместимости, но лучше использовать отдельные функции
+    await handleFinalizeReview();
   };
 
   const getStatusColor = (statusName?: string) => {
@@ -101,19 +165,39 @@ export function ExpertApplicationView() {
     }
   };
 
-  const canSubmitVerdict = () => {
-    // Эксперт может вынести вердикт только если: применен к заявке и внутри статуса, который позволяет экспертизу
-    if (!application) return false;
+  const getMyVerdict = () => {
+    // Получаем вердикт текущего эксперта
+    if (!application || !user) return null;
+    return application.expert_verdicts?.find((v: ExpertVerdict) => v.expert_id === user.id);
+  };
 
-    // Проверяем, что пользователь iegos expert_id совпадает с одним из экспертов заявки
-    const isAssigned = application.expert_1 === user?.expert_id || application.expert_2 === user?.expert_id;
+  const hasFinalVerdict = () => {
+    const myVerdict = getMyVerdict();
+    return myVerdict && (myVerdict.verdict === 'approved' || myVerdict.verdict === 'rejected');
+  };
 
-    // Статус должен быть "Подана" или "На рассмотрении"
+  const canEditVerdict = () => {
+    // Эксперт может редактировать вердикт если:
+    // 1. Он назначен на заявку
+    // 2. Заявка в подходящем статусе
+    // 3. У него еще нет финального вердикта
+    if (!application || !user) return false;
+
+    // Проверяем, что пользователь назначен экспертом на эту заявку
+    const isAssigned = application.expert_verdicts?.some((v: ExpertVerdict) => v.expert_id === user.id);
+
+    // Статус должен позволяь экспертизу
     const allowedStatuses = ['Подана', 'На рассмотрении'];
     const hasAllowedStatus = application.status_name && allowedStatuses.includes(application.status_name);
 
-    return isAssigned && hasAllowedStatus;
+    // Не должно быть финального вердикта
+    const myVerdict = getMyVerdict();
+    const hasFinal = myVerdict && (myVerdict.verdict === 'approved' || myVerdict.verdict === 'rejected');
+
+    return isAssigned && hasAllowedStatus && !hasFinal;
   };
+
+  const canSubmitVerdict = canEditVerdict;
 
   if (loading) {
     return (
@@ -168,6 +252,13 @@ export function ExpertApplicationView() {
                     {application.tender_name}
                   </span>
                 )}
+              </div>
+              {/* Отображение текущего вердикта эксперта */}
+              <div className="mt-3">
+                <MyVerdictStatus 
+                  verdict={getMyVerdict()}
+                  hasFinalVerdict={hasFinalVerdict()}
+                />
               </div>
             </div>
             <Link to="/expert" className="btn btn-secondary">
@@ -298,10 +389,20 @@ export function ExpertApplicationView() {
         )}
 
         {/* Форма вердикта */}
-        {canSubmitVerdict() && (
+        {canEditVerdict() && (
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Вынести вердикт</h2>
-            <form onSubmit={handleSubmitVerdict} className="space-y-4">
+            
+            {/* Показываем подсказку, если уже есть черновик */}
+            {getMyVerdict()?.verdict === 'draft' && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  У вас есть черновик вердикта. Выберите finalный вердикт и нажмите "Отправить финальное решение"
+                </p>
+              </div>
+            )}
+            
+            <form onSubmit={(e) => { e.preventDefault(); }} className="space-y-4">
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -311,7 +412,7 @@ export function ExpertApplicationView() {
                     checked={verdict === 'approved'}
                     onChange={() => setVerdict('approved')}
                     className="w-4 h-4"
-                    disabled={submitting}
+                    disabled={isFinalizing}
                   />
                   <span className="text-green-600 font-medium">Одобрить заявку</span>
                 </label>
@@ -323,7 +424,7 @@ export function ExpertApplicationView() {
                     checked={verdict === 'rejected'}
                     onChange={() => setVerdict('rejected')}
                     className="w-4 h-4"
-                    disabled={submitting}
+                    disabled={isFinalizing}
                   />
                   <span className="text-red-600 font-medium">Отклонить заявку</span>
                 </label>
@@ -339,7 +440,7 @@ export function ExpertApplicationView() {
                   placeholder="Оставьте комментарий к вердикту..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   rows={4}
-                  disabled={submitting}
+                  disabled={isFinalizing}
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Комментарий будет виден другим экспертам и администраторам
@@ -347,13 +448,27 @@ export function ExpertApplicationView() {
               </div>
 
               <div className="flex gap-3 pt-4">
+                {/* Кнопка сохранения черновика (доступна всегда, когда можно редактировать) */}
                 <button
-                  type="submit"
-                  disabled={submitting || !verdict}
+                  type="button"
+                  onClick={handleSaveDraft}
+                  disabled={submittingDraft}
+                  className="btn btn-secondary disabled:opacity-50"
+                  title="Сохранить комментарий как черновик"
+                >
+                  {submittingDraft ? 'Сохранение...' : 'Сохранить черновик'}
+                </button>
+                
+                {/* Кнопка финального вердикта (доступна только когда выбран вердикт) */}
+                <button
+                  type="button"
+                  onClick={handleFinalizeReview}
+                  disabled={isFinalizing || !verdict}
                   className="btn btn-primary disabled:opacity-50"
                 >
-                  {submitting ? 'Сохранение...' : 'Сохранить вердикт'}
+                  {isFinalizing ? 'Отправка...' : 'Отправить финальное решение'}
                 </button>
+                
                 <button
                   type="button"
                   onClick={() => navigate('/expert')}
@@ -366,7 +481,15 @@ export function ExpertApplicationView() {
           </div>
         )}
 
-        {!canSubmitVerdict() && (
+        {!canEditVerdict() && hasFinalVerdict() && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-green-800 text-sm">
+              Вы уже вынесли финальный вердикт по этой заявке. Изменение невозможно.
+            </p>
+          </div>
+        )}
+        
+        {!canEditVerdict() && !hasFinalVerdict() && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-yellow-800 text-sm">
               Вы не можете вынести вердикт по этой заявке.

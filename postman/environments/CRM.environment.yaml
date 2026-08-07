@@ -1,0 +1,13 @@
+name: CRM
+values:
+  - key: baseUrl
+    value: 'http://localhost:3001'
+  - key: authToken
+    description: Default user
+    secret: true
+  - key: adminAuthToken
+    secret: true
+  - key: expertAuthToken
+    secret: true
+  - key: base_url
+    value: ''

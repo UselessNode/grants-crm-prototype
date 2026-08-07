@@ -111,7 +111,6 @@ export function ApplicationsList({
             <ApplicationsListCard
               key={app.id}
               app={app}
-              experts={experts}
               statuses={statuses}
               selectedIds={selectedIds}
               changingStatusId={changingStatusId}
