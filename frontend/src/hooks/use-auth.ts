@@ -111,7 +111,8 @@ export function useAuth() {
     password: string,
     surname?: string,
     name?: string,
-    patronymic?: string
+    patronymic?: string,
+    consent?: boolean
   ) => {
     setLoading(true);
     setError(null);
@@ -123,6 +124,7 @@ export function useAuth() {
         surname,
         name,
         patronymic,
+        consent,
       });
 
       if (response.data.success) {

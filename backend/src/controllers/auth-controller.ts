@@ -17,13 +17,22 @@ const sanitizeUser = (user: any) => {
 export class AuthController {
   static async register(req: Request, res: Response) {
     try {
-      const { email, password, surname, name, patronymic } = req.body;
+      const { email, password, surname, name, patronymic, consent } = req.body;
 
       if (!email || !password) {
         return res.status(400).json({
           success: false,
           message: 'Email и пароль обязательны',
           errors: { email: !email ? 'Email обязателен' : null, password: !password ? 'Пароль обязателен' : null },
+        });
+      }
+
+      // Проверка согласия на обработку персональных данных
+      if (!consent) {
+        return res.status(400).json({
+          success: false,
+          message: 'Необходимо дать согласие на обработку персональных данных',
+          errors: { consent: 'Необходимо дать согласие на обработку персональных данных' },
         });
       }
 

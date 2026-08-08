@@ -10,11 +10,14 @@ import { AdminPanel } from './pages/admin-panel';
 import { AdminUsers } from './pages/admin-users';
 import { AdminExperts } from './pages/admin-experts';
 import { AdminDirectories } from './pages/admin-directories';
+import { AdminEvaluationCriteria } from './pages/admin-evaluation-criteria';
 import { Login } from './pages/login';
 import { Register } from './pages/register';
 import { Profile } from './pages/profile';
+
 import { Documents } from './pages/documents-list';
 import { ExpertDashboard } from './pages/expert-dashboard';
+import PrivacyPolicyPage from './pages/privacy-policy';
 import { NotFoundPage } from './pages/not-found';
 import { PrivateRoute } from './components/common/private-route';
 import { useAuthStore } from './store/auth-store';
@@ -47,6 +50,7 @@ export function App() {
         {/* Публичные маршруты */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 
         {/* Главная страница — редирект в зависимости от роли */}
         <Route
@@ -170,6 +174,14 @@ export function App() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/admin/evaluation-criteria"
+          element={
+            <PrivateRoute>
+              <AdminEvaluationCriteria />
+            </PrivateRoute>
+          }
+          />
 
         {/* Страница 404 — должна быть последней */}
         <Route

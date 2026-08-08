@@ -1,3 +1,20 @@
+export interface ApplicationReview {
+  id: number;
+  application_id: number;
+  expert_id: number;
+  review_status: 'draft' | 'approved' | 'rejected' | null;
+  review_text?: string | null;
+  rating?: any | null; // JSON с оценками по критериям
+  total_score?: number | null; // Итоговая оценка
+  created_at?: string;
+  updated_at?: string;
+  users?: {
+    surname: string | null;
+    name: string | null;
+    patronymic: string | null;
+  } | null;
+}
+
 export interface Application {
   id?: number;
   title: string;
@@ -37,6 +54,8 @@ export interface Application {
   // Опционально заполненные связанные сущности (из JOIN или отдельного запроса)
   tender?: Tender;
   direction?: Direction;
+  // Отзывы экспертов с оценками
+  application_reviews?: ApplicationReview[];
 }
 
 export interface TeamMember {

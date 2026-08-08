@@ -33,14 +33,16 @@ model additional_materials {
 }
 
 model application_reviews {
-  id             Int          @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   application_id Int
   expert_id      Int
   review_status  ReviewStatus?
   review_text    String?
-  created_at     DateTime     @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime     @default(now()) @db.Timestamptz(6)
-  deleted_at     DateTime?    @db.Timestamptz(6)
+  rating         Json?    // Оценка эксперта по критериям в JSON формате: { criterion_id: value }
+  total_score    Float?   // Итоговая оценка (сумма с учётом весов)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+  deleted_at     DateTime? @db.Timestamptz(6)
   applications   applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users          users        @relation(fields: [expert_id], references: [id], onUpdate: NoAction)
 
@@ -251,8 +253,27 @@ model tenders {
   deleted_at   DateTime?      @db.Timestamptz(6)
   applications applications[]
   directions   directions[]
+  evaluation_criteria evaluation_criteria[]
 
   @@index([deleted_at], map: "idx_tenders_deleted", where: raw("(deleted_at IS NULL)"))
+}
+
+model evaluation_criteria {
+  id           Int      @id @default(autoincrement())
+  tender_id    Int
+  name         String   @db.VarChar(255)
+  description  String?
+  min_value    Float    @default(0)
+  max_value    Float    @default(10)
+  weight       Float    @default(1)
+  config       Json?    // Дополнительная конфигурация в JSON формате
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  deleted_at   DateTime? @db.Timestamptz(6)
+  tenders      tenders  @relation(fields: [tender_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tender_id], map: "idx_evaluation_criteria_tender")
+  @@index([deleted_at], map: "idx_evaluation_criteria_deleted", where: raw("(deleted_at IS NULL)"))
 }
 
 model users {

@@ -9,6 +9,7 @@ import expertRoutes from './routes/expert-routes';
 import applicationRoutes from './routes/application-routes';
 import documentRoutes from './routes/document-routes';
 import adminRoutes from './routes/admin-routes';
+import applicationFilesRoutes from './routes/application-files-routes';
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use('/api', applicationRoutes);
 app.use('/api', expertRoutes);
 app.use('/api', adminRoutes);
 app.use('/api', documentRoutes);
+app.use('/api', applicationFilesRoutes);
 
 // 404
 app.use((_req, res) => {

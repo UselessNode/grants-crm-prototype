@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { adminService } from '../services/adminService';
 import { useAuthStore } from '../store/auth-store';
 import type { User } from '../services/adminService';
@@ -17,7 +17,7 @@ interface ExpertWithStats extends Expert {
  */
 export function AdminPanel() {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'users' | 'applications' | 'directories' | 'experts' | 'documents'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'applications' | 'directories' | 'experts' | 'documents' | 'evaluation-criteria'>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [applications, setApplications] = useState<(Application & { owner_email?: string; owner_name?: string })[]>([]);
   const [directions, setDirections] = useState<{ id: number; name: string; description?: string | null }[]>([]);
@@ -444,6 +444,11 @@ export function AdminPanel() {
               </div>
             )}
           </>
+        )}
+
+        {/* Критерии оценки - перенаправление на отдельную страницу */}
+        {activeTab === 'evaluation-criteria' && (
+          <Navigate to="/admin/evaluation-criteria" replace />
         )}
 
         {/* Документы */}

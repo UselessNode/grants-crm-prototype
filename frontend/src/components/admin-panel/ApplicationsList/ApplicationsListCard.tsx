@@ -7,6 +7,8 @@ interface ApplicationWithReviews extends Application {
   application_reviews?: Array<{
     expert_id: number;
     review_status?: string | null;
+    rating?: any | null; // JSON с оценками по критериям
+    total_score?: number | null; // Итоговая оценка
     users?: {
       surname: string | null;
       name: string | null;
@@ -38,7 +40,8 @@ export function ApplicationsListCard({
   getStatusVariant,
   onStatusChange,
 }: ApplicationsListCardProps) {
-  const reviews = [];
+  // Используем данные об отзывах экспертов из application_reviews
+  const reviews = app.application_reviews || [];
 
   return (
     <div className="ApplicationsList__card relative">
@@ -110,13 +113,31 @@ export function ApplicationsListCard({
                 ? `${review.users.surname || ''} ${review.users.name || ''}`.trim() || `Эксперт #${review.expert_id}`
                 : `Эксперт #${review.expert_id}`;
 
+              // Формируем текст для отображения
+              const displayText = [];
+              displayText.push(expertName);
+              
+              // Добавляем оценку, если она есть
+              if (review.total_score !== null && review.total_score !== undefined) {
+                displayText.push(`(${review.total_score.toFixed(1)})`);
+              }
+              
+              // Статус экспертизы
+              const statusLabel = review.review_status === 'approved' ? '✓' : 
+                                  review.review_status === 'rejected' ? '✗' : 
+                                  review.review_status === 'draft' ? 'черновик' : '';
+              
+              if (statusLabel) {
+                displayText.push(statusLabel);
+              }
+
               return (
                 <span
                   key={review.expert_id}
                   className="ExpertTag"
-                  title={expertName}
+                  title={`${expertName}${review.total_score ? ` | Оценка: ${review.total_score}` : ''}${review.review_status ? ` | Статус: ${review.review_status}` : ''}`}
                 >
-                  {expertName}
+                  {displayText.join(' ')}
                 </span>
               );
             })

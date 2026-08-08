@@ -49,4 +49,12 @@ router.post('/admin/applications/:id/change-status', AdminController.changeStatu
 router.put('/admin/users/:id', AdminController.updateUser);
 router.delete('/admin/users/:id', AdminController.deleteUser);
 
+// Критерии оценки
+router.get('/admin/tenders/:tender_id/evaluation-criteria', AdminController.getEvaluationCriteriaByTender);
+router.get('/admin/evaluation-criteria', AdminController.getEvaluationCriteria);
+router.post('/admin/evaluation-criteria', AdminController.createEvaluationCriteria);
+router.post('/admin/evaluation-criteria/default', AdminController.createDefaultEvaluationCriteria);
+router.put('/admin/evaluation-criteria/:id', AdminController.updateEvaluationCriteria);
+router.delete('/admin/evaluation-criteria/:id', AdminController.deleteEvaluationCriteria);
+
 export default router;

@@ -18,6 +18,7 @@ interface ExpertFormData {
   extra_info: string;
   email: string;
   password: string;
+  confirmPassword: string;
   specialization_id?: number | null;
 }
 
@@ -33,6 +34,7 @@ export function AddExpertModal({
     extra_info: '',
     email: '',
     password: '',
+    confirmPassword: '',
     specialization_id: null,
   });
   const [loading, setLoading] = useState(false);
@@ -46,8 +48,23 @@ export function AddExpertModal({
       return;
     }
 
-    if (!formData.email || !formData.password) {
-      setError('Email и пароль обязательны');
+    if (!formData.email) {
+      setError('Email обязателен');
+      return;
+    }
+
+    if (!formData.password) {
+      setError('Пароль обязателен');
+      return;
+    }
+
+    if (!formData.confirmPassword) {
+      setError('Подтвердите пароль');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Пароли не совпадают');
       return;
     }
 
@@ -72,6 +89,7 @@ export function AddExpertModal({
         extra_info: '',
         email: '',
         password: '',
+        confirmPassword: '',
         specialization_id: null,
       });
       onExpertAdded?.();
@@ -129,6 +147,19 @@ export function AddExpertModal({
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="AddExpertModal__input"
                 placeholder="Введите пароль"
+              />
+            </div>
+
+            <div className="AddExpertModal__field AddExpertModal__field--full">
+              <label className="AddExpertModal__label">
+                Подтверждение пароля <span className="required-mark">*</span>
+              </label>
+              <input
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                className="AddExpertModal__input"
+                placeholder="Подтвердите пароль"
               />
             </div>
 

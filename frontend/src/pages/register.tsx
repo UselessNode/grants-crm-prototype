@@ -17,6 +17,7 @@ export function Register() {
     surname: '',
     name: '',
     patronymic: '',
+    consent: false,
   });
 
   const [validationErrors, setValidationErrors] = useState<{
@@ -25,6 +26,7 @@ export function Register() {
     confirmPassword?: string;
     surname?: string;
     name?: string;
+    consent?: string;
   }>({});
 
   /**
@@ -53,6 +55,7 @@ export function Register() {
       confirmPassword?: string;
       surname?: string;
       name?: string;
+      consent?: string;
     } = {};
 
     // Email
@@ -86,6 +89,11 @@ export function Register() {
       errors.name = 'Имя обязательно';
     }
 
+    // Согласие на обработку данных
+    if (!formData.consent) {
+      errors.consent = 'Необходимо дать согласие на обработку персональных данных';
+    }
+
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       return;
@@ -97,7 +105,8 @@ export function Register() {
       formData.password,
       formData.surname,
       formData.name,
-      formData.patronymic
+      formData.patronymic,
+      formData.consent
     );
 
     if (result.success) {
@@ -242,6 +251,29 @@ export function Register() {
             />
             {validationErrors.confirmPassword && (
               <p className="field-error">{validationErrors.confirmPassword}</p>
+            )}
+          </div>
+
+          {/* Согласие на обработку персональных данных */}
+          <div className="auth-field-group">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                id="consent"
+                name="consent"
+                checked={formData.consent}
+                onChange={(e) => setFormData({ ...formData, consent: e.target.checked })}
+                className="mt-1 h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              />
+              <span className="text-sm text-gray-600">
+                Я даю согласие на обработку своих персональных данных и согласен с 
+                <Link to="/privacy-policy" className="text-primary-600 hover:underline">
+                  политикой конфиденциальности
+                </Link>
+              </span>
+            </label>
+            {validationErrors.consent && (
+              <p className="field-error">{validationErrors.consent}</p>
             )}
           </div>
 

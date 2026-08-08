@@ -2,8 +2,8 @@
 import './AdminPanelTabs.css';
 
 type AdminPanelTabsProps = {
-  activeTab: 'dashboard' | 'users' | 'applications' | 'directories' | 'experts' | 'documents';
-  setActiveTab: (tab: 'dashboard' | 'users' | 'applications' | 'directories' | 'experts' | 'documents') => void;
+  activeTab: 'dashboard' | 'users' | 'applications' | 'directories' | 'experts' | 'documents' | 'evaluation-criteria';
+  setActiveTab: (tab: 'dashboard' | 'users' | 'applications' | 'directories' | 'experts' | 'documents' | 'evaluation-criteria') => void;
 };
 
 export function AdminPanelTabs({ activeTab, setActiveTab }: AdminPanelTabsProps) {
@@ -13,6 +13,7 @@ export function AdminPanelTabs({ activeTab, setActiveTab }: AdminPanelTabsProps)
     { id: 'experts', label: 'Эксперты' },
     { id: 'documents', label: 'Документы' },
     { id: 'directories', label: 'Справочники' },
+    { id: 'evaluation-criteria', label: 'Критерии оценки' },
   ];
 
   return (

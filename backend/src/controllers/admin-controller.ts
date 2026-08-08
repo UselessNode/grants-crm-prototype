@@ -69,6 +69,13 @@ export class AdminController {
             users: { select: { surname: true, name: true, email: true } },
             application_statuses: { select: { name: true } },
             directions: { select: { name: true } },
+            tenders: { select: { name: true } },
+            application_reviews: {
+              where: { deleted_at: null },
+              include: {
+                users: { select: { surname: true, name: true, patronymic: true } },
+              },
+            },
           },
         }),
       ]);
@@ -361,6 +368,175 @@ export class AdminController {
     } catch (error) {
       if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Не найден' });
       res.status(500).json({ success: false, message: 'Ошибка при удалении' });
+    }
+  }
+
+  // ============ КРИТЕРИИ ОЦЕНКИ ============
+
+  static async getEvaluationCriteria(req: AuthRequest, res: Response) {
+    try {
+      const tenderId = Number(req.query.tender_id);
+      
+      if (!tenderId) {
+        return res.status(400).json({ success: false, message: 'tender_id обязателен' });
+      }
+
+      const data = await prisma.evaluation_criteria.findMany({
+        where: { tender_id: tenderId, deleted_at: null },
+        orderBy: { created_at: 'asc' },
+      });
+
+      res.json({ success: true, data });
+    } catch (error) {
+      console.error('Error fetching evaluation criteria:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при получении критериев оценки' });
+    }
+  }
+
+  static async getEvaluationCriteriaByTender(req: AuthRequest, res: Response) {
+    try {
+      const tenderId = Number(req.params.tender_id);
+      
+      const data = await prisma.evaluation_criteria.findMany({
+        where: { tender_id: tenderId, deleted_at: null },
+        orderBy: { created_at: 'asc' },
+      });
+
+      res.json({ success: true, data });
+    } catch (error) {
+      console.error('Error fetching evaluation criteria by tender:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при получении критериев оценки' });
+    }
+  }
+
+  static async createEvaluationCriteria(req: AuthRequest, res: Response) {
+    try {
+      const { tender_id, name, description, min_value, max_value, weight, config } = req.body;
+      
+      if (!tender_id || !name) {
+        return res.status(400).json({ success: false, message: 'tender_id и name обязательны' });
+      }
+
+      // Проверяем, существует ли тендер
+      const tender = await prisma.tenders.findUnique({ where: { id: tender_id } });
+      if (!tender) {
+        return res.status(404).json({ success: false, message: 'Тендер не найден' });
+      }
+
+      const data = await prisma.evaluation_criteria.create({
+        data: {
+          tender_id: Number(tender_id),
+          name,
+          description: description || null,
+          min_value: Number(min_value) || 0,
+          max_value: Number(max_value) || 10,
+          weight: Number(weight) || 1,
+          config: config || null,
+        },
+      });
+
+      res.json({ success: true, data, message: 'Критерий оценки создан' });
+    } catch (error) {
+      console.error('Error creating evaluation criteria:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при создании критерия оценки' });
+    }
+  }
+
+  static async updateEvaluationCriteria(req: AuthRequest, res: Response) {
+    try {
+      const id = Number(req.params.id);
+      const { name, description, min_value, max_value, weight, config } = req.body;
+
+      if (!name) {
+        return res.status(400).json({ success: false, message: 'name обязателен' });
+      }
+
+      const data = await prisma.evaluation_criteria.update({
+        where: { id },
+        data: {
+          name,
+          description: description || null,
+          min_value: Number(min_value) || 0,
+          max_value: Number(max_value) || 10,
+          weight: Number(weight) || 1,
+          config: config || null,
+          updated_at: new Date(),
+        },
+      });
+
+      res.json({ success: true, data, message: 'Критерий оценки обновлён' });
+    } catch (error) {
+      if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Критерий не найден' });
+      console.error('Error updating evaluation criteria:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при обновлении критерия оценки' });
+    }
+  }
+
+  static async deleteEvaluationCriteria(req: AuthRequest, res: Response) {
+    try {
+      const id = Number(req.params.id);
+
+      await prisma.evaluation_criteria.update({
+        where: { id },
+        data: { deleted_at: new Date() },
+      });
+
+      res.json({ success: true, message: 'Критерий оценки удалён' });
+    } catch (error) {
+      if ((error as any).code === 'P2025') return res.status(404).json({ success: false, message: 'Критерий не найден' });
+      console.error('Error deleting evaluation criteria:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при удалении критерия оценки' });
+    }
+  }
+
+  // Создание стандартного набора критериев для нового тендера
+  static async createDefaultEvaluationCriteria(req: AuthRequest, res: Response) {
+    try {
+      const { tender_id } = req.body;
+      
+      if (!tender_id) {
+        return res.status(400).json({ success: false, message: 'tender_id обязателен' });
+      }
+
+      // Проверяем, существует ли тендер
+      const tender = await prisma.tenders.findUnique({ where: { id: tender_id } });
+      if (!tender) {
+        return res.status(404).json({ success: false, message: 'Тендер не найден' });
+      }
+
+      // Удаляем существующие критерии для этого тендера
+      await prisma.evaluation_criteria.deleteMany({
+        where: { tender_id: tender_id },
+      });
+
+      // Стандартный набор критериев из TODO.md
+      const defaultCriteria = [
+        { name: 'Крутость', min_value: 0, max_value: 10, weight: 2, description: 'Оценка крутости проекта' },
+        { name: 'Стиль', min_value: 0, max_value: 100, weight: 3, description: 'Оценка стиля presentation' },
+        { name: 'Актуальность', min_value: 0, max_value: 10, weight: 1.5, description: 'Актуальность тематики' },
+        { name: 'Инновационность', min_value: 0, max_value: 10, weight: 2, description: 'Степень инновационности' },
+        { name: 'Реализуемость', min_value: 0, max_value: 10, weight: 1.5, description: 'Возможность реализации' },
+      ];
+
+      const createdCriteria = await prisma.evaluation_criteria.createMany({
+        data: defaultCriteria.map(criteria => ({
+          tender_id: tender_id,
+          name: criteria.name,
+          description: criteria.description,
+          min_value: criteria.min_value,
+          max_value: criteria.max_value,
+          weight: criteria.weight,
+        })),
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Создано ${createdCriteria.count} стандартных критериев оценки`,
+        data: defaultCriteria
+      });
+    } catch (error) {
+      console.error('Error creating default evaluation criteria:', error);
+      res.status(500).json({ success: false, message: 'Ошибка при создании стандартных критериев оценки' });
     }
   }
 }
